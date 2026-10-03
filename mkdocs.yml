@@ -1,4 +1,6 @@
 site_name: Learning LLMs From Scratch
+site_url: https://learningllms.kantarcise.com/
+repo_url: https://github.com/kantarcise/learning-llms
 docs_dir: docs
 theme:
   name: material

@@ -4,12 +4,14 @@ Learning large language models by reading, implementing, measuring, and writing.
 
 This repository follows my study of Sebastian Raschka's *Build a Large Language Model (From Scratch)*, then connects those foundations to inference engineering. The pace is six hours a week for six months. Notes and explanations will grow as I learn; an empty template does not count as completed learning.
 
+Live companion: [learningllms.kantarcise.com](https://learningllms.kantarcise.com/).
+
 ## Book companion
 
 The main artifact is a chapter-by-chapter reading companion, following the approach in my DSA and data-engineering notes. Pages use the book as their organizing structure and grow with explanations, examples, diagrams, and useful tangents.
 
 - [Companion home and chapter navigation](docs/index.md)
-- `mkdocs.yml` defines a Material for MkDocs site, consistent with my existing learning sites. Cloudflare Pages build settings and the Git publishing workflow are documented in [Deployment](DEPLOYMENT.md). Account connection and domain setup remain to be done.
+- `mkdocs.yml` defines a Material for MkDocs site, consistent with my existing learning sites. Cloudflare Pages build settings and the Git publishing workflow are documented in [Deployment](DEPLOYMENT.md). The site is published at the custom domain above.
 
 ## Start here
 

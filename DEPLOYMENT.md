@@ -11,11 +11,11 @@ After the repository is on GitHub, create a Cloudflare **Pages** project with Gi
 | Production branch | main |
 | Framework preset | None |
 | Root directory | Repository root (leave blank) |
-| Build command | `python -m pip install -r requirements.txt && python -m mkdocs build --strict` |
+| Build command | `mkdocs build` |
 | Build output directory | site |
 | Python | 3.12.10, specified by .python-version |
 
-Set `SKIP_DEPENDENCY_INSTALL=1` for production and preview. This disables Cloudflare’s automatic `pip install .` step; the build command installs dependencies from requirements.txt instead. This repository is a documentation project, not an installable Python package.
+The user confirmed successful deployment with `mkdocs build`. The dependency installation settings of that successful build have not been independently inspected. If automatic `pip install .` fails, use `SKIP_DEPENDENCY_INSTALL=1` and the explicit command `python -m pip install -r requirements.txt && python -m mkdocs build`.
 
 Apply the same settings to preview builds. If your dashboard requires an explicit runtime override, set PYTHON_VERSION to 3.12.10 for production and preview.
 
@@ -48,7 +48,7 @@ The strict build fails on documentation warnings, including unresolved relative 
 
 ## Domain
 
-The first deployment can use the pages.dev address Cloudflare assigns. Add your chosen custom domain through the Pages project's Custom domains interface afterward. No domain or DNS change has been configured here. Once the final address is chosen, add site_url to mkdocs.yml for canonical URLs and the sitemap.
+The companion is live at https://learningllms.kantarcise.com/. The user configured the custom domain in Cloudflare Pages. `site_url` in `mkdocs.yml` uses this address for canonical URLs and the sitemap.
 
 ## References
 

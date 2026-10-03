@@ -47,12 +47,12 @@ As of 2026-10-03:
 - Local Git repository: /home/sezai/repositories/learning-llms, branch main.
 - Public GitHub repository created: https://github.com/kantarcise/learning-llms. The companion is published on main.
 - Cloudflare is the user's chosen hosting provider. Do not substitute Sites hosting.
-- Cloudflare build command: python -m pip install -r requirements.txt && python -m mkdocs build --strict. Output directory: site. Production branch: main. Python version: 3.12.10.
+- User confirmed working Cloudflare build command: mkdocs build. Output directory: site. Production branch: main. Python version: 3.12.10.
 - Python project management uses uv. pyproject.toml declares dependencies, uv.lock locks them, and builds run uv run --locked python -m mkdocs build --strict directly.
 - GitHub Actions configuration checks documentation builds on pushes to main and pull requests.
 - Local Markdown links and navigation targets were checked. No build wrapper script is needed.
 - Strict documentation build passed using uv, Python 3.12.10, and pinned Material 9.6.14. GitHub Actions also checks the build.
 - GitHub CLI authentication was refreshed and verified for kantarcise on 2026-10-03.
-- Cloudflare Pages Git integration is connected. The first build failed during automatic pip install .; set SKIP_DEPENDENCY_INSTALL=1 in production and preview so the explicit pip build command manages dependencies. A retry installed uv but failed because its executable was absent from PATH; deployment now uses pip and MkDocs directly, while local work and CI keep uv. Successful live deployment and custom domain remain unverified. No API tokens are required in repository files.
+- Cloudflare Pages is live at https://learningllms.kantarcise.com/ with a user-configured custom domain. HTTPS home page was independently fetched and contained the site title, chapter navigation, and search markup. Successful build dependency-install settings have not been inspected.
 
-Next task: connect the public GitHub repository to Cloudflare Pages using DEPLOYMENT.md. Keep chapter scaffold status honest and update this status section as work proceeds.
+Keep chapter scaffold status honest. Local work and CI use uv; Cloudflare uses the working MkDocs build configuration.
