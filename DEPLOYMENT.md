@@ -11,7 +11,7 @@ After the repository is on GitHub, create a Cloudflare **Pages** project with Gi
 | Production branch | main |
 | Framework preset | None |
 | Root directory | Repository root (leave blank) |
-| Build command | bash build.sh |
+| Build command | `python -m pip install uv==0.12.13 && uv run --locked python -m mkdocs build --strict` |
 | Build output directory | site |
 | Python | 3.12.10, specified by .python-version |
 
@@ -25,7 +25,7 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
 
 ~~~bash
 uv sync --locked
-bash build.sh
+uv run --locked python -m mkdocs build --strict
 ~~~
 
 For local editing:
@@ -54,4 +54,4 @@ The first deployment can use the pages.dev address Cloudflare assigns. Add your 
 - [Build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/)
 - [Python version configuration](https://developers.cloudflare.com/pages/configuration/build-image/)
 
-Dependencies are declared in `pyproject.toml` and locked in `uv.lock`. The build script installs pinned uv if the hosting environment does not provide it.
+Dependencies are declared in `pyproject.toml` and locked in `uv.lock`. The Cloudflare build command installs pinned uv before building. Locally and in GitHub Actions, uv is already installed.

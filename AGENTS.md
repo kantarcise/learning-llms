@@ -47,10 +47,10 @@ As of 2026-10-03:
 - Local Git repository: /home/sezai/repositories/learning-llms, branch main.
 - Public GitHub repository created: https://github.com/kantarcise/learning-llms. The companion is published on main.
 - Cloudflare is the user's chosen hosting provider. Do not substitute Sites hosting.
-- Build command: bash build.sh. Output directory: site. Production branch: main. Python version: 3.12.10.
-- Python project management uses uv. pyproject.toml declares dependencies, uv.lock locks them, and build.sh runs uv run --locked python -m mkdocs build --strict.
+- Cloudflare build command: python -m pip install uv==0.12.13 && uv run --locked python -m mkdocs build --strict. Output directory: site. Production branch: main. Python version: 3.12.10.
+- Python project management uses uv. pyproject.toml declares dependencies, uv.lock locks them, and builds run uv run --locked python -m mkdocs build --strict directly.
 - GitHub Actions configuration checks documentation builds on pushes to main and pull requests.
-- Local Markdown links and navigation targets were checked, and build.sh passed bash syntax validation.
+- Local Markdown links and navigation targets were checked. No build wrapper script is needed.
 - Strict documentation build passed using uv, Python 3.12.10, and pinned Material 9.6.14. GitHub Actions also checks the build.
 - GitHub CLI authentication was refreshed and verified for kantarcise on 2026-10-03.
 - Cloudflare account connection, Git integration, custom domain, and live deployment have not been configured. No API tokens are required in repository files for the intended Git integration.
