@@ -11,9 +11,11 @@ After the repository is on GitHub, create a Cloudflare **Pages** project with Gi
 | Production branch | main |
 | Framework preset | None |
 | Root directory | Repository root (leave blank) |
-| Build command | `python -m pip install uv==0.12.13 && uv run --locked python -m mkdocs build --strict` |
+| Build command | `python -m pip install -r requirements.txt && python -m mkdocs build --strict` |
 | Build output directory | site |
 | Python | 3.12.10, specified by .python-version |
+
+Set `SKIP_DEPENDENCY_INSTALL=1` for production and preview. This disables Cloudflare’s automatic `pip install .` step; the build command installs dependencies from requirements.txt instead. This repository is a documentation project, not an installable Python package.
 
 Apply the same settings to preview builds. If your dashboard requires an explicit runtime override, set PYTHON_VERSION to 3.12.10 for production and preview.
 
@@ -54,4 +56,4 @@ The first deployment can use the pages.dev address Cloudflare assigns. Add your 
 - [Build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/)
 - [Python version configuration](https://developers.cloudflare.com/pages/configuration/build-image/)
 
-Dependencies are declared in `pyproject.toml` and locked in `uv.lock`. The Cloudflare build command installs pinned uv before building. Locally and in GitHub Actions, uv is already installed.
+Local work and GitHub Actions use uv. Cloudflare uses pip and MkDocs directly. requirements.txt is exported from uv.lock; after dependency changes, regenerate it with `uv export --locked --no-dev --no-hashes --no-emit-project --format requirements-txt --output-file requirements.txt`.
