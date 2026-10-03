@@ -1,0 +1,27 @@
+site_name: Learning LLMs From Scratch
+docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+nav:
+  - Home: index.md
+  - Step Zero: 00-step-zero.md
+  - The Book:
+      - 'Chapter 1 - Understanding Large Language Models': chapters/01-understanding-large-language-models.md
+      - 'Chapter 2 - Working with Text Data': chapters/02-working-with-text-data.md
+      - 'Chapter 3 - Coding Attention Mechanisms': chapters/03-coding-attention-mechanisms.md
+      - 'Chapter 4 - Implementing a GPT Model from Scratch': chapters/04-implementing-a-gpt-model.md
+      - 'Chapter 5 - Pretraining on Unlabeled Data': chapters/05-pretraining-on-unlabeled-data.md
+      - 'Chapter 6 - Finetuning for Text Classification': chapters/06-finetuning-for-text-classification.md
+      - 'Chapter 7 - Finetuning to Follow Instructions': chapters/07-finetuning-to-follow-instructions.md
+  - Appendices:
+      - Introduction to PyTorch: appendices/a-pytorch.md
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
