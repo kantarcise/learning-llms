@@ -2,6 +2,8 @@
 
 Goal: establish a baseline and get comfortable reasoning about tensors before the book arrives. Budget: six hours. No GPU is needed.
 
+[First conversation: tokens, model parameters, context, and generation](preparation/first-conversation.md) records our preparation discussion and where to resume.
+
 ## 1. Baseline — one hour
 
 Write from memory. Uncertainty is useful evidence; leave gaps visible.

@@ -2,7 +2,7 @@
 
 | Reading | Notes | Status |
 | --- | --- | --- |
-| Preparation | [Step Zero](00-step-zero.md) | Not started |
+| Preparation | [Step Zero](00-step-zero.md); [conversation and handoff](../docs/preparation/first-conversation.md) | Discussion in progress; exercises not completed |
 | Chapter 1 | Create notes when reading begins | Not started |
 | Chapter 2 | Create notes when reading begins | Not started |
 | Chapter 3 | Create notes when reading begins | Not started |

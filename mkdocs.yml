@@ -11,6 +11,7 @@ theme:
 nav:
   - Home: index.md
   - Step Zero: 00-step-zero.md
+  - Preparation conversation: preparation/first-conversation.md
   - The Book:
       - 'Chapter 1 - Understanding Large Language Models': chapters/01-understanding-large-language-models.md
       - 'Chapter 2 - Working with Text Data': chapters/02-working-with-text-data.md
