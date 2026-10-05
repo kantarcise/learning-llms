@@ -1,14 +1,16 @@
 # From tokens to next-token predictions
 
-Conversation notes and handoff, October 3–4, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
+Conversation notes and handoff, October 3–5, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
 
 ## Start here on the other computer
 
-We stopped after Sezai explained that the model is trained to predict the ending token too: “OH that makes sense, we train and predict end token too.”
+We stopped during the first worked Q/K/V attention example. Sezai correctly identified WQ, WK, and WV as learned weights and identified `money` as receiving more attention because its query–key score was higher. The transition from Q/K scores to mixing V vectors was too quick: Sezai pointed out, “You just added the V vector. We were working with Q and K.”
 
-Next: work through **greedy decoding versus sampling** with a tiny vocabulary and probabilities. Sampling has been explained briefly but understanding has not been checked. Then return to **why transformers need multiple blocks**, using Sezai's CS231N background. Do not jump straight into Q/K/V equations, pooling, or tensor notation without establishing the motivation.
+Next: resume at **“80% of what, and 20% of what?”** Q and K have produced mixing amounts; V supplies the vectors those amounts act on. Re-establish how V is obtained from the same incoming representations using WV, then work through the mixture slowly. The weighted sum was shown but understanding has not been checked. Do not skip straight to KV caching: first finish this attention example, then append a token and identify what can be reused. Mixture of experts remains a later tangent.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
+
+Scope matters: explicitly identify this as standard scaled dot-product attention with one head. It is a real mechanism, not the exact implementation of every model. Introduce each new quantity before using it; distinguish a numerical score from the specifically named **value vector**.
 
 ## What we are building
 
@@ -106,7 +108,7 @@ river bank: 0.5 × [0, 10] + 0.5 × [2, 2] = [1, 6]
 
 The resulting vectors differ because one of the inputs differs. Neither output is a token ID or a final prediction. Both are temporary activations. The stored `bank` row is still `[2, 2]`. Coordinates do not necessarily have individually interpretable meanings such as “finance” or “river.”
 
-Real attention calculates context-dependent mixing amounts and combines transformed value vectors, within a block that also includes residual connections, normalization, and a feedforward network. Those mechanics remain to be explained.
+Real attention calculates context-dependent mixing amounts and combines transformed value vectors, within a block that also includes residual connections, normalization, and a feedforward network. The first Q/K/V example below begins explaining the mixing; the other block components remain to be explained.
 
 ## The CNN bridge
 
@@ -123,7 +125,9 @@ LLM: token IDs → embeddings (vectors) → transformer blocks → vocabulary sc
 
 Transformer blocks include attention and feedforward networks. Updated vectors flow into later blocks. At the end, a final normalization and output projection typically turn the last position's representation into next-token logits, one per vocabulary entry; softmax converts logits to probabilities.
 
-Why multiple blocks help remains open. The earlier remark comparing token sequence length to CNN pooling was confusing and should be unpacked later. Transformer blocks generally preserve the number of token positions; they transform representations rather than acting like spatial pooling.
+In the follow-up, Sezai correctly explained that the second block receives the representations produced by the first. Successive blocks provide further learned mixing and transformation of already contextualized representations. They do not have fixed human-assigned jobs such as “grammar first, meaning second.”
+
+The model follows its configured architecture, rather than attending until it feels ready. Each block has its own learned parameters. Even one causal attention layer can access all preceding positions; depth adds successive processing, not simply access to more distant tokens. Transformer blocks generally preserve the number of token positions and the representation width at block boundaries rather than acting like spatial pooling.
 
 ## Why token pieces form proper language
 
@@ -145,7 +149,7 @@ Generation appends the selected ID directly. It does not need to decode text and
 
 Sezai demonstrated this: “if we didnt show anything while generating, model did not need to decode in between at all.”
 
-### Highest score versus sampling — next topic
+### Highest score versus sampling
 
 Greedy decoding picks the highest-scoring token. Sampling chooses according to a probability distribution, often modified by decoding settings. A brief illustrative distribution was discussed:
 
@@ -156,7 +160,23 @@ excellent: 35%
 tasty:     20%
 ```
 
-Several continuations can be appropriate. Locally highest probability does not guarantee the best complete answer. Temperature, top-k/top-p, tradeoffs, and an actual sampling walkthrough have not been covered.
+Several continuations can be appropriate. Locally highest probability does not guarantee the best complete answer. Sezai correctly connected the selected token to the later continuation: it becomes part of the context and can change all subsequent next-token distributions.
+
+For a concrete sampling walkthrough, draw a number uniformly from 0 to 1:
+
+| Token | Probability | Selection interval |
+| --- | --- | --- |
+| ` delicious` | 45% | 0 ≤ r < 0.45 |
+| ` excellent` | 35% | 0.45 ≤ r < 0.80 |
+| ` tasty` | 20% | 0.80 ≤ r < 1 |
+
+Sezai correctly selected ` excellent` for `r = 0.78`. Selecting it is not an error just because another token has greater probability. Greedy decoding would always select ` delicious` for this distribution.
+
+Temperature adjusts the distribution before sampling. Lower positive temperature concentrates probability toward the highest-scoring tokens; higher temperature spreads it more evenly. Temperature 1 leaves the distribution unchanged. This changes selection behavior, not the learned weights, and does not establish whether the model was trained well.
+
+Temperature zero is normally handled specially as greedy decoding; the usual scaling calculation divides logits by temperature and cannot directly use zero. With identical inputs, fixed weights, identical settings, and deterministic computation, greedy decoding repeats the same continuation step by step. Real serving implementations can have numerical differences, so temperature zero alone is not an absolute reproducibility guarantee. Different inputs can produce different outputs.
+
+Top-k and top-p have not been covered. Temperature was explained and discussed, but no numerical temperature exercise has been completed.
 
 ### Stopping is learned too
 
@@ -172,6 +192,124 @@ Answer: Paris.
 
 Sezai explicitly confirmed understanding that ending tokens are trained and predicted too. The model does not need a separate human-like decision process for stopping.
 
+## Width, sequence length, and model size
+
+The October 4–5 follow-up separated three quantities: number of token positions, numbers per token vector, and number of transformer blocks.
+
+One token represented by `[2, 1, 3]` has width 3 and can be written as a 1 × 3 row. Width 4,096 means 4,096 numbers per token vector. Ignoring the batch dimension, three token positions of width 3 form a 3 × 3 representation matrix:
+
+```text
+money  [1, 4, 2]
+at     [0, 1, 1]
+bank   [2, 1, 3]
+```
+
+Appending `today` adds another row, producing shape **4 × 3**, not 3 × 4. These illustrative initial embeddings (vectors) make the shape visible; subsequent contextual values can change while the width stays fixed.
+
+Sezai initially answered that appending a token would widen the vectors. After clarification he explained: “Hence, the model itself doesn't change. The width stays, but if the input changes, there's obviously gonna be more multiplication because we have more rows to multiply.”
+
+The same stored weight matrix is applied at each position. More tokens mean more computation and temporary memory, not more learned parameters. Attention also has more positions to consider. KV caching was mentioned as a way to reuse earlier attention work during generation, but its mechanics have not been covered.
+
+### A square learned matrix
+
+“Square” describes equal row and column counts, not squaring each weight. This made-up 3 × 3 matrix contains nine learned parameters:
+
+```text
+W = [1  0  2]
+    [0  1  0]
+    [1  0  1]
+
+[2, 1, 3] × W = [5, 1, 7]
+```
+
+The first output coordinate is `2×1 + 1×0 + 3×1 = 5`. The coefficients in W are stored weights; `[5, 1, 7]` is a temporary activation. A 1 × 4,096 row can similarly multiply a 4,096 × 4,096 matrix to produce another 1 × 4,096 row. Other projections can be rectangular; dimensions must be compatible.
+
+A width-3 square matrix has 9 parameters; width 6 has 36. Doubling both dimensions quadruples its parameter count. Transformer blocks contain several learned matrices, so widening representations can grow a model substantially without adding blocks. “Bigger weights” here means more learned numbers, not larger numerical values.
+
+### Published architecture examples
+
+Sezai correctly concluded that two models can have the same number of transformer blocks but very different parameter counts. Models can grow in depth, width, feedforward dimensions, or number of experts.
+
+| Llama 3 model | Parameters | Transformer blocks | Representation width |
+| --- | --- | --- | --- |
+| 8B | 8 billion | 32 | 4,096 |
+| 70B | 70 billion | 80 | 8,192 |
+| 405B | 405 billion | 126 | 16,384 |
+
+These models grow in both depth and width. More capacity can support more complex learned patterns when trained effectively; additional blocks do not guarantee a better prediction. Source: [Meta's Llama paper, Table 3](https://arxiv.org/html/2407.21783v3).
+
+DeepSeek-V3 provides a different comparison: 61 transformer layers, 671 billion total parameters, and approximately 37 billion activated per token. Its mixture-of-experts structure includes alternative feedforward networks selected by a learned router, contributing many parameters without requiring more sequential blocks than Llama 405B. Sources: [published configuration](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/inference/configs/config_671B.json), [technical report](https://arxiv.org/abs/2412.19437).
+
+Expert count is an architecture choice evaluated against quality and cost; training learns routing. Experts need not correspond to clean human labels such as “math” or “coding.” Routing inspection and disabling experts can help study their behavior. This was a brief introduction, not a worked MoE lesson. Sezai asked how expert count is chosen and how specialization is identified; these questions remain for later. Parameter-count claims alone do not reveal an undisclosed proprietary model's depth, width, or expert structure.
+
+## First Q/K/V example — current stopping point
+
+This is a toy example of **standard scaled dot-product attention**, with one head and two positions. Numbers are invented; `money` and `bank` each stand for one token position. Position encoding and the rest of the transformer block are omitted. It demonstrates a real calculation rather than claiming all models implement identical attention.
+
+Each incoming representation is projected with three learned matrices:
+
+```text
+X × WQ → queries (Q)
+X × WK → keys    (K)
+X × WV → values  (V)
+```
+
+WQ, WK, and WV are stored model parameters. Q, K, and V depend on the incoming representations and are temporary activations. Sezai explicitly identified these matrices as learned weights. These are three logical projections, not the total computation of a block; implementations can fuse them into one larger operation.
+
+Queries and keys determine mixing amounts. Values supply the vectors to mix. These are learned roles, not manually assigned coordinate meanings.
+
+### Calculate the scores at bank
+
+Assume the projections have already produced:
+
+| Position | Query | Key | Value |
+| --- | --- | --- | --- |
+| `money` | Not needed for this output | `[1, 0]` | `[10, 0]` |
+| `bank` | `[2, 0]` | `[0, 1]` | `[2, 2]` |
+
+We use the query at `bank` to score both keys. A causal position can attend to itself and preceding positions, so both are accessible here.
+
+```text
+Q_bank · K_money = 2×1 + 0×0 = 2
+Q_bank · K_bank  = 2×0 + 0×1 = 0
+```
+
+Sezai correctly identified `money` as receiving more attention. A higher **query–key score** is distinct from a larger **value vector**.
+
+Standard attention scales by the square root of the key width, here √2, and applies softmax:
+
+```text
+Raw scores:    [2, 0]
+Scaled scores: [1.414…, 0]
+Mixing weights after softmax: approximately [0.80, 0.20]
+```
+
+The softmax outputs sum to 1. Future positions would be masked before softmax. Calculating `money`'s output would exclude the later `bank` position. A separate softmax result is calculated for each query position.
+
+### Why introduce V?
+
+Q and K have answered **how much weight each position receives**. They have not yet supplied the new contextual vector. “80% of what, and 20% of what?” is the bridge to V.
+
+V comes from the same incoming representations through its own learned projection, WV. With the assumed values above, the next calculation is:
+
+```text
+0.80 × V_money + 0.20 × V_bank
+= 0.80 × [10, 0] + 0.20 × [2, 2]
+≈ [8.4, 0.4]
+```
+
+This uses rounded mixing weights. It mixes both positions rather than selecting only the highest-scoring one. The output is an attention activation at `bank`, not a next-token prediction, an updated model weight, or the complete block output.
+
+The assistant showed this sum before the role of V was sufficiently established. Sezai stopped the explanation, and the discussion returned to why V is needed. **Do not mark understanding of the weighted sum as confirmed.** Resume at that transition and check understanding before advancing.
+
+### What varies across attention implementations?
+
+Sezai asked whether the example applies to every model. The convolution analogy was used to clarify scope: learning a 3 × 3 convolution establishes an operation without covering every kernel, stride, or grouped variant.
+
+Multi-head attention combines several heads; grouped-query attention shares keys and values among query heads; sliding-window attention restricts accessible positions; cross-attention takes queries from one sequence and keys/values from another. Some other designs change the calculation more substantially. These variants were named, not worked through.
+
+The example also omits attention's output projection, residual connections, normalization, and the feedforward network. Standard GPT-style attention remains the foundation for the book companion. The next sequence is: finish Q/K/V mixing, then append a token and motivate **KV caching** by identifying reusable calculations.
+
 ## Understanding checklist and remaining questions
 
 Checked items reflect Sezai's explanations or explicit confirmations, not merely topics the assistant introduced.
@@ -182,11 +320,16 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [x] The same token row can lead to different contextual vectors because surrounding inputs differ.
 - [x] Generation appends IDs without needing intermediate text decoding.
 - [x] Ending tokens are learned and predicted too.
-- [ ] Explain greedy decoding versus sampling and why either might be chosen.
-- [ ] Trace attention's actual mixing calculation beyond the illustrative average.
-- [ ] Explain why successive transformer blocks help, using a CNN comparison carefully.
-- [ ] Predict shapes as tokens are appended; earlier shape questions were interrupted, not answered.
-- [ ] Explain Q/K/V and then KV cache with a worked example.
+- [x] Explain that sampling can choose a lower-probability valid token and that the choice affects later context; select a token using the interval example.
+- [x] Identify previous-block representations as the input to the next block; recognize fixed architecture depth during prediction.
+- [x] Distinguish width from sequence length after correcting the initial shape answer; explain that additional token rows increase work without changing model parameters.
+- [x] Recognize WQ/WK/WV as learned weights and identify the higher query–key score in the toy example.
+- [ ] Independently explain temperature and why one decoding strategy might be chosen; top-k/top-p remain uncovered.
+- [ ] Finish the Q/K/V example and check understanding of weighted value mixing.
+- [ ] Work through the projections from incoming vectors and the softmax calculation; their outputs were supplied so far.
+- [ ] Explain the remaining transformer-block components and multi-head attention with examples.
+- [ ] Explain KV cache with a worked appended-token example.
+- [ ] Return to expert count, routing, and specialization after the attention fundamentals.
 - [ ] Implement and inspect a runnable tokenization/model example; only the assistant ran tiktoken so far.
 
 No chapter reading, tensor practice, daily-capacity exercise, or independent benchmark has been completed or claimed here.
