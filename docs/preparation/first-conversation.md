@@ -4,9 +4,9 @@ Conversation notes and handoff, October 3–5, 2026. The book has not arrived ye
 
 ## Start here on the other computer
 
-We stopped during the first worked Q/K/V attention example. Sezai correctly identified WQ, WK, and WV as learned weights and identified `money` as receiving more attention because its query–key score was higher. The transition from Q/K scores to mixing V vectors was too quick: Sezai pointed out, “You just added the V vector. We were working with Q and K.”
+We stopped for sleep after the October 5 evening discussion. Resume with the **combined “money at bank” example below**, connecting embedding lookup, Q/K/V projections, attention mixing, and Llama's representation width and block count. Sezai said he could follow the attention arithmetic, but needed the connection between initial embeddings (vectors), learned projection matrices, and temporary contextual representations. The combined example was presented; understanding has not yet been checked.
 
-Next: resume at **“80% of what, and 20% of what?”** Q and K have produced mixing amounts; V supplies the vectors those amounts act on. Re-establish how V is obtained from the same incoming representations using WV, then work through the mixture slowly. The weighted sum was shown but understanding has not been checked. Do not skip straight to KV caching: first finish this attention example, then append a token and identify what can be reused. Mixture of experts remains a later tangent.
+Next: stay with that single example and ask Sezai to identify which quantities are stored parameters and which are calculated activations. Revisit a projection and the value mixture as needed. Keep training versus inference explicit: training can update the embedding table and WQ/WK/WV; ordinary inference uses them without updating them. Do not advance to KV caching until this connection is clear. Mixture of experts remains a later tangent.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -242,7 +242,7 @@ DeepSeek-V3 provides a different comparison: 61 transformer layers, 671 billion 
 
 Expert count is an architecture choice evaluated against quality and cost; training learns routing. Experts need not correspond to clean human labels such as “math” or “coding.” Routing inspection and disabling experts can help study their behavior. This was a brief introduction, not a worked MoE lesson. Sezai asked how expert count is chosen and how specialization is identified; these questions remain for later. Parameter-count claims alone do not reveal an undisclosed proprietary model's depth, width, or expert structure.
 
-## First Q/K/V example — current stopping point
+## First Q/K/V example
 
 This is a toy example of **standard scaled dot-product attention**, with one head and two positions. Numbers are invented; `money` and `bank` each stand for one token position. Position encoding and the rest of the transformer block are omitted. It demonstrates a real calculation rather than claiming all models implement identical attention.
 
@@ -300,7 +300,7 @@ V comes from the same incoming representations through its own learned projectio
 
 This uses rounded mixing weights. It mixes both positions rather than selecting only the highest-scoring one. The output is an attention activation at `bank`, not a next-token prediction, an updated model weight, or the complete block output.
 
-The assistant showed this sum before the role of V was sufficiently established. Sezai stopped the explanation, and the discussion returned to why V is needed. **Do not mark understanding of the weighted sum as confirmed.** Resume at that transition and check understanding before advancing.
+The assistant initially showed this sum before the role of V was sufficiently established. Sezai stopped the explanation, and the discussion returned to why V is needed. In the evening, the calculation was repeated from Q/K scores through scaling, softmax, and value mixing. Sezai then confirmed he could follow the calculations, while raising a different question: how Q/K/V relate to the original embeddings (vectors).
 
 ### What varies across attention implementations?
 
@@ -309,6 +309,100 @@ Sezai asked whether the example applies to every model. The convolution analogy 
 Multi-head attention combines several heads; grouped-query attention shares keys and values among query heads; sliding-window attention restricts accessible positions; cross-attention takes queries from one sequence and keys/values from another. Some other designs change the calculation more substantially. These variants were named, not worked through.
 
 The example also omits attention's output projection, residual connections, normalization, and the feedforward network. Standard GPT-style attention remains the foundation for the book companion. The next sequence is: finish Q/K/V mixing, then append a token and motivate **KV caching** by identifying reusable calculations.
+
+## Evening follow-up: connect embeddings (vectors) to attention
+
+Sezai recognized softmax from CNNs. It is the same mathematical operation, but the interpretation differs: a classifier can use it for class probabilities; attention uses it for mixing weights over accessible positions. For the earlier two-position example, the softmax calculation was made explicit:
+
+```text
+exp(1.414…) ≈ 4.113; exp(0) = 1
+money weight ≈ 4.113 / 5.113 ≈ 0.804
+bank weight  ≈ 1 / 5.113 ≈ 0.196
+```
+
+The key remaining question was whether initial embeddings (vectors) are themselves queries, keys, or values. They are **incoming representations from which Q, K, and V are calculated**, not three names for the same stored embedding row. Later blocks project the previous block's updated representations using their own learned matrices. Normalization and position handling were acknowledged but not worked through.
+
+### Training changes parameters; inference calculates activations
+
+The phrase “embeddings change” had blurred two meanings. The clarification was explicit:
+
+| Stored parameters learned during training | Temporary results calculated for an input |
+| --- | --- |
+| Embedding table | Input rows retrieved from the table |
+| WQ, WK, WV | Q, K, V vectors |
+| Other learned matrices | Attention outputs and contextual representations |
+
+For the same token ID, the stored `bank` embedding row stays the same during ordinary inference. Different preceding inputs can produce different contextual representations without overwriting that row.
+
+Training performs a forward calculation, evaluates loss against target tokens, backpropagates, and uses an optimizer to update learned parameters. Both the embedding table and WQ/WK/WV can be updated. Ordinary inference performs the forward calculation and token selection without those learning steps. Sezai said this distinction helped; an independent explanation has not yet been checked.
+
+Appending a token adds a position rather than modifying model weights. In a causal transformer, earlier positions cannot attend to the appended future position, so their representations do not acquire that new information. The newly appended position can attend to its preceding context. This corrects the earlier vague suggestion that all existing vectors change whenever a token is appended.
+
+### Combined example: money at bank — resume here
+
+Assume three token IDs for `money at bank`. This is an illustrative tokenizer split, not a verified encoding result. For Llama 8B's published width, lookup retrieves three rows containing 4,096 learned numbers each: **3 × 4,096**, ignoring the batch dimension.
+
+Shrink the width to **2** to make every number visible. Our made-up embedding table supplies:
+
+```text
+money → [10, 0]
+at    → [ 0, 1]
+bank  → [ 2, 1]
+
+Input representation matrix X: 3 × 2
+```
+
+These three input rows are retrieved from stored learned parameters. Use these invented projection matrices:
+
+```text
+WQ = [1  0]    WK = [0.1  0]    WV = [1  1]
+     [0  0]         [0    1]         [0  0]
+```
+
+The same matrices process every row:
+
+| Position | Incoming x | Q = x × WQ | K = x × WK | V = x × WV |
+| --- | --- | --- | --- | --- |
+| `money` | `[10, 0]` | `[10, 0]` | `[1, 0]` | `[10, 10]` |
+| `at` | `[0, 1]` | `[0, 0]` | `[0, 1]` | `[0, 0]` |
+| `bank` | `[2, 1]` | `[2, 0]` | `[0.2, 1]` | `[2, 2]` |
+
+This is a **new, consistent example** starting from incoming vectors and shared projection matrices. Its outputs differ from the earlier example, which supplied Q/K/V directly. Do not silently interchange the two examples.
+
+At `bank`, use its query `[2, 0]` against the three accessible keys:
+
+```text
+money: [2, 0] · [1,   0] = 2
+at:    [2, 0] · [0,   1] = 0
+bank:  [2, 0] · [0.2, 1] = 0.4
+```
+
+Divide by √2 and apply softmax. In position order `[money, at, bank]`, weights are approximately `[0.639, 0.155, 0.206]`. Using the rounded amounts from the conversation:
+
+```text
+0.64 × [10, 10] + 0.15 × [0, 0] + 0.21 × [2, 2]
+≈ [6.82, 6.82]
+```
+
+That is the approximate attention output at `bank`, not a replacement for its stored embedding row `[2, 1]`. It is not the full transformer-block output. The toy matrices are deliberately simple; their coordinates have no assigned semantic labels.
+
+### Connect the toy width to Llama's blocks
+
+Our example has width 2 and one attention head. Llama 8B has representation width 4,096 and 32 transformer blocks. Its actual attention uses multiple heads; projected Q/K/V are arranged into heads and need not have identical total widths. Attention head outputs are combined and projected back to the model width.
+
+At block boundaries, the illustrative three-position sequence follows:
+
+```text
+3 × 4,096 incoming representations
+    → block 1 → 3 × 4,096 updated representations
+    → block 2 → 3 × 4,096 updated representations
+    → …
+    → block 32 → 3 × 4,096 updated representations
+```
+
+Each block has its own learned parameters. Final normalization and the vocabulary projection turn the last position's representation into next-token scores. The embedding table and learned matrices stay fixed during inference; the input rows, projections, and contextual outputs are temporary results. The published architecture source is [Meta's Llama paper, Table 3](https://arxiv.org/html/2407.21783v3).
+
+This combined example was presented immediately before Sezai stopped for sleep. **Resume here without assuming its connections have been mastered.** KV caching, multi-head mechanics, and the remaining block components still await worked examples.
 
 ## Understanding checklist and remaining questions
 
@@ -325,8 +419,9 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [x] Distinguish width from sequence length after correcting the initial shape answer; explain that additional token rows increase work without changing model parameters.
 - [x] Recognize WQ/WK/WV as learned weights and identify the higher query–key score in the toy example.
 - [ ] Independently explain temperature and why one decoding strategy might be chosen; top-k/top-p remain uncovered.
-- [ ] Finish the Q/K/V example and check understanding of weighted value mixing.
-- [ ] Work through the projections from incoming vectors and the softmax calculation; their outputs were supplied so far.
+- [x] Follow the supplied two-position query–key scores, scaling, softmax, and weighted-value arithmetic; explicitly confirmed in the evening.
+- [ ] Independently trace the combined three-position example from incoming vectors through projections and mixing; the calculations have been shown but not checked.
+- [ ] Explain stored embeddings and projection matrices versus temporary Q/K/V and contextual outputs, and distinguish training updates from inference calculations; clarification helped, but independent understanding remains to be checked.
 - [ ] Explain the remaining transformer-block components and multi-head attention with examples.
 - [ ] Explain KV cache with a worked appended-token example.
 - [ ] Return to expert count, routing, and specialization after the attention fundamentals.
