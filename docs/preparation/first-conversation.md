@@ -1,12 +1,12 @@
 # From tokens to next-token predictions
 
-Conversation notes and handoff, October 3–5, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
+Conversation notes and handoff, October 3–6, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
 
 ## Start here on the other computer
 
-We stopped for sleep after the October 5 evening discussion. Resume with the **combined “money at bank” example below**, connecting embedding lookup, Q/K/V projections, attention mixing, and Llama's representation width and block count. Sezai said he could follow the attention arithmetic, but needed the connection between initial embeddings (vectors), learned projection matrices, and temporary contextual representations. The combined example was presented; understanding has not yet been checked.
+We stopped after the October 6 morning discussion of the **combined “money at bank” example below**. Sezai explained that the toy token vectors have two numbers and that the incoming vector is multiplied by learned matrices. He connected WQ/WK/WV to the attention block's learned parameters. V projections were revisited, and Q_bank = `[2, 0]` was shown. The next calculation is **the keys**, using the existing WK; do not restart with a different example.
 
-Next: stay with that single example and ask Sezai to identify which quantities are stored parameters and which are calculated activations. Revisit a projection and the value mixture as needed. Keep training versus inference explicit: training can update the embedding table and WQ/WK/WV; ordinary inference uses them without updating them. Do not advance to KV caching until this connection is clear. Mixture of experts remains a later tangent.
+Next: calculate K_money, K_at, and K_bank using WK = `[[0.1, 0], [0, 1]]`. Then compare Q_bank with those keys, scale and apply softmax, and return to mixing the already calculated value vectors. Check understanding before advancing. The three projections independently use the same incoming vector; they are not chained WQ → WK → WV. Later blocks use updated representations and their own matrices. Keep training versus inference explicit. KV caching and mixture of experts remain later topics.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -402,7 +402,41 @@ At block boundaries, the illustrative three-position sequence follows:
 
 Each block has its own learned parameters. Final normalization and the vocabulary projection turn the last position's representation into next-token scores. The embedding table and learned matrices stay fixed during inference; the input rows, projections, and contextual outputs are temporary results. The published architecture source is [Meta's Llama paper, Table 3](https://arxiv.org/html/2407.21783v3).
 
-This combined example was presented immediately before Sezai stopped for sleep. **Resume here without assuming its connections have been mastered.** KV caching, multi-head mechanics, and the remaining block components still await worked examples.
+This combined example was first presented before Sezai stopped for sleep on October 5. The October 6 morning follow-up below revisited its projections. KV caching, multi-head mechanics, and the remaining block components still await worked examples.
+
+## October 6 morning: value projections and the query
+
+We stayed with the same width-2 example rather than introducing new numbers. Sezai confirmed that each toy incoming token vector has two numbers and described V_bank as the result of multiplying the incoming vector by a weight matrix learned through training.
+
+The value calculations were made explicit using the existing WV:
+
+```text
+WV = [1  1]
+     [0  0]
+
+V_bank  = [2, 1]  × WV = [2, 2]
+V_money = [10, 0] × WV = [10, 10]
+V_at    = [0, 1]  × WV = [0, 0]
+```
+
+When asked to calculate V_at, Sezai initially answered “one zero.” After showing that each output coordinate uses a column of WV, he corrected the result to `[0, 0]` and identified the mistake as matrix multiplication. Preserve the corrected result without claiming independent mastery of all projections.
+
+We then calculated the query at bank:
+
+```text
+WQ = [1  0]
+     [0  0]
+
+Q_bank = [2, 1] × WQ
+       = [2×1 + 1×0, 2×0 + 1×0]
+       = [2, 0]
+```
+
+Sezai said: “I think I understand that we are using the initial embedding to multiply with every matrix we have so far.” He also identified WV/WQ/WK as learned parameters within attention. The clarification was that the transformer block contains several weight matrices and other operations; it is not itself a single weight. Q/K/V are three separate projections of the same incoming representation, not sequential transformations of one another.
+
+The first block receives embedding-based representations; later blocks receive updated representations from the preceding block and calculate their own Q/K/V. Normalization and position handling remain omitted from the toy arithmetic. Stored embeddings and matrices remain fixed during ordinary inference; calculated vectors remain separate activations.
+
+**Stopping point:** the V vectors are available and Q_bank has been shown. Next, calculate all three keys with the existing WK, then continue the scores and mixture. The full three-position attention calculation has not yet been independently traced by Sezai.
 
 ## Understanding checklist and remaining questions
 
@@ -420,6 +454,7 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [x] Recognize WQ/WK/WV as learned weights and identify the higher query–key score in the toy example.
 - [ ] Independently explain temperature and why one decoding strategy might be chosen; top-k/top-p remain uncovered.
 - [x] Follow the supplied two-position query–key scores, scaling, softmax, and weighted-value arithmetic; explicitly confirmed in the evening.
+- [x] Explain that the toy width is two and that incoming vectors multiply learned projection matrices; correct V_at to `[0, 0]` after the column-wise calculation was shown.
 - [ ] Independently trace the combined three-position example from incoming vectors through projections and mixing; the calculations have been shown but not checked.
 - [ ] Explain stored embeddings and projection matrices versus temporary Q/K/V and contextual outputs, and distinguish training updates from inference calculations; clarification helped, but independent understanding remains to be checked.
 - [ ] Explain the remaining transformer-block components and multi-head attention with examples.
