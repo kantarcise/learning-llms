@@ -4,11 +4,13 @@ Conversation notes and handoff, October 3–6, 2026. The book has not arrived ye
 
 ## Start here on the other computer
 
-We stopped after the October 6 morning discussion of the **combined “money at bank” example below**. Sezai explained that the toy token vectors have two numbers and that the incoming vector is multiplied by learned matrices. He connected WQ/WK/WV to the attention block's learned parameters. V projections were revisited, and Q_bank = `[2, 0]` was shown. The next calculation is **the keys**, using the existing WK; do not restart with a different example.
+We stopped after introducing **LayerNorm** on October 6. Sezai has now explained the full toy attention flow himself: Q/K/V projections, query–key dot products, scaling and softmax, then a weighted sum of value vectors. Output projection and the first residual addition were introduced next, followed by a GPT-style block diagram and a first LayerNorm calculation. Normalization is the current topic; understanding of it has not yet been checked.
 
-Next: calculate K_money, K_at, and K_bank using WK = `[[0.1, 0], [0, 1]]`. Then compare Q_bank with those keys, scale and apply softmax, and return to mixing the already calculated value vectors. Check understanding before advancing. The three projections independently use the same incoming vector; they are not chained WQ → WK → WV. Later blocks use updated representations and their own matrices. Keep training versus inference explicit. KV caching and mixture of experts remain later topics.
+Next: resume the LayerNorm example and ask whether each token vector is normalized separately or one mean is computed across all token positions. Distinguish calculated mean/variance from learned scale/shift. Then revisit how the normalized vector feeds Q/K/V; inserting normalization changes the old toy numbers. Feedforward networks, the second residual addition, multi-head mechanics, KV caching, and experts still await explanation.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
+
+Sezai explicitly requested emojis in explanations and notes: learning is tough enough, and he enjoys using them. Use a few helpful markers such as 🧩, 🌱, and 🎉 while keeping the math readable.
 
 Scope matters: explicitly identify this as standard scaled dot-product attention with one head. It is a real mechanism, not the exact implementation of every model. Introduce each new quantity before using it; distinguish a numerical score from the specifically named **value vector**.
 
@@ -438,6 +440,70 @@ The first block receives embedding-based representations; later blocks receive u
 
 **Stopping point:** the V vectors are available and Q_bank has been shown. Next, calculate all three keys with the existing WK, then continue the scores and mixture. The full three-position attention calculation has not yet been independently traced by Sezai.
 
+## October 6 continuation: attention connected, then normalization 🌱
+
+We calculated the keys with the existing WK. Sezai initially gave K_bank as `[0.2, 0]`, then corrected it to `[0.2, 1]` after checking the second column. Q_bank = `[2, 0]` was revisited at his request. He connected per-position Q/K/V calculations to the incoming embeddings (vectors) and learned matrices; the clarification was that the matrices stay fixed during inference and are shared across positions within a layer.
+
+The combined example then continued with scores `[2, 0, 0.4]`, scaled scores approximately `[1.414, 0, 0.283]`, and softmax weights approximately `[0.639, 0.155, 0.206]`. Using these rounded weights gives attention output `[6.802, 6.802]`. The earlier `[6.82, 6.82]` used more coarsely rounded weights; this is a rounding difference, not a different mechanism.
+
+Sezai explained the flow in his own words and explicitly said the final sum adds value vectors multiplied by mixing amounts. Two refinements were made: attention is calculated at a token position, and scaling precedes softmax. This is demonstrated understanding of the attention calculation, not completion of a full transformer implementation. Sezai described it as a point to celebrate 🎉.
+
+### Output projection and the first residual addition 🧩
+
+Attention output is multiplied by another learned matrix, WO. With multiple heads, this projection transforms the combined head outputs back to the model's representation width. It is distinct from the final vocabulary projection after the entire stack.
+
+For the toy example we assumed identity WO:
+
+```text
+WO = [1  0]
+     [0  1]
+
+[6.802, 6.802] × WO = [6.802, 6.802]
+```
+
+The residual addition then produces:
+
+```text
+Incoming bank vector + projected attention output
+= [2, 1] + [6.802, 6.802]
+= [8.802, 7.802]
+```
+
+Sezai remembered residual connections from ResNet and correctly identified this result under the identity-projection assumption. A learned WO generally changes the output. The residual path carries the incoming representation forward and helps gradients flow during training.
+
+A common GPT-style pre-normalization block was drawn, marking attention as covered, output projection/residuals as introduced, and normalization/feedforward as remaining:
+
+```text
+x → normalization → attention → WO → add x → y
+y → normalization → feedforward network → add y → block output
+```
+
+This is a specific common architecture, not a claim that every transformer orders operations identically. Multi-head mechanics and the feedforward network have not been worked through.
+
+### First LayerNorm example — resume here 🌱
+
+LayerNorm operates across coordinates of each token's vector separately; it does not mix token positions. For `bank = [2, 1]`:
+
+```text
+Mean = (2 + 1) / 2 = 1.5
+Centered vector = [0.5, -0.5]
+Variance = (0.5² + (-0.5)²) / 2 = 0.25
+Standard deviation = √0.25 = 0.5
+Standardized vector = [1, -1]
+```
+
+Actual LayerNorm divides by `sqrt(variance + epsilon)` to avoid division by zero, then applies learned per-coordinate scale and shift. With scale `[1, 1]` and shift `[0, 0]`, the result is approximately `[1, -1]`. Mean and variance are calculated from current inputs during inference; scale and shift are learned model parameters.
+
+Normalization controls numerical scale and helps training stability. In this pre-normalization architecture it precedes Q/K/V projection. Our original toy attention deliberately omitted it: inserting LayerNorm would change Q/K/V, so the previous attention and residual numbers cannot simply be reused unchanged.
+
+The unanswered check was: **for “money at bank,” does LayerNorm normalize each token vector separately, or use one mean across all three tokens?** Continue here. Do not mark LayerNorm understood merely because it was explained.
+
+### How preparation relates to the book 📖
+
+Sezai asked whether we will revisit this when the book arrives. Yes: preparation supplies a mental map; book reading and runnable PyTorch implementations remain the main path. Chapter 2 covers text data and embeddings, Chapter 3 attention, Chapter 4 the GPT architecture, and Chapter 5 training and decoding topics. See the [author's chapter outline and code](https://github.com/rasbt/LLMs-from-scratch).
+
+We will connect hand calculations to runnable tensors and inspect shapes, revisiting unclear ideas rather than treating preparation as completed chapter work. Llama size comparisons and experts are supporting tangents. Understanding the full transformer is not a prerequisite to starting the book.
+
 ## Understanding checklist and remaining questions
 
 Checked items reflect Sezai's explanations or explicit confirmations, not merely topics the assistant introduced.
@@ -455,9 +521,11 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [ ] Independently explain temperature and why one decoding strategy might be chosen; top-k/top-p remain uncovered.
 - [x] Follow the supplied two-position query–key scores, scaling, softmax, and weighted-value arithmetic; explicitly confirmed in the evening.
 - [x] Explain that the toy width is two and that incoming vectors multiply learned projection matrices; correct V_at to `[0, 0]` after the column-wise calculation was shown.
-- [ ] Independently trace the combined three-position example from incoming vectors through projections and mixing; the calculations have been shown but not checked.
+- [x] Explain the combined attention flow in his own words and identify the final result as a weighted sum of value vectors; matrix arithmetic was guided and corrections remain recorded.
 - [ ] Explain stored embeddings and projection matrices versus temporary Q/K/V and contextual outputs, and distinguish training updates from inference calculations; clarification helped, but independent understanding remains to be checked.
-- [ ] Explain the remaining transformer-block components and multi-head attention with examples.
+- [x] Recognize the ResNet residual connection and the toy residual result under identity WO.
+- [ ] Explain LayerNorm per token, including calculated statistics and learned scale/shift; the first example was supplied, not yet checked.
+- [ ] Explain the feedforward network, second residual addition, and multi-head attention with examples; independently trace a non-identity output projection.
 - [ ] Explain KV cache with a worked appended-token example.
 - [ ] Return to expert count, routing, and specialization after the attention fundamentals.
 - [ ] Implement and inspect a runnable tokenization/model example; only the assistant ran tiktoken so far.
