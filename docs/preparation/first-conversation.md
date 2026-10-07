@@ -4,9 +4,9 @@ Conversation notes and handoff, October 3–7, 2026. The book has not arrived ye
 
 ## Start here on the other computer
 
-We stopped on October 7 after completing the **width-4 “money at bank” example below**, from token lookup through first LayerNorm, Q/K/V, attention, identity output projection, first residual addition, and second LayerNorm. **The feedforward network is next.** Sezai explicitly likes this four-numbers-per-row example and wants to continue it. Keep its numbers and assumptions consistent; do not switch back to the width-2 example.
+We stopped for rest after the October 7 continuation, at **forming shifted next-token training examples and batches**. The width-4 toy block was completed through feedforward and its second residual addition, then connected to vocabulary scores, ending tokens, cross-entropy, and the familiar neural-network training loop. Keep the worked example below for reference; do not restart with different numbers.
 
-Resume with feedforward input approximately `[-1.260, 0.925, -0.698, 1.034]`. The second residual path preserves y = `[-0.936, 3.734, 0.266, 3.968]`. Work through expand → activation → shrink, then add the feedforward update to y. No feedforward matrices have been chosen or calculated yet. Sezai follows the normalization arithmetic, but the motivation for learned scale/shift remains unsettled; do not mark it mastered. Multi-head mechanics, KV caching, and experts remain later topics.
+Next: resume the unanswered check in the latest training-window example: **the input contains `today`, but can the position at `bank` attend to it?** Establish causal masking during training, then show multiple windows forming a batch and how score/target shapes produce the loss. Cross-entropy and its logit-gradient direction were discussed, but Sezai said he did not fully understand the detail; do not mark a derivation or independent calculation completed. The overall training-loop connection to CNNs is understood. No experiment has been implemented or run.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -613,6 +613,134 @@ Tiny epsilon effects are omitted in these rounded values. Keep the two paths dis
 
 **Next:** choose small, explicitly illustrative feedforward matrices, calculate expand → activation → shrink, then `block output = y + Feedforward(LayerNorm₂(y))`. No such matrices or outputs have been calculated yet. Sezai requested this exact example as the handoff and wants to continue from here.
 
+## October 7 continuation: finish the block and connect training 🔗
+
+### Feedforward expansion, GELU, and shrinking
+
+We resumed with normalized bank input z ≈ `[-1.260, 0.925, -0.698, 1.034]` and residual y = `[-0.936, 3.734, 0.266, 3.968]`. A diagram clarified that y is copied into two paths, not divided into coordinate groups: one passes through LayerNorm₂ and feedforward; the other preserves y for addition. Sezai confirmed this connection.
+
+Both LayerNorm modules used scales of ones and shifts of zeros in this example. These are equal illustrative values in **separate parameter sets**, not shared weights. Attention gathered information from preceding positions; feedforward processes each position separately with shared weights across positions.
+
+Use zero biases and this invented 4 × 6 expansion matrix:
+
+```text
+W_expand = [1  0  0  0  1  0]
+           [0  1  0  0  1  0]
+           [0  0  1  0  0  1]
+           [0  0  0  1  0  1]
+
+z × W_expand ≈ [-1.260, 0.925, -0.698, 1.034, -0.335, 0.336]
+```
+
+Sezai asked what fifth/sixth coordinates mean: they are the fifth/sixth numbers in this **one row**, each produced by the corresponding matrix column, not new tokens. The fifth column combines z₁ + z₂; the sixth combines z₃ + z₄. He confirmed how the 1 × 6 result is obtained.
+
+GELU is a fixed nonlinear activation applied coordinate-wise; it has no learned parameters here. Unlike ReLU's sharp zeroing of negative inputs, GELU smoothly adjusts values and can retain small negatives. Using rounded values:
+
+```text
+GELU output h ≈ [-0.131, 0.761, -0.169, 0.878, -0.124, 0.212]
+```
+
+Expansion → activation → shrinking all belong to feedforward. The surrounding LayerNorm and residual addition are outside it. Without a nonlinear activation, the two linear projections could be combined into one. Sezai understood the shape return but questioned the usefulness: our sparse copying matrix demonstrates mechanics, not useful trained behavior. Training learns intermediate combinations and their output combination to reduce loss; this toy network was not trained and cannot be claimed to improve predictions. A separate ReLU illustration `x → [x, -x] → [max(0,x), max(0,-x)] → |x|` showed that returning to the same width does not undo a nonlinear transformation.
+
+Choose this invented 6 × 4 shrinking matrix:
+
+```text
+W_shrink = [1  0  0  0]
+           [0  1  0  0]
+           [0  0  1  0]
+           [0  0  0  1]
+           [1  0  1  0]
+           [0  1  0  1]
+
+h × W_shrink ≈ [-0.255, 0.973, -0.293, 1.090]
+
+Block output at bank = y + feedforward update
+≈ [-1.191, 4.707, -0.027, 5.058]
+```
+
+This uses the conversation's rounded intermediates. Sezai correctly explained that this is passed to the **next transformer block** at the bank position, rather than retrieving the original embedding again. The whole sequence's updated rows pass forward. Blocks use their own learned transformations; intermediate outputs do not overwrite stored embedding rows. Sezai explicitly distinguished learned initial embeddings and transformations from calculated representations, and asked not to repeat the training/inference distinction unnecessarily.
+
+### Architecture shape trace, inspired by Sezai's CNN notes
+
+Sezai supplied his [Tiny YOLOv3 layer-shape gist](https://gist.github.com/kantarcise/6a2d4993ba1df697f75efa861a69238f) and requested a similar operation-by-operation trace. The response showed two toy transformer blocks explicitly, rather than silently jumping from first to last. Both have the following shape flow for three positions, width 4, one width-4 head, and feedforward width 6, ignoring batch:
+
+| Operation in each block | Input → output |
+| --- | --- |
+| First LayerNorm | 3 × 4 → 3 × 4 |
+| Q/K/V projections | 3 × 4 → three 3 × 4 matrices |
+| Q × K transposed | (3 × 4) × (4 × 3) → 3 × 3 |
+| Scaling, causal masking, softmax | 3 × 3 → 3 × 3 |
+| Mixing V | (3 × 3) × (3 × 4) → 3 × 4 |
+| WO and first residual addition | 3 × 4 → 3 × 4 |
+| Second LayerNorm | 3 × 4 → 3 × 4 |
+| Expansion | 3 × 4 → 3 × 6 |
+| GELU | 3 × 6 → 3 × 6 |
+| Shrinking and second residual addition | 3 × 6 → 3 × 4 |
+
+Block 1 output feeds Block 2 input; shape repetition is not value repetition. **Only bank's Block 1 numerical output was calculated.** Block 2's numerical results were not calculated or claimed. Position handling and dropout remain omitted.
+
+Final LayerNorm preserves shape 3 × 4. For next-token generation, take the last position's row (1 × 4), then multiply by a learned width × vocabulary matrix. With five vocabulary entries, (1 × 4) × (4 × 5) produces one row of five logits. WO within attention and this final vocabulary projection are different operations.
+
+### Vocabulary, next-token selection, and stopping
+
+The vocabulary is the tokenizer's complete set of token entries, not the tokens appearing in one prompt. A model scores all entries so it can continue with tokens absent from the input. Token combinations can express words not represented by a single entry; a fixed vocabulary does not make sequences predictable.
+
+Sezai connected this to CNN output classes. COCO's 80 detection categories, rather than standard ImageNet's 1,000 classification classes, matched his YOLO reference. Unlike those object categories, tokenizer entries include pieces, punctuation, and special tokens.
+
+An illustrative five-token vocabulary used IDs 0–4 for `money`, ` at`, ` bank`, ` today`, and `.`. Supplied logits `[-1, 0, -2, 2, 1]` give probabilities approximately `[0.032, 0.086, 0.012, 0.636, 0.234]`. These were not computed from Block 2. Greedy selects ID 3; sampling uses the distribution. Append the ID to `[0, 1, 2]` to get `[0, 1, 2, 3]`: length grows, width and vocabulary do not. Ending IDs are vocabulary entries scored the same way; the serving system recognizes a selected ending ID and stops. Adding `[END]` to the toy vocabulary makes six entries for the later training example.
+
+### Long prompts, caching, and chat context — brief tangents
+
+Sezai asked whether all input positions need attention outputs. During prompt processing, yes: earlier updated representations contribute to later blocks. A standard causal head has N(N+1)/2 accessible query–key pairs. GPU operations parallelize the work, but attention pair counts grow quadratically with length. KV caching reuses earlier keys/values during generation; its actual calculations remain to be worked through.
+
+He also asked whether Codex chat history keeps growing. Messages extend conversation history; caching can reuse processing of an unchanged prefix without shortening logical context. Compaction reduces active context while preserving state needed to continue; visible history and active model context need not be identical. Exact cache reuse in this desktop session was not inspected. He deferred compaction as a separate topic. References: [OpenAI prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching), [Codex prompting guide](https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide). Persisted handoff notes preserve exact examples across context changes and computers.
+
+### Training targets: the text supplies the labels
+
+Sezai connected the full forward/loss/backpropagation/optimizer loop to detector training. For next-token pretraining, target IDs come from text shifted one token ahead, rather than manual boxes/classes. Causal attention prevents the model from seeing its future target. Training typically calculates vocabulary logits and losses at every input position, not just the last generation position.
+
+For one unweighted target position, cross-entropy is `-ln(probability of the actual next token)`. Target probability 0.10 gives loss about 2.303; 0.80 gives about 0.223. PyTorch takes raw logits and target IDs, using a numerically stable log-softmax calculation. Source: [CrossEntropyLoss documentation](https://docs.pytorch.org/docs/2.14/generated/torch.nn.CrossEntropyLoss.html).
+
+With probabilities `[0.10, 0.10, 0.10, 0.20, 0.50]` and target ` today` (ID 3), loss is about 1.609. The per-logit gradient is predicted probability minus the one-hot target: `[0.10, 0.10, 0.10, -0.80, 0.50]`. Subtracting a negative gradient would increase the target logit if logits were directly adjustable. Actual backpropagation carries gradients to parameters through the network. Sezai said the direction made sense but he did not fully understand the detail; no derivation or independent calculation was checked.
+
+From-scratch training normally includes embeddings, attention/WO, feedforward matrices/biases, normalization parameters, final projection, and learned position embeddings if used. The optimizer updates trainable parameters supplied to it; not every number necessarily changes each step. Lookup gradients for untied input embeddings involve used rows; freezing, optimizer state, and weight decay affect updates. Ordinary training changes parameter values within a fixed architecture. Sezai correctly summarized the shared CNN/LLM training framework.
+
+Backpropagation was described as the dominant practical gradient-calculation method for the neural networks discussed, separate from the optimizer. [Evolution strategies](https://arxiv.org/abs/1703.03864) and [Forward-Forward](https://arxiv.org/abs/2212.13345) were brief research tangents, not mainstream alternatives adopted for this plan. Sezai wanted the standard loop kept central.
+
+### Dataset and hardware discussion — no implementation yet
+
+A trainable bigram model uses only the immediately preceding token, with a vocabulary × vocabulary score table, and can teach the loss/update loop without attention. A proposed tiny character transformer had one block, width 32, one head, feedforward width 64, and context length 32. These are proposals, not built models or measured results.
+
+Sezai reports an Apple M5 computer and access to an RTX 3090. A tiny model can start on CPU; MPS availability would need local verification before Apple GPU use. No hardware benchmark was run. Source: [PyTorch MPS documentation](https://docs.pytorch.org/docs/2.14/notes/mps.html).
+
+**Reserve The Verdict for following the book.** Sezai finds Tiny Shakespeare overused and asked for something fresher. Alternatives discussed were a narrow subset of synthetic educational text from [Cosmopedia v2 in SmolLM corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus), or explicitly fictional synthetic data-platform event logs. Neither was selected, downloaded, or generated. A small model may learn formatting/local patterns without producing useful explanations. Character targets are the actual next characters; use separate held-out text to check generalization. A short sequence can demonstrate memorization without establishing general language ability.
+
+Sezai asked about the six-hour weekly budget. October 3–7 spans five days; the assistant's rough 3–5 active-study-hour estimate was **not measured**, excludes idle/build waiting, and must not be treated as a study log. Preparation counts toward the budget; book reading, coding, and writing will share it.
+
+### Latest stopping point: training windows and batches 🌱
+
+Use the illustrative six-entry vocabulary:
+
+```text
+money at bank today . [END]
+  0    1   2    3   4   5
+
+Training sequence length: 4
+Input:  [0, 1, 2, 3]
+Target: [1, 2, 3, 4]
+```
+
+| Input position | Accessible context | Target |
+| --- | --- | --- |
+| 0 | `money` | ` at` |
+| 1 | `money at` | ` bank` |
+| 2 | `money at bank` | ` today` |
+| 3 | `money at bank today` | `.` |
+
+One example produces 4 × 6 vocabulary scores and four target IDs. Loss is calculated at all four positions. Several examples form a batch; average loss, backpropagate, then take an optimizer step. Batch shapes and window construction have only been introduced, not worked through.
+
+**Unanswered check:** the input contains `today`, but can the position at `bank` attend to it during training? Sezai stopped for rest before answering. Resume here, then build a tiny batch. Avoid jumping to implementation or claiming that the detailed cross-entropy gradient is mastered.
+
 ## Understanding checklist and remaining questions
 
 Checked items reflect Sezai's explanations or explicit confirmations, not merely topics the assistant introduced.
@@ -635,7 +763,12 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [x] Recognize the ResNet residual connection and the toy residual result under identity WO.
 - [x] Identify the pre-normalization incoming representation used by the residual path and independently calculate the width-4 bank query–key self-score of 4.
 - [ ] Explain LayerNorm per token, including calculated statistics and learned scale/shift; the first example was supplied, not yet checked.
-- [ ] Explain the feedforward network, second residual addition, and multi-head attention with examples; independently trace a non-identity output projection.
+- [x] Connect the completed toy block output to the next block's incoming representation and distinguish temporary outputs from learned embeddings/transformations.
+- [x] Understand how the expansion produces a 1 × 6 row, and connect next-token vocabulary scores to the CNN class-score analogy.
+- [x] Explain the shared forward → loss → backpropagation → optimizer training framework for CNNs and language models.
+- [ ] Revisit the usefulness of feedforward transformations beyond the illustrative sparse matrices; work through multi-head attention and a non-identity WO.
+- [ ] Independently explain cross-entropy and derive/check its logit gradient; direction was discussed, detailed understanding remains open.
+- [ ] Answer the causal-mask training-window check and work through batched input/target/score shapes.
 - [ ] Explain KV cache with a worked appended-token example.
 - [ ] Return to expert count, routing, and specialization after the attention fundamentals.
 - [ ] Implement and inspect a runnable tokenization/model example; only the assistant ran tiktoken so far.
