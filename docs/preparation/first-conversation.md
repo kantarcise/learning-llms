@@ -1,12 +1,12 @@
 # From tokens to next-token predictions
 
-Conversation notes and handoff, October 3–6, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
+Conversation notes and handoff, October 3–7, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
 
 ## Start here on the other computer
 
-We stopped after introducing **LayerNorm** on October 6. Sezai has now explained the full toy attention flow himself: Q/K/V projections, query–key dot products, scaling and softmax, then a weighted sum of value vectors. Output projection and the first residual addition were introduced next, followed by a GPT-style block diagram and a first LayerNorm calculation. Normalization is the current topic; understanding of it has not yet been checked.
+We stopped on October 7 after completing the **width-4 “money at bank” example below**, from token lookup through first LayerNorm, Q/K/V, attention, identity output projection, first residual addition, and second LayerNorm. **The feedforward network is next.** Sezai explicitly likes this four-numbers-per-row example and wants to continue it. Keep its numbers and assumptions consistent; do not switch back to the width-2 example.
 
-Next: resume the LayerNorm example and ask whether each token vector is normalized separately or one mean is computed across all token positions. Distinguish calculated mean/variance from learned scale/shift. Then revisit how the normalized vector feeds Q/K/V; inserting normalization changes the old toy numbers. Feedforward networks, the second residual addition, multi-head mechanics, KV caching, and experts still await explanation.
+Resume with feedforward input approximately `[-1.260, 0.925, -0.698, 1.034]`. The second residual path preserves y = `[-0.936, 3.734, 0.266, 3.968]`. Work through expand → activation → shrink, then add the feedforward update to y. No feedforward matrices have been chosen or calculated yet. Sezai follows the normalization arithmetic, but the motivation for learned scale/shift remains unsettled; do not mark it mastered. Multi-head mechanics, KV caching, and experts remain later topics.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -504,6 +504,115 @@ Sezai asked whether we will revisit this when the book arrives. Yes: preparation
 
 We will connect hand calculations to runnable tensors and inspect shapes, revisiting unclear ideas rather than treating preparation as completed chapter work. Llama size comparisons and experts are supporting tangents. Understanding the full transformer is not a prerequisite to starting the book.
 
+## October 7: rebuild the block with width 4 🧩
+
+Sezai asked how LayerNorm's learned scale and shift work after standardization. An illustrative standardized `[1, -1]`, scale `[2, 0.5]`, and shift `[0.1, 0.3]` produce `[2.1, -0.2]` coordinate-wise. Scale and shift are learned by backpropagation and optimizer updates, commonly initialized to ones and zeros; calculated mean/variance are input-dependent statistics. The same scale/shift vectors are shared across positions within one module. The final output need not retain zero mean and unit variance.
+
+Sezai could follow the arithmetic but remained uncertain why we normalize and then rescale. Record this motivation as open. He correctly summarized that embedding rows, WQ/WK/WV, and normalization scale/shift are learned parameters; WO was included in the recap.
+
+We introduced the feedforward pattern without doing its arithmetic: expand → nonlinear activation → shrink. The book uses GELU, while ReLU was mentioned as a familiar comparison. Residual additions were linked to ResNet. A residual vector addition requires far fewer operations than a large matrix projection; this is a workload-size comparison, not a claim that an individual GPU multiplication is dramatically slower than addition. YOLO is a detection system and ResNet an architecture that can serve as a backbone, so they are not direct alternatives.
+
+Sezai correctly explained that the first residual path bypasses normalization and attention, carrying the block's incoming representation. Later blocks carry their own incoming representations rather than repeatedly adding original embeddings. The second residual carries the result of the first addition. Both LayerNorm modules use the same recipe but have separate learned parameters. Architecture can change normalization type, placement, and count; Gemma 2's four RMSNorm modules were cited as an example, not explained in detail. Source: [Gemma 2 report, architecture section](https://arxiv.org/html/2408.00118v3).
+
+### Why the width-2 example was misleading
+
+The equal-coordinate attention update in the earlier example only changed the shared offset, which LayerNorm removes. Sezai noticed this. A separate width-4 example illustrated a pattern change that survives normalization, but he reasonably called it cherry-picked and asked to start from token lookup instead. LayerNorm does remove certain differences; it does not preserve all information. The residual path retains the unnormalized representation.
+
+The following is the complete fresh example used after that request. It replaces the earlier supplied width-4 intermediate values as the current learning example. It is simplified single-head, causal, pre-normalization attention, omitting positional information and dropout. All IDs and weights are illustrative, not measured tokenizer or trained-model outputs.
+
+### 1. Token lookup: three positions, width 4
+
+| Token | Illustrative ID | Stored embedding row |
+| --- | --- | --- |
+| `money` | 0 | `[3, 1, 3, 1]` |
+| `at` | 1 | `[1, 1, 3, 3]` |
+| `bank` | 2 | `[1, 3, 1, 3]` |
+
+The input shape is **3 × 4**, ignoring batch. Each ID retrieves a learned row without updating it during inference. Sezai confirmed this starting point was clear.
+
+### 2. First LayerNorm
+
+Each row has mean 2 and variance 1. Assume this module's learned scale is `[1, 1, 1, 1]` and shift `[0, 0, 0, 0]`. Ignoring tiny epsilon effects:
+
+```text
+money → [ 1, -1,  1, -1]
+at    → [-1, -1,  1,  1]
+bank  → [-1,  1, -1,  1]
+```
+
+These normalized rows feed the projections. The original incoming rows remain on the first residual path.
+
+### 3. Q/K/V projections
+
+Choose WQ and WK as 4 × 4 identity matrices, and WV as a diagonal matrix with diagonal `[2, 1, 1, 1]`. This deliberately simplifies the arithmetic: real WQ/WK are independently learned and generally different. Sezai questioned the identity choice; its pedagogical purpose was stated explicitly.
+
+| Position | Q | K | V |
+| --- | --- | --- | --- |
+| `money` | `[1, -1, 1, -1]` | `[1, -1, 1, -1]` | `[2, -1, 1, -1]` |
+| `at` | `[-1, -1, 1, 1]` | `[-1, -1, 1, 1]` | `[-2, -1, 1, 1]` |
+| `bank` | `[-1, 1, -1, 1]` | `[-1, 1, -1, 1]` | `[-2, 1, -1, 1]` |
+
+### 4. Scores and mixing amounts at bank
+
+Use Q_bank against all three accessible keys:
+
+```text
+money: (-1×1) + (1×-1) + (-1×1) + (1×-1) = -4
+at:    (-1×-1) + (1×-1) + (-1×1) + (1×1) = 0
+bank:  (-1×-1) + (1×1) + (-1×-1) + (1×1) = 4
+```
+
+Sezai independently answered **4** for Q_bank · K_bank. Negative raw scores are allowed. With key width 4, divide by √4 = 2, giving `[-2, 0, 2]`. Softmax gives approximately `[0.016, 0.117, 0.867]` in `[money, at, bank]` order. Here bank attends mostly to itself; attention need not favor another position.
+
+### 5. Weighted values and output projection
+
+Using those rounded weights:
+
+```text
+money: 0.016 × [2, -1, 1, -1] = [ 0.032, -0.016,  0.016, -0.016]
+at:    0.117 × [-2, -1, 1, 1] = [-0.234, -0.117,  0.117,  0.117]
+bank:  0.867 × [-2, 1, -1, 1] = [-1.734,  0.867, -0.867,  0.867]
+
+Attention output ≈ [-1.936, 0.734, -0.734, 0.968]
+```
+
+Choose identity WO explicitly, so the projected output is unchanged. Values here and below use rounded mixing amounts consistently, rather than claiming exact softmax precision.
+
+### 6. First residual addition
+
+Add the **original pre-normalization** bank input, not its standardized vector:
+
+```text
+ [ 1,     3,      1,     3    ]
++[-1.936, 0.734, -0.734, 0.968]
+= [-0.936, 3.734,  0.266, 3.968] = y
+```
+
+Sezai explicitly confirmed understanding of which vector the residual addition uses.
+
+### 7. Second LayerNorm — latest stopping point 🌱
+
+Normalize y with this separate module. Assume its own learned scale is `[1, 1, 1, 1]` and shift `[0, 0, 0, 0]`:
+
+```text
+y = [-0.936, 3.734, 0.266, 3.968]
+Mean = 1.758
+Centered = [-2.694, 1.976, -1.492, 2.210]
+Variance = 4.568094
+Standard deviation ≈ 2.137
+
+LayerNorm₂(y) ≈ [-1.260, 0.925, -0.698, 1.034]
+```
+
+Tiny epsilon effects are omitted in these rounded values. Keep the two paths distinct:
+
+| Path | Current vector |
+| --- | --- |
+| Feedforward input | `[-1.260, 0.925, -0.698, 1.034]` |
+| Second residual shortcut | y = `[-0.936, 3.734, 0.266, 3.968]` |
+
+**Next:** choose small, explicitly illustrative feedforward matrices, calculate expand → activation → shrink, then `block output = y + Feedforward(LayerNorm₂(y))`. No such matrices or outputs have been calculated yet. Sezai requested this exact example as the handoff and wants to continue from here.
+
 ## Understanding checklist and remaining questions
 
 Checked items reflect Sezai's explanations or explicit confirmations, not merely topics the assistant introduced.
@@ -524,6 +633,7 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [x] Explain the combined attention flow in his own words and identify the final result as a weighted sum of value vectors; matrix arithmetic was guided and corrections remain recorded.
 - [ ] Explain stored embeddings and projection matrices versus temporary Q/K/V and contextual outputs, and distinguish training updates from inference calculations; clarification helped, but independent understanding remains to be checked.
 - [x] Recognize the ResNet residual connection and the toy residual result under identity WO.
+- [x] Identify the pre-normalization incoming representation used by the residual path and independently calculate the width-4 bank query–key self-score of 4.
 - [ ] Explain LayerNorm per token, including calculated statistics and learned scale/shift; the first example was supplied, not yet checked.
 - [ ] Explain the feedforward network, second residual addition, and multi-head attention with examples; independently trace a non-identity output projection.
 - [ ] Explain KV cache with a worked appended-token example.
