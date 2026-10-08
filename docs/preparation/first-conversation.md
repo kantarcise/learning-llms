@@ -1,12 +1,12 @@
 # From tokens to next-token predictions
 
-Conversation notes and handoff, October 3–7, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
+Conversation notes and handoff, October 3–8, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
 
 ## Start here on the other computer
 
-We stopped for rest after the October 7 continuation, at **forming shifted next-token training examples and batches**. The width-4 toy block was completed through feedforward and its second residual addition, then connected to vocabulary scores, ending tokens, cross-entropy, and the familiar neural-network training loop. Keep the worked example below for reference; do not restart with different numbers.
+We stopped after the October 8 morning discussion of **causal masking during training**. Sezai explained that each position can attend to itself and previous positions, then identified the mechanism: replacing future-position scores makes their softmax mixing amounts zero. He also explained that the hidden future token is still the training target. The width-4 example at the middle token `at` made this connection clear; preserve it below.
 
-Next: resume the unanswered check in the latest training-window example: **the input contains `today`, but can the position at `bank` attend to it?** Establish causal masking during training, then show multiple windows forming a batch and how score/target shapes produce the loss. Cross-entropy and its logit-gradient direction were discussed, but Sezai said he did not fully understand the detail; do not mark a derivation or independent calculation completed. The overall training-loop connection to CNNs is understood. No experiment has been implemented or run.
+Next: continue **training windows and batches**. Use the established shifted input/target example, show multiple windows forming a small batch, and connect input, target, and vocabulary-score shapes to the loss. Causal masking's purpose and score-replacement mechanism are now confirmed; do not restart that lesson unless needed. Cross-entropy and its logit-gradient direction were discussed, but detailed understanding remains open. No experiment has been implemented or run.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -741,6 +741,46 @@ One example produces 4 × 6 vocabulary scores and four target IDs. Loss is calcu
 
 **Unanswered check:** the input contains `today`, but can the position at `bank` attend to it during training? Sezai stopped for rest before answering. Resume here, then build a tiny batch. Avoid jumping to implementation or claiming that the detailed cross-entropy gradient is mastered.
 
+## October 8 morning: causal masking clicked 🧩
+
+The session was deliberately short. Sezai stated the accessibility rule correctly: a token position can attend to itself and earlier positions, never upcoming ones. The initial explanation of enforcing the rule did not fully connect, so we returned to the original width-4 example rather than introducing new vectors.
+
+Previously, attention was calculated at `bank`, the last position in `money at bank`; there were no later positions to block. This time we calculated attention **at the middle position, `at`**. After the established first LayerNorm, with identity WQ and WK:
+
+```text
+Q_at    = [-1, -1,  1,  1]
+K_money = [ 1, -1,  1, -1]
+K_at    = [-1, -1,  1,  1]
+K_bank  = [-1,  1, -1,  1]
+
+Q_at · K_money = -1 + 1 + 1 - 1 = 0
+Q_at · K_at    =  1 + 1 + 1 + 1 = 4
+Q_at · K_bank  =  1 - 1 - 1 + 1 = 0
+
+Divide by √4 = 2:
+Scaled scores = [0, 2, 0]
+```
+
+Since bank follows at, replace its score before softmax:
+
+```text
+Position order: [money, at, bank]
+Before mask:    [0, 2,  0]
+After mask:     [0, 2, -∞]
+After softmax:  approximately [0.119, 0.881, 0]
+
+Attention output at at:
+0.119 × V_money + 0.881 × V_at + 0 × V_bank
+```
+
+A raw score of zero does not block a position: `exp(0) = 1`. A masked score of negative infinity gives `exp(-∞) = 0`, so the future value vector contributes nothing. The mask is a fixed positional rule, not learned parameters. It is applied at every causal attention layer, allowing positions to be processed in parallel while preserving the accessibility constraint.
+
+Sezai's explanation: “Oh, we replace a score. Which makes the mixing amount zero.” He then asked why. At the `at` position, the training task is to predict bank from `money at`; accessing bank's input representation would reveal the answer. During generation from `money at`, that next token is not yet available. Masking keeps training consistent with that constraint.
+
+Sezai then explained: “We are masking something so the model doesn't see it. But in training we actually want it to predict that token.” The clarification was that the future token is hidden from **that position's attention**, while its ID remains available to the training code as the target for computing loss. It is not removed from every use of the full training sequence.
+
+**Next:** form a small batch of shifted windows and trace the score/target shapes. The earlier unanswered masking question is resolved at the conceptual level; no masking implementation or independent softmax calculation was completed.
+
 ## Understanding checklist and remaining questions
 
 Checked items reflect Sezai's explanations or explicit confirmations, not merely topics the assistant introduced.
@@ -768,7 +808,8 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [x] Explain the shared forward → loss → backpropagation → optimizer training framework for CNNs and language models.
 - [ ] Revisit the usefulness of feedforward transformations beyond the illustrative sparse matrices; work through multi-head attention and a non-identity WO.
 - [ ] Independently explain cross-entropy and derive/check its logit gradient; direction was discussed, detailed understanding remains open.
-- [ ] Answer the causal-mask training-window check and work through batched input/target/score shapes.
+- [x] Explain causal masking's position rule, replacement of future scores before softmax, zero mixing amounts, and why the hidden next token remains the loss target.
+- [ ] Work through batched input/target/score shapes and implement causal masking; the numerical example was guided.
 - [ ] Explain KV cache with a worked appended-token example.
 - [ ] Return to expert count, routing, and specialization after the attention fundamentals.
 - [ ] Implement and inspect a runnable tokenization/model example; only the assistant ran tiktoken so far.
