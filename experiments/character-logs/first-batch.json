@@ -1,0 +1,100 @@
+{
+  "status": "Data-only fixture for inspecting inputs and targets before training.",
+  "vocabulary_rule": "Sorted distinct characters in training text; indices are token IDs.",
+  "vocabulary": [
+    "\n",
+    " ",
+    "1",
+    "=",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "y"
+  ],
+  "batch_size": 2,
+  "sequence_length": 8,
+  "input_shape": [
+    2,
+    8
+  ],
+  "target_shape": [
+    2,
+    8
+  ],
+  "expected_logits_shape": [
+    2,
+    8,
+    25
+  ],
+  "examples": [
+    {
+      "sequence_id": "train-orders",
+      "start": 0,
+      "input_text": "job=orde",
+      "target_text": "ob=order",
+      "input_ids": [
+        12,
+        17,
+        5,
+        3,
+        17,
+        19,
+        7,
+        8
+      ],
+      "target_ids": [
+        17,
+        5,
+        3,
+        17,
+        19,
+        7,
+        8,
+        19
+      ]
+    },
+    {
+      "sequence_id": "train-users",
+      "start": 0,
+      "input_text": "job=user",
+      "target_text": "ob=users",
+      "input_ids": [
+        12,
+        17,
+        5,
+        3,
+        22,
+        20,
+        8,
+        19
+      ],
+      "target_ids": [
+        17,
+        5,
+        3,
+        22,
+        20,
+        8,
+        19,
+        20
+      ]
+    }
+  ]
+}

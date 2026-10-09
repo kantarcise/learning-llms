@@ -7,3 +7,10 @@ dependencies = ["mkdocs-material==9.6.14"]
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+experiments = [
+    "matplotlib>=3.11.2",
+    "ruff>=0.16.10",
+    "torch>=2.14.1",
+]
