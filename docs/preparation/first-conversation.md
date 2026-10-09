@@ -4,9 +4,11 @@ Conversation notes and handoff, October 3–8, 2026. The book has not arrived ye
 
 ## Start here on the other computer
 
-We stopped after the October 8 morning discussion of **causal masking during training**. Sezai explained that each position can attend to itself and previous positions, then identified the mechanism: replacing future-position scores makes their softmax mixing amounts zero. He also explained that the hidden future token is still the training target. The width-4 example at the middle token `at` made this connection clear; preserve it below.
+We stopped on October 8 after moving from causal masking into **batches, validation, and our first runnable preparation experiment**. Sezai connected averaging batch gradients with a less noisy training signal, distinguished learned parameters from chosen hyperparameters, and followed the explanation of validation loss without backpropagation and overfitting. These were guided discussions; implementation understanding is still to be checked.
 
-Next: continue **training windows and batches**. Use the established shifted input/target example, show multiple windows forming a small batch, and connect input, target, and vocabulary-score shapes to the loss. Causal masking's purpose and score-replacement mechanism are now confirmed; do not restart that lesson unless needed. Cross-entropy and its logit-gradient direction were discussed, but detailed understanding remains open. No experiment has been implemented or run.
+The assistant implemented a character-level transformer using fictional job logs in `experiments/character-logs/`, with uv and an optional experiment dependency group. This work is separate from the book chapters and is carried by a stacked experiment PR. The assistant ran a ten-epoch CPU demonstration: 11,104 parameters, validation loss from 3.3809 to a best 1.9128 at epoch 9, and still-malformed generated text. Six behavior tests passed. This is an observed teaching run, not an independently completed exercise or a generalization benchmark. Weights and generated artifacts stay local; the README records results and reproduction instructions for the other computer.
+
+**Resume tomorrow here 🧩:** open the experiment README and run the inspection command. Start with `job=orde` as input and `ob=order` as target. Follow the pair through character IDs, embeddings, and vocabulary logits, one small step at a time. Then read `TransformerBlock.forward` and connect its two residual additions to the width-4 diagram. Do not assume that running code means Sezai has already understood its implementation. Cross-entropy's detailed gradient calculation, KV caching, and multi-head attention remain open.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -812,7 +814,7 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [ ] Work through batched input/target/score shapes and implement causal masking; the numerical example was guided.
 - [ ] Explain KV cache with a worked appended-token example.
 - [ ] Return to expert count, routing, and specialization after the attention fundamentals.
-- [ ] Implement and inspect a runnable tokenization/model example; only the assistant ran tiktoken so far.
+- [ ] Implement and inspect a runnable tokenization/model example; the assistant ran tiktoken and the tiny transformer demonstration; independent implementation inspection remains open.
 
 No chapter reading, tensor practice, daily-capacity exercise, or independent benchmark has been completed or claimed here.
 
