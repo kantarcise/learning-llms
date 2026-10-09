@@ -13,16 +13,21 @@ from torch.utils.data import DataLoader
 
 def loss_for(logits, targets):
     # Cross-entropy receives logits, not probabilities. One target per position.
+    # [B,T,V] -> [B*T,V], [B,T] -> [B*T]. Flattening does not mix attention.
+    # The default reduction averages the loss over all B*T targets.
     return F.cross_entropy(logits.flatten(0, 1), targets.flatten())
 
 
 @torch.no_grad()
 def evaluate(model, loader):
+    # eval() selects evaluation behavior; no_grad above disables graph building.
+    # Neither computes an optimizer update. They serve different purposes.
     model.eval()
     total_loss = 0.0
     total_targets = 0
     for inputs, targets in loader:
         count = targets.numel()
+        # Weight by target count so a smaller final batch is not overrepresented.
         total_loss += loss_for(model(inputs), targets).item() * count
         total_targets += count
     return total_loss / total_targets
@@ -34,6 +39,7 @@ def generate(model, vocabulary, prompt="job=", new_characters=120):
     ids = torch.tensor([encode(prompt, vocabulary)], dtype=torch.long)
     for _ in range(new_characters):
         context = ids[:, -model.context_length :]
+        # Use the final position to predict the next character; greedy selection.
         next_id = model(context)[:, -1].argmax(dim=-1, keepdim=True)
         ids = torch.cat((ids, next_id), dim=1)
     return decode(ids[0].tolist(), vocabulary)
@@ -96,22 +102,30 @@ def main():
     validation_data = CharacterWindows(
         validation_texts, vocabulary, config["context_length"]
     )
+    # Shuffle windows, never the character order WITHIN a window.
     training = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
     train_evaluation = DataLoader(train_data, batch_size=args.batch_size)
     validation = DataLoader(validation_data, batch_size=args.batch_size)
+    # model.parameters() includes embeddings, Q/K/V/O, both norms, and FFN.
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=args.learning_rate, weight_decay=0.01
     )
     before = generate(model, vocabulary)
     history = []
     best_validation = float("inf")
+    # Epoch 0 measures random initialization. Each later epoch visits every
+    # training window once, in shuffled batches, then evaluates fixed weights.
     for epoch in range(args.epochs + 1):
         if epoch:
             model.train()
             for inputs, targets in training:
+                # 1. Clear previous gradients (PyTorch otherwise accumulates them).
                 optimizer.zero_grad(set_to_none=True)
+                # 2. Forward pass + compare scores with known next-character IDs.
                 loss = loss_for(model(inputs), targets)
+                # 3. Backprop computes parameter gradients; weights stay unchanged.
                 loss.backward()
+                # 4. AdamW uses those gradients to change the learned parameters.
                 optimizer.step()
         # Both curves measure fixed weights over the whole respective split.
         train_loss = evaluate(model, train_evaluation)
@@ -126,6 +140,8 @@ def main():
         print(
             f"Epoch {epoch:2}: train={train_loss:.4f} validation={validation_loss:.4f}"
         )
+        # Keep the best held-out loss, not automatically the final epoch.
+        # Validation influences checkpoint selection, but receives no backprop.
         if validation_loss < best_validation:
             best_validation = validation_loss
             torch.save(
@@ -139,6 +155,7 @@ def main():
                 checkpoint,
             )
 
+    # Generate from the selected checkpoint, which may precede the last epoch.
     saved = torch.load(checkpoint, map_location="cpu", weights_only=True)
     model.load_state_dict(saved["model"])
     after = generate(model, vocabulary)

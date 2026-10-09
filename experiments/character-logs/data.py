@@ -17,6 +17,7 @@ def load_data(path=DATA_PATH):
         raise ValueError("Both training and validation sequences are required.")
     if set(train) & set(validation):
         raise ValueError("A complete sequence appears in both splits.")
+    # Fit the vocabulary on training text only; validation must not expand it.
     vocabulary = sorted(set("".join(train)))
     unknown = set("".join(validation)) - set(vocabulary)
     if unknown:
@@ -40,12 +41,16 @@ class CharacterWindows(Dataset):
         if context_length < 1:
             raise ValueError("Context length must be positive.")
         self.windows = []
+        # Each record belongs to a split BEFORE we create overlapping windows.
+        # This prevents adjacent windows from one record landing in both splits.
         for text in texts:
             ids = encode(text, vocabulary)
             for start in range(len(ids) - context_length):
                 window = torch.tensor(
                     ids[start : start + context_length + 1], dtype=torch.long
                 )
+                # Take T+1 characters: the last T are the next-character labels.
+                # Example: job=orde -> ob=order (the source slice has 9 chars).
                 self.windows.append((window[:-1], window[1:]))
         if not self.windows:
             raise ValueError("No sequences are longer than the context length.")

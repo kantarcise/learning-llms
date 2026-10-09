@@ -74,7 +74,7 @@ The assistant ran on CPU with one PyTorch thread, seed 7, learning rate 0.003, A
 | Epoch 9, best validation | 0.7870 | 1.9128 |
 | Epoch 10 | 0.6789 | 1.9296 |
 
-Loss decreased, but greedy generated logs remained malformed. One late validation increase is not enough to establish a reliable overfitting trend. The tiny, shared-template dataset is a demonstration of mechanics and limited held-out prediction, not proof of language or workflow understanding. Results may differ across software versions and hardware. Local details are in `artifacts/first-run/run.json`.
+Loss decreased, but greedy generated logs remained malformed. One late validation increase is not enough to establish a reliable overfitting trend. The tiny, shared-template dataset is a demonstration of mechanics and limited held-out prediction, not proof of language or workflow understanding. Results may differ across software versions and hardware. The small run record and plot are committed in [results/first-run/run.json](results/first-run/run.json) and [results/first-run/loss.png](results/first-run/loss.png), so both computers can inspect the same evidence. Trained weights remain local.
 
 ## Verification and next question
 
@@ -89,3 +89,25 @@ Six behavior checks cover fixture alignment, sequence boundaries, future-token i
 Resume by running `--inspect-only` and following `job=orde` → `ob=order` through IDs, embeddings, and logits, one step at a time. Then read `TransformerBlock.forward` together and connect its two residual additions to our diagram, before following the training loop. Sezai has already correctly identified `o` as the next-character target at `=` in the first inspected example; implementation understanding has not yet been checked.
 
 The implementation was written for this preparation experiment using standard PyTorch operations. References for the shared concepts: [author's GPT implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch04/01_main-chapter-code/gpt.py) and [PyTorch cross-entropy](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html).
+
+## Read the first loss plot together 📉
+
+![Training and validation loss over ten epochs](results/first-run/loss.png)
+
+Epoch 0 is the untrained model. Each following epoch makes one pass through 244 overlapping training windows, in 16 batches (15 batches of 16 and a final batch of 4). Each window supplies 32 next-character targets. After that pass, we evaluate all 244 training windows and 127 validation windows without changing weights. These curves therefore compare the same checkpoint on the two splits; the training curve is not an average of losses collected while weights were changing.
+
+Both curves decrease initially. Later, the training curve continues downward while validation improves more slowly and rises slightly at epoch 10. The growing gap is a reason to investigate overfitting. One final increase alone cannot establish a sustained trend. Saving epoch 9 selects the best observed validation loss; it does not prove the model avoids overfitting.
+
+The windows overlap heavily: 244 windows are not 244 independent log sequences. The underlying data is only four training records and two validation records, using shared templates. Tests check mechanics (including no future-token access and no validation updates), not useful generalization. Generated text is still malformed. We have not established that this dataset or architecture is sufficient for a useful model.
+
+### Practice before merging this experiment 🌱
+
+Keep this PR open while we work through these steps together:
+
+1. Inspect the first input/target pair and its tensor shapes. Explain which character each position predicts.
+2. Read one training batch: clear gradients → forward/loss → backward → optimizer update. Identify what changes at each step.
+3. Read the plot above and explain why validation has a loss without updating weights.
+4. Choose a controlled follow-up run together, changing one setting at a time. A longer run can help us observe whether the validation rise persists; it is not automatically a better model.
+5. Design a larger, more varied dataset and a meaningful held-out split before making generalization claims. Keep a separate test set untouched by checkpoint selection when we reach that stage.
+
+These are planned learning steps, not completed exercises. The added code comments explain shapes, learned weights versus temporary activations, residual paths, masking, and the training loop. We will read them in small pieces rather than treating an automated run as understanding.
