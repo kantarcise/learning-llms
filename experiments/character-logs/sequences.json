@@ -1,0 +1,32 @@
+[
+  {
+    "id": "train-orders",
+    "split": "train",
+    "text": "job=orders status=started\njob=orders status=completed\n"
+  },
+  {
+    "id": "train-users",
+    "split": "train",
+    "text": "job=users status=started\njob=users status=failed reason=timeout\njob=users status=retrying attempt=1\njob=users status=completed\n"
+  },
+  {
+    "id": "train-stock",
+    "split": "train",
+    "text": "job=stock status=started\njob=stock status=completed\n"
+  },
+  {
+    "id": "train-invoices",
+    "split": "train",
+    "text": "job=invoices status=started\njob=invoices status=failed reason=timeout\njob=invoices status=retrying attempt=1\njob=invoices status=completed\n"
+  },
+  {
+    "id": "validation-sales",
+    "split": "validation",
+    "text": "job=sales status=started\njob=sales status=completed\n"
+  },
+  {
+    "id": "validation-products",
+    "split": "validation",
+    "text": "job=products status=started\njob=products status=failed reason=timeout\njob=products status=retrying attempt=1\njob=products status=completed\n"
+  }
+]
