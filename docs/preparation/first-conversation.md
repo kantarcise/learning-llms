@@ -1,14 +1,16 @@
 # From tokens to next-token predictions
 
-Conversation notes and handoff, October 3–8, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
+Conversation notes and handoff, October 3–12, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
 
 ## Start here on the other computer
 
-We stopped on October 8 after moving from causal masking into **batches, validation, and our first runnable preparation experiment**. Sezai connected averaging batch gradients with a less noisy training signal, distinguished learned parameters from chosen hyperparameters, and followed the explanation of validation loss without backpropagation and overfitting. These were guided discussions; implementation understanding is still to be checked.
+As of October 12, Sezai has run `--inspect-only` himself, read the code in VS Code, and followed text slicing and character-to-ID encoding. We revisited tensors as numerical containers, embedding-table rows versus vector width, and learned position embeddings. Sezai confirmed that lookup retrieves stored values and optimizer updates change them during training. The next step is a slow walkthrough from token lookup through position addition, normalization, and attention, using actual code and numbers.
 
-The assistant implemented a character-level transformer using fictional job logs in `experiments/character-logs/`, with uv and an optional experiment dependency group. This work is separate from the book chapters and is carried by a stacked experiment PR. The assistant ran a ten-epoch CPU demonstration: 11,104 parameters, validation loss from 3.3809 to a best 1.9128 at epoch 9, and still-malformed generated text. Six behavior tests passed. This is an observed teaching run, not an independently completed exercise or a generalization benchmark. Weights and generated artifacts stay local; the README records results and reproduction instructions for the other computer.
+The preparation experiment is in `experiments/character-logs/`. Its current configuration has **maximum input length 24, vector width 32, and 10,848 parameters**; inspection still uses two eight-character examples. Context length was changed from 32 to 24 to distinguish it visibly from vector width. The original ten-epoch CPU demonstration used context length 32 and 11,104 parameters, with best validation loss 1.9128 at epoch 9 and malformed generated text. Its small JSON report and plot are committed; model weights stay local. No full training run has been performed for the new configuration, and useful generalization has not been established.
 
-**Resume tomorrow here 🧩:** open the experiment README and run the inspection command. Start with `job=orde` as input and `ob=order` as target. Follow the pair through character IDs, embeddings, and vocabulary logits, one small step at a time. Then read `TransformerBlock.forward` and connect its two residual additions to the width-4 diagram. Do not assume that running code means Sezai has already understood its implementation. Cross-entropy's detailed gradient calculation, KV caching, and multi-head attention remain open.
+**Resume here 🧩:** open the architecture overview at the top of `experiments/character-logs/model.py`, then `TinyTransformer.forward`. Trace `job=orde` from its ID tensor to the token and position vectors and their sum. Use the [learning glossary](glossary.md) for unfamiliar terms. The hand calculation originally omitted position embeddings; explicitly include them in the code walkthrough. Name the module and method for every source reference, and distinguish explanatory equivalents from exact source. Prefer small diagrams paired with code, one step at a time.
+
+We are wrapping the first experiment PR as a documented learning baseline. Continued walkthroughs, a larger and more varied dataset, and controlled training comparisons belong in a follow-up PR. Keep the character tokenizer for this experiment; select an established tokenizer for the next distinct training project. Merging does not claim independent mastery or completed book exercises. Cross-entropy's detailed gradient calculation, KV caching, and multi-head attention remain open.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -817,6 +819,38 @@ Checked items reflect Sezai's explanations or explicit confirmations, not merely
 - [ ] Implement and inspect a runnable tokenization/model example; the assistant ran tiktoken and the tiny transformer demonstration; independent implementation inspection remains open.
 
 No chapter reading, tensor practice, daily-capacity exercise, or independent benchmark has been completed or claimed here.
+
+## Why turn character IDs into tensors? 🧩
+
+This question came up while reading the runnable experiment: if encoding has already produced numbers, why call `torch.tensor`? Sezai connected it to his earlier [numpyandpytorch repository](https://github.com/kantarcise/numpyandpytorch), which explores the same intended neural-network structure using plain Python lists, NumPy arrays, and PyTorch tensors. Its September 2024 history progresses through those three implementations; an August 2025 update adds uv-based setup.
+
+The examples make the purpose of the numerical container concrete:
+
+| Implementation | Data container | Matrix multiplication |
+| --- | --- | --- |
+| Plain Python | Nested lists | A manually implemented loop |
+| NumPy | Arrays | `x.dot(w1)` |
+| PyTorch | Tensors | `x.mm(w1)` |
+
+The old PyTorch example uses a **2D** input tensor of shape `[64, 1000]`: 64 examples with 1,000 numbers each. A tensor need not be 3D. It can be a scalar, vector, matrix, or higher-dimensional numerical array. The old example also computes gradients manually; using tensors does not automatically enable automatic differentiation. In our current experiment, `loss.backward()` computes gradients and `optimizer.step()` updates parameters.
+
+For our text model, the steps are distinct:
+
+```text
+Text: "job=orde"
+  → encode using our vocabulary
+Python list: [12, 17, 5, 3, 17, 19, 7, 8]
+  → collect two examples and call torch.tensor
+Integer tensor: shape [2, 8], containing the same IDs
+  → embedding lookup
+Floating-point vectors: shape [2, 8, 32]
+```
+
+**Encoding determines what the numbers represent. Tensor creation provides the numerical container PyTorch operates on.** Batching determines the first dimension here; it is not the reason tensors are needed. The tensor carries shape, numerical type, device, and access to numerical operations. The integer input IDs do not require gradients; the learned floating-point embedding parameters do.
+
+The old repository begins with random numerical inputs, so it skips text encoding. Read it as a companion explanation of the list → array/tensor bridge, not a completed text-processing pipeline or a verified performance benchmark. A [maintenance issue](https://github.com/kantarcise/numpyandpytorch/issues/1) records a reproduced ReLU backward-mask bug in the plain-Python version; the full old training scripts were not rerun during this review.
+
+**Walkthrough handoff:** Sezai has run the inspection command and followed slicing and character-to-ID encoding. We discussed why the resulting lists become tensors. Next, follow the actual `TinyTransformer.forward` method in `experiments/character-logs/model.py`, starting with token lookup and position addition. Use exact module/method names and label explanatory code separately from source. Keep the walkthrough to one step at a time; do not treat the explanation alone as an independent understanding check.
 
 ## Further references
 

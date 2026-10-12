@@ -1,0 +1,76 @@
+{
+  "seed": 7,
+  "device": "cpu",
+  "torch_version": "2.14.1",
+  "config": {
+    "vocabulary_size": 25,
+    "context_length": 32,
+    "width": 32,
+    "hidden_width": 64
+  },
+  "batch_size": 16,
+  "learning_rate": 0.003,
+  "train_windows": 244,
+  "validation_windows": 127,
+  "best_epoch": 9,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 3.3557320110133437,
+      "validation_loss": 3.380885293164591
+    },
+    {
+      "epoch": 1,
+      "train_loss": 2.5118992797663955,
+      "validation_loss": 2.6733193284883274
+    },
+    {
+      "epoch": 2,
+      "train_loss": 2.0459474540147626,
+      "validation_loss": 2.362641646167425
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.7112620775816871,
+      "validation_loss": 2.1717177732722965
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.4800985406656735,
+      "validation_loss": 2.098122504752452
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.314201098973634,
+      "validation_loss": 2.0531676622826285
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.1739824013631852,
+      "validation_loss": 2.03136479572987
+    },
+    {
+      "epoch": 7,
+      "train_loss": 1.0385244244434795,
+      "validation_loss": 2.002343046383595
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.9120146309743162,
+      "validation_loss": 1.9765158112593524
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.7869707727041401,
+      "validation_loss": 1.9127990579980565
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.6788913285145994,
+      "validation_loss": 1.9296042243326743
+    }
+  ],
+  "before": "job=v lntuppeoanogyilad== ad=roaoppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+  "after": "job=ices statatatus=fatus=ustus=fatus=fatus=fat=1\njous=fated\njousers reatempt=1\njob=usertemeob=us status=fatatus=fated\njomeo",
+  "generation": "Greedy, prompt job=, 120 new characters, no end token."
+}
