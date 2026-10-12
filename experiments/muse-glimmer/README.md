@@ -8,6 +8,8 @@ On a single RTX 3090 (24 GiB), Muse Glimmer 30B Q4_K_M completed five engineerin
 
 Muse, Qwen3.8, and Gemma passed both executable coding tasks and calculated KV-cache shapes and bytes correctly. Their queue-worker reviews and serving designs still needed corrections. Four of Qwen3.5's five initial thinking-mode requests exhausted the output budget without final answers; a larger-budget bug-fix retry passed, while disabling thinking produced a fast but incorrect bug fix and KV-cache calculation.
 
+A harder atomic TTL/LRU cache follow-up exposed limits: Muse returned complete code but failed rollback/numeric-validation checks; Qwen3.8 exhausted a 6,144-token output budget and returned an incomplete implementation. Neither delivered a correct usable answer in that trial.
+
 With models kept loaded, Muse's five requests took 6.965–19.955 seconds at 40.98–41.86 generated tokens/s; Qwen3.8 took 12.503–32.599 seconds at 38.38–40.10 tokens/s. Counts include reasoning, and Muse generated shorter outputs. Gemma wall times included cold loading. Across 897 GPU samples, maximum observed whole-device memory use was 17,188 MiB, including desktop processes; this is not a per-model peak.
 
 After a container permission repair, Muse completed the agent retry in seven turns. Independent verification passed all seven test methods and confirmed unchanged tests. The user also reported responsive chat. **Muse merits further local experimentation, but these single samples do not establish a model ranking or reliable repository-scale autonomy.** DFlash, vision, long context, and concurrency remain untested. This side experiment is separate from chapter progress; the rest of this report provides evidence, limitations, and reproduction steps.
@@ -185,6 +187,76 @@ The Qwen3.8 queue answer overstates that a few tests prove a no-loss guarantee. 
 
 Practical verdict: Muse is worth more tinkering on this machine. It supplied correct small coding answers, a correct worked explanation, and a verified tool-driven fix. In these single samples it completed chat requests sooner than Qwen3.8 at their respective low reasoning settings. Both produced review/design answers needing corrections. This is not evidence that Muse is generally better than Qwen or Gemma; Qwen3.8 and Gemma were not tested as agents here. DFlash, vision, long-context retrieval, and repository-scale engineering remain untested.
 
+## Harder follow-up: atomic expiring LRU cache
+
+The initial coding tasks were small. A second, harder prompt asks for a bounded cache combining TTL expiry, least-recently-used eviction, explicit monotonic time, and atomic batch updates. A failed batch must preserve values, expiry state, order, and the last successful time—even if its input generator raises. Duplicate keys are allowed and capacity is enforced once after the complete batch. The exact contract is saved in [hard-prompt.txt](hard-prompt.txt).
+
+Muse and Qwen3.8 received the same prompt, seed 42, temperature 1.0, top-p 0.95, 8K context, and 6,144-token output limit. Each used its previously recorded low-reasoning settings and model-specific top-k (64 / 20). Models ran sequentially on the same llama.cpp build. Neither received tests, feedback, or a repair attempt. Gemma and Qwen3.5 were not included in this follow-up.
+
+### Independent checks
+
+[test_hard.py](test_hard.py) contains 18 test methods covering expiry boundaries, hits/misses and eviction order, stored None and object identity, invalid times/keys/TTLs, deadline overflow, zero capacity, replacements, duplicate keys, malformed batches, generator exceptions, rollback, and empty-batch time advancement. A seeded differential check performs 800 operations across four capacities against a simple list-based oracle. These checks are held out from the prompt, not a comprehensive proof.
+
+Before evaluating model code, all 18 methods passed against [hard_reference.py](hard_reference.py), a deliberately simple semantic oracle that does not satisfy the prompt's O(1) lookup target. A mutation that evicts after every batch write was rejected by the atomic-batch eviction test. [Validation](results/hard-harness-validation.txt) and [mutation evidence](results/hard-harness-mutation.txt) are preserved. Model answers were reviewed and executed in the existing networkless container with a 20-second timeout.
+
+### Hard-task results
+
+| Observation | Muse Glimmer 30B | Qwen3.8-27B |
+| --- | ---: | ---: |
+| Request wall time, excluding loading | 54.696 s | 152.924 s |
+| First reasoning/text chunk | 1.173 s | 0.738 s |
+| First answer-text chunk | 20.254 s | 150.818 s |
+| Generated tokens, including reasoning | 2,261 | 6,144 (limit) |
+| Server decode throughput | 42.16 tokens/s | 40.37 tokens/s |
+| Server prompt throughput | 1,113.54 tokens/s | 823.69 tokens/s |
+| Finish reason | stop | length |
+| Usable correct implementation | No | No; incomplete |
+
+Muse returned source that ran, but its suite reported six assertion failures and fourteen errors across eighteen test methods, including subtests. Those errors are exceptions during contract verification, not inference-server crashes. For example, writing an invalid key at time 100 raises ValueError but advances its last successful time; inspecting the unchanged cache at its previous valid time then raises another ValueError. The same flaw affects a batch generator that raises. It also accepts infinity and overflowing deadlines, contrary to the contract. Ordinary LRU behavior and the seeded valid-operation check passed, which shows why happy-path tests alone are insufficient. See [source](results/hard-muse/answer.py) and [checks](results/hard-muse/tests.txt).
+
+Qwen returned its first answer text only after approximately 151 seconds, then hit the output limit two seconds later. Its final response is a fenced, incomplete class missing the required methods. The preserved raw response fails source loading at the opening Markdown fence; it was not scored as eighteen independent test failures. No code was extracted from its reasoning to manufacture a completed answer. This is a budget/response-completion failure under the recorded settings, not proof that Qwen cannot implement this cache with another budget. See [answer](results/hard-qwen3.8/answer.py), [load check](results/hard-qwen3.8/tests.txt), and [request](results/hard-qwen3.8/request.json).
+
+This harder trial weakens any interpretation that the earlier coding passes demonstrate reliable engineering. Muse produced more immediately reviewable code, but neither model solved the contract as delivered. A larger-budget Qwen retry and a feedback-driven repair comparison remain future work; no inference retries or selective best-of results were used here.
+
+### Resource and latency capture
+
+[run_hard.py](run_hard.py) saves the exact request, timestamped streaming events, final answer, reasoning, and a JSONL resource series targeting 500 ms intervals. Each sample includes GPU device memory, per-compute-process VRAM, GPU/memory utilization, power, temperature, model-process RSS/high-water mark/CPU time/thread count/I/O counters, system available RAM and swap, and load averages. Phases identify health waiting, baseline, request, and post-request activity. Qwen's capture includes most of its startup; Muse was already loaded. Request timings exclude loading.
+
+First-text latency means the first nonempty streamed reasoning or answer chunk observed by the client. First-answer latency excludes reasoning. These are client-observed chunk latencies, not an instrumented measurement of the first GPU token. Server prompt/decode timings and token counts are also preserved. CPU percentages use 100% for one fully used CPU core; sampled request RSS is distinct from the process's lifetime VmHWM. System RAM pressure is reported as MemTotal minus MemAvailable, including other applications. GPU power and temperature are whole-device observations with different thermal histories.
+
+These captures provide much better visibility than the initial trial, but not full observability: sub-interval spikes, GPU kernel traces, allocator attribution, and per-thread scheduling are not measured. Per-process VRAM covers NVIDIA compute-process accounting; sampled values and phase boundaries are approximate. [summarize_hard.py](summarize_hard.py) derives summaries from raw samples.
+
+| Request-phase resource observation | Muse | Qwen3.8 |
+| --- | ---: | ---: |
+| Samples (target interval 0.5 s) | 110 | 306 |
+| Maximum sampled total GPU memory | 16,747 MiB | 17,005 MiB |
+| Maximum sampled model compute-process VRAM | 15,946 MiB | 16,222 MiB |
+| Mean / maximum GPU utilization | 96.46% / 99% | 97.39% / 100% |
+| Maximum sampled model-process RSS | 2,390.71 MiB | 1,616.90 MiB |
+| Maximum system RAM pressure (total minus available) | 9,029.03 MiB | 8,563.19 MiB |
+| Mean process CPU (100% = one core) | 101.23% | 101.76% |
+| Maximum sampled GPU power | 419.12 W | 419.09 W |
+| Maximum sampled GPU temperature | 76 C | 80 C |
+| Telemetry errors | 0 | 0 |
+
+Including startup/health waiting, Qwen had 414 total samples and a sampled RSS maximum of 16,335.39 MiB, much higher than its request-phase RSS. Muse had 114 total samples and was already loaded. These windows are not a controlled startup-memory comparison. The largest request sample gaps were approximately 0.500 seconds for both models. The first captures' approximately one-second GPU series and these half-second series are separate measurements.
+
+All stream events, reasoning, requests, raw samples, and derived summaries are saved under [hard-muse](results/hard-muse/) and [hard-qwen3.8](results/hard-qwen3.8/). Qwen's dedicated [server log](results/hard-qwen3.8/server.log) contains only this automated trial. The user's interactive chat transcript is not included. Muse was restored after the comparison.
+
+### Reproduction
+
+Use a fresh output directory and the actual server PID. For the loaded Muse server:
+
+```bash
+python3 experiments/muse-glimmer/run_hard.py --model muse-glimmer-30B \
+  --pid SERVER_PID --output /tmp/new-hard-muse
+python3 experiments/muse-glimmer/summarize_hard.py /tmp/new-hard-muse
+```
+
+Stop Muse before launching Qwen with the earlier command. Run the same script with `--model qwen3.8-27B --base-url http://127.0.0.1:8081`, its PID, `--top-k 20 --reasoning-effort low`, and `--template-kwargs '{"enable_thinking":true,"reasoning_effort":"low"}'`. Start monitoring promptly after launch to include health waiting. The sampler requires host access to NVIDIA telemetry and `/proc`; do not mistake sandbox denial for a hardware failure.
+
+Copy the reviewed answer and `test_hard.py` into the disposable container, then run `timeout 20s python /workspace/test_hard.py /workspace/hard_answer.py -v` via `docker exec`. Do not run unreviewed model code on the host. Use Python 3.11+ for the resource runner/summarizer; the task and test suite work in the Python 3.9 container.
+
 ## Trade-offs and limitations
 
 This is a small, single-machine exploration with different model sizes and runtimes. It does not establish benchmark rankings. Chat answers do not demonstrate reliable autonomous repository work. Agent evaluation must separately test file discovery, edits, tool arguments, test execution, and recovery after a failed test.
@@ -246,8 +318,8 @@ cmp experiments/muse-glimmer/agent-fixture/test_chunks.py /tmp/muse-test-chunks.
 
 | Files | Purpose |
 | --- | --- |
-| [prompts.json](prompts.json) | Exact original tasks and review criteria |
-| [run.py](run.py), [check_code.py](check_code.py) | Local API runner and shared executable checks |
+| [prompts.json](prompts.json), [hard-prompt.txt](hard-prompt.txt) | Exact original tasks and harder cache contract |
+| [run.py](run.py), [check_code.py](check_code.py), [run_hard.py](run_hard.py), [test_hard.py](test_hard.py) | Local API runners, streaming telemetry, and executable checks |
 | [serve.sh](serve.sh), [run_agent.py](run_agent.py), [agent-fixture](agent-fixture/) | Launcher and bounded agent reproduction |
 | [Muse outputs](results/muse-q4km/), [Qwen3.8 outputs](results/qwen3.8-27b/), [Gemma outputs](results/gemma4-26b/) | Exact requests, responses, timings, and reviewed source copies |
 | [Qwen3.5 initial](results/qwen3.5-9b/), [larger-budget retry](results/qwen3.5-9b-retry/), [thinking disabled](results/qwen3.5-9b-no-think/) | Preserve incomplete and failed answers as well as successes |

@@ -1,0 +1,43 @@
+Implement production-minded ExpiringLRU class in Python using only standard library. Return only Python source, without Markdown fences. Do not include tests.
+
+Need to follow spec. Provide code.
+
+Implement class with capacity, dict for key->node with value, deadline, prev/next for LRU doubly linked list. Also need time monotonic check.
+
+Purge entries with deadline <= now: iterate over dict items? scanning cache may be O(n). We'll maintain dict.
+
+For put_many atomic: need to validate all entries first without mutating state, then apply. Need to consume iterable? It says one-pass iterable, validate/consume entire input and apply it, or propagate exception with no state change. So we can first collect into list? But could be generator large. Could validate by iterating and collecting into temporary list of validated triples, then apply. That consumes iterable. If exception during iteration, propagate unchanged. So we do first pass to validate and build list, but that consumes. Could we do two passes? No.
+
+We'll collect into list of validated tuples. If iteration raises, exception propagates, state unchanged.
+
+Implementation details: helper _validate_time, _validate_ttl, _validate_key.
+
+Times nondecreasing: store self._last_time = None. On each successful call, check now >= last_time if last_time not None. If < raise ValueError. Then update.
+
+Purge: for each key in list(dict keys) if deadline is not None and deadline <= now: delete.
+
+But need also remove from linked list.
+
+Simplify: use OrderedDict for LRU? Need move to end on access. OrderedDict move_to_end is O(1). Purge scanning may need to iterate. Might be okay.
+
+But need to keep deadline.
+
+We'll use dict mapping key -> [value, deadline, node?]. Use OrderedDict for order.
+
+Implementation with OrderedDict: keys order LRU to MRU. On get hit, move_to_end. On put, set item then move_to_end. Purge: iterate over list of keys, remove those expired. This is O(n).
+
+Atomic put_many: validate each entry: key string, ttl None or numeric finite nonnegative int/float not bool, deadline finite. Also validate now. Then after validation, purge, then for each entry in order: update dict. But need to apply writes in input order, duplicate keys allowed -> last wins? Since applying sequentially, final value is last. Then enforce capacity once at end: while len > capacity, popitem(last=False) (LRU). For capacity zero, always empty.
+
+Need to ensure ttl=0 removes key if present and stores nothing. So deadline = now + 0 = now. After purge? Purge before apply? Spec: For a valid batch, purge first, apply writes in input order, then enforce capacity ONCE at end. So purge first. Then if ttl=0, deadline = now, which equals now, so after purge? It will be stored then later? Actually deadline <= now? deadline = now, so if we don't purge again, it will remain. But spec says ttl=0 removes key if present and stores nothing. So we should treat ttl=0 as deletion, not store. So during apply, if ttl is 0? deadline = now, but we can just delete key instead of storing. Simpler: compute deadline; if ttl ==0, treat as delete (remove key). Also deadline <= now would be purged later? But purge already done. Might need to ensure not stored.
+
+Edge: ttl None means no expiry: deadline = None.
+
+Implement _validate_number.
+
+Return snapshot: list of (key,value) least to most recently used. Need to purge first? snapshot(*,now) -> list... At each successful call, purge entries with deadline <= now. So snapshot should purge first then return list preserving order.
+
+get must distinguish stored None from miss. Use dict contains.
+
+Implement class.
+
+Let's produce code.

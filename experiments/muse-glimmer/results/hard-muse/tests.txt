@@ -1,0 +1,237 @@
+test_all_calls_validate_time_without_mutation (__main__.CacheTests) ... test_backward_time_in_every_method (__main__.CacheTests) ... ok
+test_batch_eviction_happens_once (__main__.CacheTests) ... ok
+test_capacity_validation (__main__.CacheTests) ... ok
+test_capacity_zero_still_validates_and_advances (__main__.CacheTests) ... ERROR
+test_deadline_overflow_is_atomic (__main__.CacheTests) ... FAIL
+test_duplicate_batch_keys_and_inputs (__main__.CacheTests) ... ok
+test_empty_batch_and_miss_advance_time (__main__.CacheTests) ... ok
+test_expired_entries_purged_before_eviction (__main__.CacheTests) ... ok
+test_expiry_boundary (__main__.CacheTests) ... ok
+test_identity_none_and_empty_key (__main__.CacheTests) ... ok
+test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) ... ERROR
+test_iterator_exception_preserved_and_atomic (__main__.CacheTests) ... ERROR
+test_lru_hits_misses_and_snapshot (__main__.CacheTests) ... ok
+test_malformed_batch_rolls_back_everything (__main__.CacheTests) ... test_replacement_resets_expiry_and_order (__main__.CacheTests) ... ok
+test_seeded_valid_operations_against_list_reference (__main__.CacheTests) ... ok
+test_zero_ttl_deletes_without_eviction (__main__.CacheTests) ... ok
+
+======================================================================
+ERROR: test_capacity_zero_still_validates_and_advances (__main__.CacheTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 75, in test_capacity_zero_still_validates_and_advances
+    self.assertEqual(cache.snapshot(now=2), [])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key=1, ttl=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 113, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=1), [("old", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key=[], ttl=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 113, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=1), [("old", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key='a', ttl=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 113, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=1), [("old", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key='a', ttl=-1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 113, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=1), [("old", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key='a', ttl='3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 113, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=1), [("old", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key='a', ttl=nan)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 113, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=1), [("old", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 118, in test_invalid_keys_and_ttl_are_atomic
+    self.assertEqual(cache.snapshot(now=0), [("a", 1)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_iterator_exception_preserved_and_atomic (__main__.CacheTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 170, in test_iterator_exception_preserved_and_atomic
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_malformed_batch_rolls_back_everything (__main__.CacheTests) (bad=('bad',))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 156, in test_malformed_batch_rolls_back_everything
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_malformed_batch_rolls_back_everything (__main__.CacheTests) (bad=('bad', 2, None, 4))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 156, in test_malformed_batch_rolls_back_everything
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_malformed_batch_rolls_back_everything (__main__.CacheTests) (bad=3)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 156, in test_malformed_batch_rolls_back_everything
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_malformed_batch_rolls_back_everything (__main__.CacheTests) (bad=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 156, in test_malformed_batch_rolls_back_everything
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+ERROR: test_malformed_batch_rolls_back_everything (__main__.CacheTests) (bad=([], 2, None))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 156, in test_malformed_batch_rolls_back_everything
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+  File "/workspace/hard_answer.py", line 182, in snapshot
+    self._check_time_monotonic(now)
+  File "/workspace/hard_answer.py", line 48, in _check_time_monotonic
+    raise ValueError
+ValueError
+
+======================================================================
+FAIL: test_all_calls_validate_time_without_mutation (__main__.CacheTests) (method='put', bad=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 85, in test_all_calls_validate_time_without_mutation
+    getattr(cache, method)(*args.get(method, ()), now=bad)
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_all_calls_validate_time_without_mutation (__main__.CacheTests) (method='put_many', bad=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 85, in test_all_calls_validate_time_without_mutation
+    getattr(cache, method)(*args.get(method, ()), now=bad)
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_all_calls_validate_time_without_mutation (__main__.CacheTests) (method='get', bad=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 85, in test_all_calls_validate_time_without_mutation
+    getattr(cache, method)(*args.get(method, ()), now=bad)
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_all_calls_validate_time_without_mutation (__main__.CacheTests) (method='snapshot', bad=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 85, in test_all_calls_validate_time_without_mutation
+    getattr(cache, method)(*args.get(method, ()), now=bad)
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_deadline_overflow_is_atomic (__main__.CacheTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 124, in test_deadline_overflow_is_atomic
+    cache.put("b", 2, now=1e308, ttl=1e308)
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_invalid_keys_and_ttl_are_atomic (__main__.CacheTests) (key='a', ttl=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 112, in test_invalid_keys_and_ttl_are_atomic
+    cache.put(key, 2, now=100, ttl=ttl)
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.014s
+
+FAILED (failures=6, errors=14)
