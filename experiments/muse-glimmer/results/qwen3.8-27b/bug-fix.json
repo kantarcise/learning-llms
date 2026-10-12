@@ -1,0 +1,66 @@
+{
+  "task": {
+    "id": "bug-fix",
+    "prompt": "Fix this Python function. Return only Python source, without Markdown fences. Keep the signature. chunk_size must be a positive int (bool is invalid); otherwise raise ValueError. Accept a one-pass iterable, return a list of nonempty lists, keep order, include the final partial chunk, and never mutate input. No third-party packages.\n\ndef chunks(items, chunk_size):\n    return [items[i:i + chunk_size] for i in range(0, len(items) - chunk_size, chunk_size)]",
+    "review": "Check empty input, exact multiples, remainder, generators, invalid sizes including True, and unchanged list input. Run the same checks against every answer."
+  },
+  "request": {
+    "model": "qwen3.8-27B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Fix this Python function. Return only Python source, without Markdown fences. Keep the signature. chunk_size must be a positive int (bool is invalid); otherwise raise ValueError. Accept a one-pass iterable, return a list of nonempty lists, keep order, include the final partial chunk, and never mutate input. No third-party packages.\n\ndef chunks(items, chunk_size):\n    return [items[i:i + chunk_size] for i in range(0, len(items) - chunk_size, chunk_size)]"
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "enable_thinking": true,
+      "reasoning_effort": "low"
+    },
+    "reasoning_effort": "low"
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "def chunks(items, chunk_size):\n    if isinstance(chunk_size, bool) or not isinstance(chunk_size, int):\n        raise ValueError\n    if chunk_size <= 0:\n        raise ValueError\n\n    result = []\n    current = []\n    for item in items:\n        current.append(item)\n        if len(current) == chunk_size:\n            result.append(current)\n            current = []\n    if current:\n        result.append(current)\n    return result",
+          "reasoning_content": "The user wants me to fix a Python function called `chunks`. Let me analyze the requirements:\n\n1. Keep the signature: `def chunks(items, chunk_size)`\n2. `chunk_size` must be a positive int (bool is invalid); otherwise raise `ValueError`\n3. Accept a one-pass iterable (so I can't use `len()` or index into it - must consume it in a single pass)\n4. Return a list of nonempty lists\n5. Keep order\n6. Include the final partial chunk\n7. Never mutate input\n8. No third-party packages\n\nThe original code has several bugs:\n- Uses `len(items)` which doesn't work on general iterables (one-pass)\n- Uses slicing `items[i:i+chunk_size]` which requires indexing (lists, not general iterables)\n- The range logic is wrong: `range(0, len(items) - chunk_size, chunk_size)` would miss the final partial chunk and also the math is off\n\nLet me think about the solution:\n\n1. Validate `chunk_size`:\n   - Must be an int (not bool)\n   - Must be positive\n   - If not, raise `ValueError`\n\n2. For the one-pass iterable, I need to iterate through it and collect elements into chunks of size `chunk_size`.\n\nHere's my approach:\n\n```python\ndef chunks(items, chunk_size):\n    if isinstance(chunk_size, bool) or not isinstance(chunk_size, int):\n        raise ValueError\n    if chunk_size <= 0:\n        raise ValueError\n    \n    result = []\n    current = []\n    for item in items:\n        current.append(item)\n        if len(current) == chunk_size:\n            result.append(current)\n            current = []\n    if current:\n        result.append(current)\n    return result\n```\n\nThis:\n- Validates chunk_size (rejects bool, non-int, non-positive)\n- Works with any one-pass iterable\n- Returns a list of nonempty lists\n- Keeps order\n- Includes the final partial chunk\n- Never mutates the input (we're just reading from it)\n- No third-party packages\n\nLet me double-check the validation:\n- `isinstance(chunk_size, bool)` - catches True/False first since bool is a subclass of int\n- `not isinstance(chunk_size, int)` - catches floats, strings, etc.\n- `chunk_size <= 0` - catches 0 and negatives\n\nThis looks correct. Let me write the final answer.\n"
+        }
+      }
+    ],
+    "created": 1791832909,
+    "model": "qwen3.8-27B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 639,
+      "prompt_tokens": 143,
+      "total_tokens": 782,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-UA1pPXzS2tJ2NMpDuz4BmDA15XIqXdzg",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 143,
+      "prompt_ms": 358.457,
+      "prompt_per_token_ms": 2.5066923076923078,
+      "prompt_per_second": 398.9320894835364,
+      "predicted_n": 639,
+      "predicted_ms": 16625.19,
+      "predicted_per_token_ms": 26.058291536050156,
+      "predicted_per_second": 38.375501272466664
+    }
+  },
+  "elapsed_seconds": 16.988
+}

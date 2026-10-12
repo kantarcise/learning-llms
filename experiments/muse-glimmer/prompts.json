@@ -1,0 +1,27 @@
+[
+  {
+    "id": "bug-fix",
+    "prompt": "Fix this Python function. Return only Python source, without Markdown fences. Keep the signature. chunk_size must be a positive int (bool is invalid); otherwise raise ValueError. Accept a one-pass iterable, return a list of nonempty lists, keep order, include the final partial chunk, and never mutate input. No third-party packages.\n\ndef chunks(items, chunk_size):\n    return [items[i:i + chunk_size] for i in range(0, len(items) - chunk_size, chunk_size)]",
+    "review": "Check empty input, exact multiples, remainder, generators, invalid sizes including True, and unchanged list input. Run the same checks against every answer."
+  },
+  {
+    "id": "constrained-code",
+    "prompt": "Return only Python source without Markdown fences. Implement first_unique(events), accepting a one-pass iterable of dicts with an id key. Return a list containing the first original dict for each id, preserving order and object identity. IDs are hashable. Missing id must raise KeyError. Do not mutate any input, sort, add dependencies, or iterate the input twice. Target expected O(n) time. Include only this function.",
+    "review": "Check generators, empty input, repeated IDs with different payloads, IDs 0 and None, identity, missing keys, input mutation, and expected linear algorithm."
+  },
+  {
+    "id": "code-review",
+    "prompt": "Review this queue worker. Our goal is no lost jobs; duplicate delivery is possible. Identify the two most serious correctness problems, explain a concrete failure sequence for each, and propose a minimal fix with a test strategy. Do not claim exactly-once delivery without specifying how side effects are made idempotent. Keep the answer under 350 words.\n\ndef handle(msg, db, queue):\n    queue.ack(msg)\n    try:\n        db.execute('INSERT INTO charges (job_id, amount) VALUES (?, ?)', (msg.id, msg.amount))\n        db.commit()\n    except Exception:\n        pass",
+    "review": "Must catch acknowledge-before-commit and duplicate charge risk. Look for commit-before-ack, unique job ID/atomic idempotency, crash windows, visible failures, and useful tests. Do not reward a broad rewrite."
+  },
+  {
+    "id": "serving-design",
+    "prompt": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU.",
+    "review": "Assess actionable diagnosis, token-aware memory/concurrency bounds, bounded waiting, cancellation cleanup, separate TTFT/decode/prefill metrics, and explicit uncertainty. This is a qualitative review, not a benchmark score."
+  },
+  {
+    "id": "learning",
+    "prompt": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words.",
+    "review": "Expected shapes [1,2,100,64] then [1,2,101,64]; 51200 then 51712 bytes per layer. Must explain GQA and that attention still reads previous K/V."
+  }
+]

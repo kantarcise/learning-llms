@@ -1,0 +1,46 @@
+{
+  "task": {
+    "id": "learning",
+    "prompt": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words.",
+    "review": "Expected shapes [1,2,100,64] then [1,2,101,64]; 51200 then 51712 bytes per layer. Must explain GQA and that attention still reads previous K/V."
+  },
+  "request": {
+    "model": "gemma4:26b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words."
+      }
+    ],
+    "stream": false,
+    "think": true,
+    "keep_alive": 0,
+    "options": {
+      "num_ctx": 8192,
+      "num_predict": 4096,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 64,
+      "seed": 42
+    }
+  },
+  "api": "ollama",
+  "response": {
+    "model": "gemma4:26b",
+    "created_at": "2026-10-12T18:58:42.070336144Z",
+    "message": {
+      "role": "assistant",
+      "content": "In auto-regressive decoding, the KV cache stores the Key and Value projections of previously processed tokens. This avoids recomputing $K$ and $V$ for all preceding tokens at every new step, transforming the projection complexity from $O(N^2)$ to $O(N)$ for the entire sequence.\n\n**Worked Example**\n*Configuration:* $Batch=1$, $H_{q}=8$, $H_{kv}=2$, $D=64$, $T=100$ (cached tokens), Precision: FP16 (2 bytes).\n\n**Shapes $[batch, H_{kv}, tokens, D]$:**\n*   **Before appending:** $K, V \\in [1, 2, 100, 64]$\n*   **After appending 1 token:** $K, V \\in [1, 2, 101, 64]$\n\n**Total K+V Bytes (per layer):**\n*   **Before:** $(1 \\times 2 \\times 100 \\times 64) \\times 2 \\text{ (for K and V)} \\times 2 \\text{ bytes} = \\mathbf{51,200 \\text{ bytes}}$\n*   **After:** $(1 \\times 2 \\times 101 \\times 64) \\times 2 \\text{ (for K and V)} \\times 2 \\text{ bytes} = \\mathbf{51,712 \\text{ bytes}}$\n\n**Why Query heads do not determine size:**\nThis example uses **Grouped-Query Attention (GQA)**. In GQA, multiple query heads are mapped to a single KV head to reduce memory bandwidth bottlenecks. Because the cache only stores the outputs of the $K$ and $V$ linear projections, the memory footprint scales with $H_{kv}$, not $H_{q}$.\n\n**What the cache does NOT avoid:**\nThe KV cache does not avoid the **linear increase in computational complexity** of the attention mechanism itself. While we avoid recomputing projections, the $Q \\cdot K^T$ dot-product must still iterate over all $T$ tokens in the cache. Furthermore, the cache does not avoid the **memory bandwidth bottleneck**; as the sequence grows, loading the increasingly large KV tensors from VRAM to the registers remains the primary constraint on inference speed.",
+      "thinking": "\n*   Audience: Senior Software Engineer (needs technical precision, minimal fluff).\n*   Subject: KV Cache in Transformers.\n*   Specifics:\n    *   Worked Example: `batch=1`, `num_query_heads=8`, `num_kv_heads=2`, `head_dim=64`, `cached_tokens=100`.\n    *   Output requirements:\n        *   Shapes of K and V: `[batch, KV heads, tokens, head dimension]`.\n        *   Memory (FP16 bytes) for K+V per layer *before* and *after* appending 1 token.\n        *   Explanation of why Query heads don't determine size.\n        *   Explanation of what the cache *does not* avoid.\n    *   Constraint: Under 300 words.\n\n    *   *Context:* In auto-regressive decoding, we compute tokens one by one. For the current token, we only need the new $Q$ to attend to all previous $K$ and $V$. Recomputing $K$ and $V$ for all previous tokens is $O(N^2)$ wasted work. The KV cache stores these vectors.\n    *   *Dimensions:*\n        *   `batch` = 1\n        *   `KV_heads` = 2\n        *   `head_dim` = 64\n        *   `cached_tokens` = 100\n        *   `precision` = FP16 (2 bytes per element).\n    *   *Shapes:*\n        *   $K_{old} = [1, 2, 100, 64]$\n        *   $V_{old} = [1, 2, 100, 64]$\n        *   $K_{new} = [1, 2, 101, 6Head]$\n        *   $V_{new} = [1, 2, 101, 64]$\n    *   *Calculations:*\n        *   Total elements (before) = $2 \\times (1 \\times 2 \\times 100 \\times 64) = 25,600$ elements.\n        *   Bytes (before) = $25,600 \\times 2$ bytes = $51,200$ bytes.\n        *   Total elements (after) = $2 \\times (1 \\times 2 \\times 101 \\times 64) = 25,856$ elements.\n        *   Bytes (after) = $25,856 \\times 2$ bytes = $51,712$ bytes.\n    *   *Why not Q heads?* Grouped Query Attention (GQA) or Multi-Query Attention (MQA) uses fewer KV heads than Q heads to reduce memory bandwidth bottlenecks. The cache only stores what is needed for the attention dot-product, which is the $K$ and $V$ projections.\n    *   *What it doesn't avoid:* It doesn't avoid the $O(N)$ computation/memory bottleneck of the attention mechanism itself (the $QK^T$ calculation increases linearly with sequence length) or the memory growth. It avoids $O(N^2)$ *recomputation* of projections.\n\n    *   *Intro:* The KV cache stores Key and Value tensors for previous tokens during auto-regressive decoding, preventing redundant projection computations for $K$ and $V$ at each step.\n    *   *Example:*\n        *   Params: $B=1, H_{kv}=2, D=64, T=100$.\n        *   $K/V$ Shapes (Before): `[1, 2, 100, 64]`\n        *   $K/V$ Shapes (After): `[1, 2, 101, 64]`\n        *   Memory (Before): $2 \\times (1 \\times 2 \\times 100 \\times 64) \\times 2 \\text{ bytes} = 51,200 \\text{ bytes}$\n        *   Memory (After): $2 \\times (1 \\times 2 \\times 101 \\times 64) \\times 2 \\text{ bytes} = 51,712 \\text{ bytes}$\n    *   *Q-Heads explanation:* In Grouped-Query Attention (GQA), multiple $Q$ heads share a single $K/V$ head. Since the cache only stores the results of the $K$ and $V$ projections, only the $H_{kv}$ dimension determines the footprint.\n    *   *What it doesn't avoid:* It does not avoid the increasing computational complexity of the attention mechanism itself. As $T$ grows, the $QK^T$ operation still scales $O(T)$ per new token, and the memory bandwidth bottleneck (reading the growing cache) remains the primary bottleneck for LLM inference.\n\n    *   Senior engineer tone? Yes.\n    *   Worked example included? Yes.\n    *   Shapes correct? Yes.\n    *   Bytes correct? Yes.\n    *   Q-heads explanation included? Yes.\n    *   What it doesn't avoid included? Yes.\n    *   Under 300 words? Let's count.\n\n    *Word count check:* ~180 words. Perfect.\n\n    (Self-Correction during drafting): Ensure I explicitly mention the $K+V$ sum in the byte calculation.\n    Calculation: $(1 \\times 2 \\times 100 \\times 64) \\times 2 \\text{ (for K and V)} \\times 2 \\text{ (FP16)} = 51,200$. Correct.\n\n    *Final refinement of text:*\n    In auto-regressive decoding, the KV cache stores the Key and Value projections of previously processed tokens. This avoids recomputing $K$ and $V$ for all preceding tokens at every new step, transforming the projection complexity from $O(N^2)$ to $O(N)$ for the entire sequence.\n\n    **Worked Example**\n    *Configuration:* $B=1$, $H_{q}=8$, $H_{kv}=2$, $D=64$, $T=100$ (cached), Precision: FP16 (2 bytes).\n\n    **Shapes [batch, KV heads, tokens, head dim]:**\n    *   **Before:** $K, V \\in [1, 2, 100, 64]$\n    *   **After (1 token added):** $K, V \\in [1, 2, 101, 64]$\n\n    **Memory Usage (K + V combined, per layer):**\n    *   **Before:** $(1 \\times 2 \\times 100 \\times 64) \\times 2 \\text{ (K and V)} \\times 2 \\text{ bytes} = \\mathbf{51,200 \\text{ bytes}}$\n    *   **After:** $(1 \\times 2 \\times 101 \\times 64) \\times 2 \\text{ (K and V)} \\times 2 \\text{ bytes} = \\mathbf{51,712 \\text{ bytes}}$\n\n    **Why Query heads don't determine size:**\n    This model uses **Grouped-Query Attention (GQA)**. In GQA, multiple query heads are mapped to a single KV head to reduce memory bandwidth requirements. Since the cache only stores the projections of the $K$ and $V$ weights, the cache footprint is proportional to $H_{kv}$, not $H_{q}$.\n\n    **What the cache does NOT avoid:**\n    The KV cache does not avoid the **linear increase in computation and memory bandwidth** required for the attention mechanism itself. As the sequence grows, the $Q \\cdot K^T$ dot-product must still iterate over all $T$ tokens, and the bottleneck remains the time taken to load the growing KV tensors from VRAM to the compute units.\n\n    *Word count check:* ~240 words. Excellent."
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 84887672228,
+    "load_duration": 61850029097,
+    "prompt_eval_count": 124,
+    "prompt_eval_duration": 99687345,
+    "eval_count": 2320,
+    "eval_duration": 20989174529
+  },
+  "elapsed_seconds": 84.889
+}

@@ -1,0 +1,25 @@
+test_batch_eviction_happens_once (checks.CacheTests.test_batch_eviction_happens_once) ... FAIL
+
+======================================================================
+FAIL: test_batch_eviction_happens_once (checks.CacheTests.test_batch_eviction_happens_once)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/sezai/repositories/learning-llms/experiments/muse-glimmer/test_hard.py", line 136, in test_batch_eviction_happens_once
+    self.assertEqual(cache.snapshot(now=0), [("a", 1), ("b", 2)])
+AssertionError: Lists differ: [('b', 2)] != [('a', 1), ('b', 2)]
+
+First differing element 0:
+('b', 2)
+('a', 1)
+
+Second list contains 1 additional elements.
+First extra element 1:
+('b', 2)
+
+- [('b', 2)]
++ [('a', 1), ('b', 2)]
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=1)

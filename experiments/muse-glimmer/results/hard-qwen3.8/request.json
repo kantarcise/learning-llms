@@ -1,0 +1,56 @@
+{
+  "model": "qwen3.8-27B",
+  "pid": 67720,
+  "started_utc": "2026-10-12T19:54:42.933646+00:00",
+  "health_wait_seconds": 52.09776941400014,
+  "request": {
+    "model": "qwen3.8-27B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Implement a production-minded ExpiringLRU class in Python using only the standard library. Return only Python source, without Markdown fences. Do not include tests. The API and behavior below are the contract; prioritize correctness over cleverness.\n\nAPI:\n  ExpiringLRU(capacity)\n  put(key, value, *, now, ttl=None) -> None\n  put_many(entries, *, now) -> None\n  get(key, default=None, *, now) -> value or default\n  snapshot(*, now) -> list of (key, value), least to most recently used\n\ncapacity must be an int >= 0, and bool is invalid; otherwise raise ValueError. Keys must be strings (including empty string); values are arbitrary objects and must retain identity. Entries is a one-pass iterable of (key, value, ttl) triples. TTL None means no expiry; numeric TTL must be a finite nonnegative int or float, excluding bool. now must likewise be a finite nonnegative int or float, excluding bool. The computed deadline now + ttl must be finite. Any invalid argument raises ValueError. Times across all successful calls on an instance must be nondecreasing (equal is allowed); backward time raises ValueError. Construction does not establish a time. Do not mutate caller-owned inputs.\n\nAt each successful call, purge entries with deadline <= now. A successful get of a live key moves it to most recently used; a miss and snapshot do not change the order of surviving entries. A write replaces a key's value and expiry and moves it to most recently used. ttl=0 removes the key if present and stores nothing. Capacity zero stores nothing but still validates arguments and advances time on successful calls. Evict least recently used entries when capacity is exceeded. get must distinguish a stored None from a miss with a supplied default.\n\nput_many is atomic, including with a generator that raises during iteration: either validate/consume the entire input and apply it, or propagate the exception with absolutely no state change (including expiry purging, LRU order, and last successful time). Invalid entries, including malformed triples, raise ValueError. Iteration exceptions raised by the input itself propagate unchanged. All other invalid calls likewise leave state unchanged. Treat put as a one-element atomic batch. For a valid batch, purge first, apply writes in input order (duplicate keys allowed), then enforce capacity ONCE at the end. A valid empty batch still purges and advances time.\n\nDo not implement time with a real clock, add background threads, or require callers to catch internal implementation exceptions. Average key lookup/update should be O(1), excluding expiry purging, batch validation, and final eviction. Expiry purging may scan the cache. The implementation must work on Python 3.9+.\n"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    },
+    "max_tokens": 6144,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "enable_thinking": true,
+      "reasoning_effort": "low"
+    },
+    "reasoning_effort": "low"
+  },
+  "request_started_utc": "2026-10-12T19:55:36.032268+00:00",
+  "headers_seconds": 0.007115594999959285,
+  "first_reasoning_seconds": 0.7381692879998809,
+  "first_text_seconds": 0.7381692879998809,
+  "first_answer_seconds": 150.81813366000006,
+  "finish_reason": "length",
+  "usage": {
+    "completion_tokens": 6144,
+    "prompt_tokens": 602,
+    "total_tokens": 6746,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 602,
+    "prompt_ms": 730.857,
+    "prompt_per_token_ms": 1.214048172757475,
+    "prompt_per_second": 823.6905441146489,
+    "predicted_n": 6144,
+    "predicted_ms": 152184.752,
+    "predicted_per_token_ms": 24.77368582125997,
+    "predicted_per_second": 40.36541058988617
+  },
+  "elapsed_seconds": 152.92392952999944,
+  "ended_utc": "2026-10-12T19:58:09.956869+00:00"
+}

@@ -1,0 +1,45 @@
+{
+  "model": "qwen3.8-27B",
+  "request_samples": 306,
+  "request_sample_gap_max_seconds": 0.50040633899971,
+  "all_phase_samples": 414,
+  "all_phase_process_RSS_peak_MiB": 16335.39453125,
+  "all_phase_system_used_memory_peak_MiB": 8563.1875,
+  "telemetry_errors": [],
+  "sampled_device_memory_peak_MiB": 17005.0,
+  "sampled_process_gpu_memory_peak_MiB": 16222.0,
+  "sampled_gpu_utilization_mean_percent": 97.3921568627451,
+  "sampled_gpu_utilization_peak_percent": 100.0,
+  "sampled_gpu_power_peak_W": 419.09,
+  "sampled_gpu_temperature_peak_C": 80.0,
+  "sampled_process_RSS_peak_MiB": 1616.8984375,
+  "sampled_system_used_memory_peak_MiB": 8563.1875,
+  "process_cpu_interval_peak_percent_one_core": 107.98347550465321,
+  "process_cpu_mean_percent_one_core": 101.75595641365389,
+  "health_wait_seconds": 52.09776941400014,
+  "headers_seconds": 0.007115594999959285,
+  "first_reasoning_seconds": 0.7381692879998809,
+  "first_text_seconds": 0.7381692879998809,
+  "first_answer_seconds": 150.81813366000006,
+  "finish_reason": "length",
+  "usage": {
+    "completion_tokens": 6144,
+    "prompt_tokens": 602,
+    "total_tokens": 6746,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 602,
+    "prompt_ms": 730.857,
+    "prompt_per_token_ms": 1.214048172757475,
+    "prompt_per_second": 823.6905441146489,
+    "predicted_n": 6144,
+    "predicted_ms": 152184.752,
+    "predicted_per_token_ms": 24.77368582125997,
+    "predicted_per_second": 40.36541058988617
+  },
+  "elapsed_seconds": 152.92392952999944
+}

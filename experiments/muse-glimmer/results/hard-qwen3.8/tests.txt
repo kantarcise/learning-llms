@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/workspace/test_hard.py", line 214, in <module>
+    Cache = runpy.run_path(sys.argv.pop(1))["ExpiringLRU"]
+  File "/usr/local/lib/python3.9/runpy.py", line 287, in run_path
+    code, fname = _get_code_from_file(run_name, path_name)
+  File "/usr/local/lib/python3.9/runpy.py", line 257, in _get_code_from_file
+    code = compile(f.read(), fname, 'exec')
+  File "/workspace/hard_qwen_answer.py", line 1
+    ```python
+    ^
+SyntaxError: invalid syntax

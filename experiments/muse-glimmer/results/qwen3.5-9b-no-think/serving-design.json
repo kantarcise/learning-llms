@@ -1,0 +1,45 @@
+{
+  "task": {
+    "id": "serving-design",
+    "prompt": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU.",
+    "review": "Assess actionable diagnosis, token-aware memory/concurrency bounds, bounded waiting, cancellation cleanup, separate TTFT/decode/prefill metrics, and explicit uncertainty. This is a qualitative review, not a benchmark score."
+  },
+  "request": {
+    "model": "qwen3.5:9b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU."
+      }
+    ],
+    "stream": false,
+    "think": false,
+    "keep_alive": 0,
+    "options": {
+      "num_ctx": 8192,
+      "num_predict": 4096,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 64,
+      "seed": 42
+    }
+  },
+  "api": "ollama",
+  "response": {
+    "model": "qwen3.5:9b",
+    "created_at": "2026-10-12T18:59:52.009745029Z",
+    "message": {
+      "role": "assistant",
+      "content": "To stabilize the current 24 GiB GPU setup without adding hardware, implement a **dynamic admission controller** combined with a **bounded request queue**. This single architectural change addresses both memory exhaustion and timeout bursts by enforcing strict limits on concurrent contexts.\n\n**Admission Control & Bounded Queues:**\nConfigure a maximum concurrency limit (e.g., 8\u201310 active requests) based on the token distribution. Since inference consists of distinct *prompt* and *decode* phases, admission control must respect this heterogeneity. Large prompts (up to 16k tokens) consume significant KV cache space during the prompt phase. The controller should reject or delay new requests if the predicted KV cache usage (inferred from input size) exceeds a safe threshold (e.g., 75% of VRAM). Requests entering the bounded queue should be assigned lower priority than active decodes to prevent starvation.\n\n**Cancellation Strategy:**\nImplement aggressive cancellation for long-running prompts that fail to progress within a timeout window. When a request times out, immediately kill its execution thread to reclaim GPU memory for subsequent bursts. Ensure the scheduler marks these contexts as \"failed\" to avoid retry loops, as retrying a fully buffered large prompt often exacerbates memory pressure if the system is already near capacity.\n\n**Prompt vs. Decode Workload Management:**\nDistinguish bottlenecks by measuring time spent in each phase. If most timeouts occur during the prompt phase for large inputs, the bottleneck is memory allocation (KV cache). If timeouts happen during decoding, the bottleneck is compute bandwidth (often caused by head-blocking or interleaving inefficiencies). Small requests (<500 tokens) typically finish quickly; if they accumulate, the issue is contention, not compute.\n\n**Metrics for Diagnosis:**\nMonitor:\n1.  **KV Cache Utilization %**: Indicates memory pressure. High values correlate with timeouts.\n2.  **Phase Duration Histogram**: Separates prompt ingestion time from decode latency.\n3.  **Queue Depth vs. Completion Rate**: Shows if the bounded queue is causing artificial delays or if requests are simply being rejected.\n4.  **Context Switch Overhead**: High overhead suggests the scheduler is struggling to manage many small tasks on the same stream.\n\n**Conclusion Limitations:**\nYou cannot conclude the optimal concurrency limit or the root cause of specific timeouts without measuring the actual distribution of input sizes during bursts and the precise duration of the prompt-versus-decode split. Without these metrics, any chosen concurrency limit remains a guess that may unnecessarily reduce throughput or fail to prevent overflows."
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 9819298671,
+    "load_duration": 3752162528,
+    "prompt_eval_count": 129,
+    "prompt_eval_duration": 67209674,
+    "eval_count": 523,
+    "eval_duration": 5555770762
+  },
+  "elapsed_seconds": 9.82
+}

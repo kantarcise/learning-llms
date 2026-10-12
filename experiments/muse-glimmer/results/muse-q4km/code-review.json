@@ -1,0 +1,64 @@
+{
+  "task": {
+    "id": "code-review",
+    "prompt": "Review this queue worker. Our goal is no lost jobs; duplicate delivery is possible. Identify the two most serious correctness problems, explain a concrete failure sequence for each, and propose a minimal fix with a test strategy. Do not claim exactly-once delivery without specifying how side effects are made idempotent. Keep the answer under 350 words.\n\ndef handle(msg, db, queue):\n    queue.ack(msg)\n    try:\n        db.execute('INSERT INTO charges (job_id, amount) VALUES (?, ?)', (msg.id, msg.amount))\n        db.commit()\n    except Exception:\n        pass",
+    "review": "Must catch acknowledge-before-commit and duplicate charge risk. Look for commit-before-ack, unique job ID/atomic idempotency, crash windows, visible failures, and useful tests. Do not reward a broad rewrite."
+  },
+  "request": {
+    "model": "muse-glimmer-30B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Review this queue worker. Our goal is no lost jobs; duplicate delivery is possible. Identify the two most serious correctness problems, explain a concrete failure sequence for each, and propose a minimal fix with a test strategy. Do not claim exactly-once delivery without specifying how side effects are made idempotent. Keep the answer under 350 words.\n\ndef handle(msg, db, queue):\n    queue.ack(msg)\n    try:\n        db.execute('INSERT INTO charges (job_id, amount) VALUES (?, ?)', (msg.id, msg.amount))\n        db.commit()\n    except Exception:\n        pass"
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 64,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "reasoning_strength": "low"
+    }
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "The worker violates at-least-once safety in two ways.\n\n**1. Ack before work \u2192 lost jobs**\n`queue.ack(msg)` is done before the DB write and before `commit`. If the process crashes, the DB rolls back, or `execute`/`commit` raises, the message is already removed from the queue.\n\nFailure sequence: `ack` succeeds \u2192 worker crashes before `INSERT` \u2192 message never re-delivered \u2192 charge never created. Same if `db.execute` raises: exception is swallowed, ack already done, job is lost.\n\n**2. Non-idempotent side effect + swallowed errors \u2192 duplicates and silent loss**\n`INSERT INTO charges` has no uniqueness guard. With at-least-once delivery the broker will redeliver after a timeout/crash. The second delivery inserts a second row for same `job_id`. The bare `except Exception: pass` hides DB errors, so a transient failure is also silently dropped after ack.\n\nFailure sequence: worker starts processing, crashes after first `INSERT` but before `commit`/`ack`. Broker redelivers. Second run inserts again \u2192 duplicate charge. If the `INSERT` fails with a constraint error, it is swallowed and acked \u2192 silent loss.\n\nMinimal fix\n* Make processing idempotent and ack only after durable success.\n\n```python\ndef handle(msg, db, queue):\n    try:\n        db.execute(\n            'INSERT INTO charges (job_id, amount) VALUES (?, ?) '\n            'ON CONFLICT(job_id) DO NOTHING', (msg.id, msg.amount)\n        )\n        db.commit()\n        queue.ack(msg)          # ack after durable commit\n    except Exception:\n        db.rollback()\n        # do not ack \u2192 redelivery\n        raise\n```\n\n`job_id` must be UNIQUE. This gives at-least-once with idempotent writes; you still have at-least-once delivery, not exactly-once.\n\nTest strategy\n* Crash test: mock `db.execute` to succeed then raise on `commit`; assert no ack and message remains.\n* Redelivery test: insert same `msg.id` twice; assert only one row and no error.\n* Failure visibility test: force `db.execute` to raise; assert exception propagates and no ack.\n\nDo not claim exactly-once; idempotency via unique key makes duplicates safe, loss is prevented by ack-after-commit.",
+          "reasoning_content": "Review this queue worker. Our goal is no lost jobs; duplicate delivery is possible. Identify two most serious correctness problems, explain concrete failure sequence for each, and propose minimal fix with test strategy. Do not claim exactly-once delivery without specifying how side effects are made idempotent. Keep under 350 words.\n\nWe need identify problems: ack before processing -> lost jobs on failure/crash. Also exception swallowed -> duplicate? Actually ack before means if crash after ack, job lost. Also duplicate delivery possible, insert not idempotent -> duplicate charges. Also ack before commit.\n\nTwo most serious: ack premature leading to loss; non-idempotent insert leading to duplicate charges on redelivery.\n\nFailure sequence: process crashes after ack before insert -> job lost forever. Or insert fails, exception swallowed, ack already done, job lost.\n\nMinimal fix: process first, then ack. Use idempotency key: INSERT ... ON CONFLICT DO NOTHING or check existence. Or transactional outbox.\n\nPropose: move ack after successful commit. Use job_id unique constraint, insert with upsert. Test strategy: simulate crash after ack, simulate redelivery.\n\nKeep under 350 words.\n\n"
+        }
+      }
+    ],
+    "created": 1791832584,
+    "model": "muse-glimmer-30B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 729,
+      "prompt_tokens": 175,
+      "total_tokens": 904,
+      "prompt_tokens_details": {
+        "cached_tokens": 49
+      }
+    },
+    "id": "chatcmpl-ilHykWtAw8pNZp6lV4vFUxTiI3vtHYyw",
+    "timings": {
+      "cache_n": 49,
+      "prompt_n": 126,
+      "prompt_ms": 158.871,
+      "prompt_per_token_ms": 1.2608809523809525,
+      "prompt_per_second": 793.0962856657287,
+      "predicted_n": 729,
+      "predicted_ms": 17756.849,
+      "predicted_per_token_ms": 24.3912760989011,
+      "predicted_per_second": 40.99826495117462
+    }
+  },
+  "elapsed_seconds": 17.971
+}

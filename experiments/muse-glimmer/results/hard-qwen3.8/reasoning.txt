@@ -1,0 +1,495 @@
+Let me carefully analyze the requirements:
+
+1. **ExpiringLRU class** with standard library only
+2. **API**: constructor, put, put_many, get, snapshot
+3. **Validation rules**:
+   - capacity: int >= 0, bool invalid
+   - keys: strings (including empty)
+   - values: arbitrary, retain identity
+   - ttl: None or finite nonnegative int/float, bool invalid
+   - now: finite nonnegative int/float, bool invalid
+   - now + ttl must be finite
+   - Time must be nondecreasing across successful calls
+   - Construction doesn't establish time
+
+4. **Behavior**:
+   - Purge entries with deadline <= now at each successful call
+   - Successful get moves to MRU
+   - Miss and snapshot don't change order
+   - Write replaces and moves to MRU
+   - ttl=0 removes key if present, stores nothing
+   - Capacity 0 stores nothing but validates and advances time
+   - Evict LRU when capacity exceeded
+   - get distinguishes stored None from miss with default
+
+5. **put_many atomicity**:
+   - Either apply entirely or no state change
+   - Must validate/consume entire input first
+   - If generator raises during iteration, propagate with no state change
+   - Invalid entries raise ValueError
+   - Iteration exceptions propagate unchanged
+
+6. **Performance**: O(1) average key lookup/update (excluding purge, batch validation, final eviction)
+
+Let me think about the implementation:
+
+**Data structure**: I'll use an `OrderedDict` for O(1) LRU operations. Each entry maps to (value, deadline). The deadline is None if no expiry.
+
+**Validation helpers**:
+- `_validate_now(now)`: must be finite nonnegative int/float, not bool
+- `_validate_ttl(ttl)`: must be None or finite nonnegative int/float, not bool
+- `_validate_key(key)`: must be str
+- `_validate_capacity(cap)`: must be int >= 0, not bool
+
+**Time tracking**: Store `_last_time` as None initially. On each successful call, check that `now >= _last_time` (if `_last_time` is not None). Then set `_last_time = now`.
+
+**Purge**: Iterate over the dict, remove entries where deadline is not None and deadline <= now.
+
+**put(key, value, *, now, ttl=None)**:
+1. Validate all args
+2. Check time nondecreasing
+3. Purge expired
+4. If ttl == 0: remove key if present (but still advance time)
+5. If capacity == 0: don't store (but still advance time)
+6. Otherwise: insert/update key with (value, deadline), move to end
+7. If capacity exceeded: evict from front
+8. Update _last_time
+
+Wait, let me re-read: "ttl=0 removes the key if present and stores nothing." So if ttl is 0, we remove the key and don't store it. But we still advance time and purge.
+
+"Capacity zero stores nothing but still validates arguments and advances time on successful calls."
+
+So for capacity 0, we validate everything, purge, advance time, but don't store.
+
+**put_many(entries, *, now)**:
+1. Validate now
+2. Check time nondecreasing
+3. Validate AND consume the entire iterable first (to ensure atomicity)
+   - Each entry must be a triple (key, value, ttl)
+   - Validate each key, ttl
+   - If any is invalid, raise ValueError (no state change)
+   - If iteration raises, propagate (no state change)
+4. Purge expired
+5. Apply writes in order
+6. Enforce capacity once at end
+7. Update _last_time
+
+Wait, the atomicity requirement says "either validate/consume the entire input and apply it, or propagate the exception with absolutely no state change (including expiry purging, LRU order, and last successful time)."
+
+So the approach for put_many:
+1. Validate now and check time nondecreasing (if this fails, no state change)
+2. Consume and validate the entire iterable into a list
+   - If this fails (ValueError or iteration exception), no state change at all
+3. Now that we have a validated list, we can safely:
+   a. Purge
+   b. Apply writes
+   c. Enforce capacity
+   d. Update _last_time
+
+But wait - "All other invalid calls likewise leave state unchanged." So if validation of `now` fails, or time goes backward, no state change. That's natural since we haven't mutated anything yet.
+
+**get(key, default=None, *, now)**:
+1. Validate now, key
+2. Check time nondecreasing
+3. Purge expired
+4. If key in dict: move to end, return value
+5. If key not in dict: return default
+6. Update _last_time
+
+Wait, "a miss and snapshot do not change the order of surviving entries" - but they DO advance time (since "At each successful call, purge entries with deadline <= now"). So a miss still purges and advances time.
+
+Let me re-read: "At each successful call, purge entries with deadline <= now." A miss IS a successful call (it's a valid call that returns the default). So yes, miss purges and advances time.
+
+**snapshot(*, now)**:
+1. Validate now
+2. Check time nondecreasing
+3. Purge expired
+4. Return list of (key, value) from least to most recently used
+5. Update _last_time
+
+Doesn't change order.
+
+**O(1) operations**: Using OrderedDict, `move_to_end` is O(1), `__contains__` is O(1), insertion is O(1), deletion is O(1). Good.
+
+**Purge**: Scan the dict. O(n) where n is number of entries. This is explicitly allowed.
+
+Let me think about edge cases:
+- `now + ttl` must be finite: if both are finite, their sum is finite (in Python, float + float can be inf if overflow). So I need to check `math.isfinite(now + ttl)`.
+- Actually wait, if `now` and `ttl` are both finite, `now + ttl` should be finite in most cases, but with very large floats it could overflow to inf. So I should check.
+
+Let me think about the `default` parameter for `get`. The signature is `get(key, default=None, *, now)`. So `default` is a positional-or-keyword argument with default value `None`. The caller can pass `get(key, sentinel, now=...)` to distinguish.
+
+Actually wait, re-reading: "get(key, default=None, *, now) -> value or default". So the signature has `default` as a positional parameter with default `None`. The caller can do `get(key, now=1.0)` (uses default None) or `get(key, 'not_found', now=1.0)`.
+
+Now let me think about the `put` method's `ttl` parameter. It's keyword-only (`*` before it). Same for `now`.
+
+Let me code this up:
+
+```python
+import math
+from collections import OrderedDict
+
+
+class ExpiringLRU:
+    def __init__(self, capacity):
+        if isinstance(capacity, bool) or not isinstance(capacity, int) or capacity < 0:
+            raise ValueError("capacity must be an int >= 0")
+        self._capacity = capacity
+        self._store = OrderedDict()  # key -> (value, deadline)
+        self._last_time = None
+
+    @staticmethod
+    def _validate_now(now):
+        if isinstance(now, bool) or not isinstance(now, (int, float)):
+            raise ValueError("now must be a finite nonnegative int or float")
+        if not math.isfinite(now) or now < 0:
+            raise ValueError("now must be a finite nonnegative int or float")
+
+    @staticmethod
+    def _validate_ttl(ttl):
+        if ttl is None:
+            return
+        if isinstance(ttl, bool) or not isinstance(ttl, (int, float)):
+            raise ValueError("ttl must be None or a finite nonnegative int or float")
+        if not math.isfinite(ttl) or ttl < 0:
+            raise ValueError("ttl must be None or a finite nonnegative int or float")
+
+    @staticmethod
+    def _validate_key(key):
+        if not isinstance(key, str):
+            raise ValueError("key must be a string")
+
+    def _check_time(self, now):
+        if self._last_time is not None and now < self._last_time:
+            raise ValueError("time must be nondecreasing")
+
+    def _purge(self, now):
+        to_remove = []
+        for key, (value, deadline) in self._store.items():
+            if deadline is not None and deadline <= now:
+                to_remove.append(key)
+        for key in to_remove:
+            del self._store[key]
+
+    def _apply_put(self, key, value, ttl, now):
+        """Apply a single put to the internal store (assumes validation done)."""
+        if ttl == 0:
+            self._store.pop(key, None)
+            return
+        if self._capacity == 0:
+            return
+        deadline = None if ttl is None else now + ttl
+        if key in self._store:
+            del self._store[key]
+        self._store[key] = (value, deadline)
+        # OrderedDict: insertion at end = MRU
+
+    def _enforce_capacity(self):
+        while len(self._store) > self._capacity:
+            self._store.popitem(last=False)
+
+    def put(self, key, value, *, now, ttl=None):
+        self._validate_key(key)
+        self._validate_now(now)
+        self._validate_ttl(ttl)
+        if ttl is not None:
+            deadline = now + ttl
+            if not math.isfinite(deadline):
+                raise ValueError("now + ttl must be finite")
+        self._check_time(now)
+        
+        self._purge(now)
+        self._apply_put(key, value, ttl, now)
+        self._enforce_capacity()
+        self._last_time = now
+
+    def put_many(self, entries, *, now):
+        self._validate_now(now)
+        self._check_time(now)
+        
+        # Consume and validate the entire iterable
+        batch = []
+        for entry in entries:
+            # Must be a triple
+            if not isinstance(entry, (tuple, list)) or len(entry) != 3:
+                raise ValueError("each entry must be a (key, value, ttl) triple")
+            key, value, ttl = entry
+            self._validate_key(key)
+            self._validate_ttl(ttl)
+            if ttl is not None:
+                deadline = now + ttl
+                if not math.isfinite(deadline):
+                    raise ValueError("now + ttl must be finite")
+            batch.append((key, value, ttl))
+        
+        # Now apply atomically
+        self._purge(now)
+        for key, value, ttl in batch:
+            self._apply_put(key, value, ttl, now)
+        self._enforce_capacity()
+        self._last_time = now
+
+    def get(self, key, default=None, *, now):
+        self._validate_key(key)
+        self._validate_now(now)
+        self._check_time(now)
+        
+        self._purge(now)
+        
+        if key in self._store:
+            value, deadline = self._store.pop(key)
+            self._store[key] = (value, deadline)
+            self._last_time = now
+            return value
+        else:
+            self._last_time = now
+            return default
+
+    def snapshot(self, *, now):
+        self._validate_now(now)
+        self._check_time(now)
+        
+        self._purge(now)
+        
+        result = [(key, value) for key, (value, deadline) in self._store.items()]
+        self._last_time = now
+        return result
+```
+
+Wait, I need to reconsider the "atomic" aspect of `put`. The spec says "Treat put as a one-element atomic batch." This means if validation fails at any point, no state change. Let me check my `put` implementation:
+
+1. Validate key, now, ttl - if any fails, raise, no state change ✓
+2. Check time - if fails, raise, no state change ✓
+3. Purge - this mutates state. But at this point, all validation has passed, so this is a "successful call" in progress. The spec says "At each successful call, purge entries with deadline <= now." So purge is part of the successful operation.
+
+Actually, re-reading the spec: "All other invalid calls likewise leave state unchanged." So if validation fails, no state change. My implementation validates everything before purging, so that's correct.
+
+But wait, there's a subtle issue with `put_many`. The spec says "either validate/consume the entire input and apply it, or propagate the exception with absolutely no state change (including expiry purging, LRU order, and last successful time)."
+
+My implementation first consumes and validates the entire batch, then purges and applies. If the batch is valid, we proceed. If invalid, we raise before any mutation. This is correct.
+
+But what about the time check? If `now` is backward, we raise before consuming the iterable. That's fine - no state change.
+
+What if the iterable raises during iteration? We propagate it. At that point, we haven't mutated anything (we're still in the validation phase). Good.
+
+Wait, but there's an issue: what if `entries` is a generator that has side effects during iteration? The spec says "either validate/consume the entire input and apply it, or propagate the exception with absolutely no state change." So we must consume the entire input before applying. My implementation does this correctly.
+
+Let me also think about the `isinstance(entry, (tuple, list))` check. The spec says "entries is a one-pass iterable of (key, value, ttl) triples." A triple could be any sequence of length 3, right? Actually, the spec says "triples" which I'll interpret as any sequence-like object of length 3. Let me be more permissive and check if it's iterable and has exactly 3 elements.
+
+Actually, let me re-read: "Invalid entries, including malformed triples, raise ValueError." So I need to check that each entry is a valid triple. I'll check that it's a sequence (tuple, list, or similar) with exactly 3 elements. Let me use a try-except approach:
+
+```python
+try:
+    key, value, ttl = entry
+except (TypeError, ValueError):
+    raise ValueError("each entry must be a (key, value, ttl) triple")
+```
+
+This handles the case where `entry` is not iterable, or has wrong number of elements. But it also handles the case where `entry` is a string (which is iterable) - a string of length 3 would unpack into 3 characters, which would then fail the key validation. Actually, a string of length 3 like "abc" would unpack to ('a', 'b', 'c'), and then 'a' would fail the key check (well, 'a' IS a string, so it would pass key validation...). Hmm, but then 'b' would be the value and 'c' would be the ttl, and 'c' would fail ttl validation. So it would still raise ValueError. That's acceptable.
+
+Actually wait, what if entry is a dict with 3 keys? `key, value, ttl = entry` would unpack the keys. Then key would be a hashable object (not necessarily a string), which would fail validation. So that's fine.
+
+What about a set? Same thing - unpacks to 3 elements, likely fails validation.
+
+I think the try-except approach is cleaner and more permissive. Let me use that.
+
+Actually, I realize I should be more careful. The spec says entries are "triples" - I'll interpret this as any object that can be unpacked into exactly 3 values. The try-except approach handles this well.
+
+Now, one more thing: "Do not mutate caller-owned inputs." My implementation doesn't mutate any inputs - I only read from them. Good.
+
+Let me also think about the `snapshot` method. It returns "list of (key, value), least to most recently used". Since OrderedDict maintains insertion order and I move-to-end on access/update, the order in the dict is LRU (front) to MRU (back). So iterating over it gives the correct order.
+
+Wait, I'm not using `move_to_end`. Let me check: in my `get`, I do `self._store.pop(key)` and then `self._store[key] = (value, deadline)`. This removes and re-inserts at the end, which is equivalent to `move_to_end`. In my `_apply_put`, I do `del self._store[key]` then `self._store[key] = (value, deadline)`, same thing.
+
+Actually, I should use `move_to_end` for efficiency (avoids the delete+insert). Let me use that.
+
+Let me also reconsider: in `_apply_put`, if the key already exists, I delete and re-insert. I could use `move_to_end` instead. But I also need to update the value, so I'd do:
+```python
+self._store[key] = (value, deadline)
+self._store.move_to_end(key)
+```
+This is simpler and O(1).
+
+Let me rewrite:
+
+```python
+def _apply_put(self, key, value, ttl, now):
+    if ttl == 0:
+        self._store.pop(key, None)
+        return
+    if self._capacity == 0:
+        return
+    deadline = None if ttl is None else now + ttl
+    if key in self._store:
+        self._store[key] = (value, deadline)
+        self._store.move_to_end(key)
+    else:
+        self._store[key] = (value, deadline)
+```
+
+This is cleaner.
+
+Now let me think about the `put` method being "a one-element atomic batch." This means:
+1. Validate everything
+2. If valid: purge, apply, enforce capacity, advance time
+3. If invalid: no state change
+
+My current implementation does this correctly since all validation happens before any mutation.
+
+One more consideration: the spec says "capacity must be an int >= 0, and bool is invalid." In Python, `True` is an instance of `int` with value 1, and `False` is 0. So I need to explicitly exclude bool. My check `isinstance(capacity, bool)` handles this.
+
+Similarly for `now` and `ttl`: "excluding bool." So `isinstance(now, bool)` check is needed.
+
+Let me also think about whether `now` could be a `numpy` int or something. The spec says "int or float" - I'll interpret this as Python's built-in `int` and `float` only. So `isinstance(now, (int, float))` with the bool exclusion is correct.
+
+What about `Decimal`? The spec says "int or float", so Decimal is invalid. My check correctly rejects it.
+
+What about `fractions.Fraction`? Also not int or float, so rejected. Good.
+
+Let me finalize my implementation:
+
+```python
+import math
+from collections import OrderedDict
+
+
+class ExpiringLRU:
+    def __init__(self, capacity):
+        if isinstance(capacity, bool) or not isinstance(capacity, int) or capacity < 0:
+            raise ValueError("capacity must be an int >= 0")
+        self._capacity = capacity
+        self._store = OrderedDict()
+        self._last_time = None
+
+    @staticmethod
+    def _validate_now(now):
+        if isinstance(now, bool) or not isinstance(now, (int, float)):
+            raise ValueError("now must be a finite nonnegative int or float")
+        if not math.isfinite(now) or now < 0:
+            raise ValueError("now must be a finite nonnegative int or float")
+
+    @staticmethod
+    def _validate_ttl(ttl):
+        if ttl is None:
+            return
+        if isinstance(ttl, bool) or not isinstance(ttl, (int, float)):
+            raise ValueError("ttl must be None or a finite nonnegative int or float")
+        if not math.isfinite(ttl) or ttl < 0:
+            raise ValueError("ttl must be None or a finite nonnegative int or float")
+
+    @staticmethod
+    def _validate_key(key):
+        if not isinstance(key, str):
+            raise ValueError("key must be a string")
+
+    def _check_time(self, now):
+        if self._last_time is not None and now < self._last_time:
+            raise ValueError("time must be nondecreasing")
+
+    def _purge(self, now):
+        to_remove = [k for k, (_, d) in self._store.items() if d is not None and d <= now]
+        for k in to_remove:
+            del self._store[k]
+
+    def _apply_put(self, key, value, ttl, now):
+        if ttl == 0:
+            self._store.pop(key, None)
+            return
+        if self._capacity == 0:
+            return
+        deadline = None if ttl is None else now + ttl
+        if key in self._store:
+            self._store[key] = (value, deadline)
+            self._store.move_to_end(key)
+        else:
+            self._store[key] = (value, deadline)
+
+    def _enforce_capacity(self):
+        while len(self._store) > self._capacity:
+            self._store.popitem(last=False)
+
+    def put(self, key, value, *, now, ttl=None):
+        self._validate_key(key)
+        self._validate_now(now)
+        self._validate_ttl(ttl)
+        if ttl is not None:
+            if not math.isfinite(now + ttl):
+                raise ValueError("now + ttl must be finite")
+        self._check_time(now)
+        self._purge(now)
+        self._apply_put(key, value, ttl, now)
+        self._enforce_capacity()
+        self._last_time = now
+
+    def put_many(self, entries, *, now):
+        self._validate_now(now)
+        self._check_time(now)
+        batch = []
+        for entry in entries:
+            try:
+                key, value, ttl = entry
+            except (TypeError, ValueError):
+                raise ValueError("each entry must be a (key, value, ttl) triple")
+            self._validate_key(key)
+            self._validate_ttl(ttl)
+            if ttl is not None:
+                if not math.isfinite(now + ttl):
+                    raise ValueError("now + ttl must be finite")
+            batch.append((key, value, ttl))
+        self._purge(now)
+        for key, value, ttl in batch:
+            self._apply_put(key, value, ttl, now)
+        self._enforce_capacity()
+        self._last_time = now
+
+    def get(self, key, default=None, *, now):
+        self._validate_key(key)
+        self._validate_now(now)
+        self._check_time(now)
+        self._purge(now)
+        if key in self._store:
+            value, deadline = self._store[key]
+            self._store.move_to_end(key)
+            self._last_time = now
+            return value
+        self._last_time = now
+        return default
+
+    def snapshot(self, *, now):
+        self._validate_now(now)
+        self._check_time(now)
+        self._purge(now)
+        result = [(k, v) for k, (v, _) in self._store.items()]
+        self._last_time = now
+        return result
+```
+
+Wait, I need to double-check the `put_many` atomicity with the time check. If `now` is backward, I raise before consuming `entries`. The spec says "propagate the exception with absolutely no state change (including expiry purging, LRU order, and last successful time)." Since I raise before purging, this is satisfied.
+
+But what if `now` is valid and time is nondecreasing, but the batch has an invalid entry? I raise ValueError before purging. Good.
+
+What if the batch is valid but a generator raises during iteration (after some entries have been consumed)? I propagate the exception. At that point, I haven't purged or modified the store. Good.
+
+Hmm, but there's a subtlety: what if the generator has already yielded some values and then raises? The `batch` list would be partially filled, but I haven't applied anything to the store. So no state change. Good.
+
+Let me also verify: "A valid empty batch still purges and advances time." My implementation: if `entries` is empty, `batch` is empty, then I purge, apply nothing, enforce capacity (no-op), and advance time. Correct.
+
+One more thing: the spec says "get must distinguish a stored None from a miss with a supplied default." My implementation: if key is in store, return the value (which could be None). If not, return default. The caller can pass a sentinel as default to distinguish. E.g., `_sentinel = object(); cache.get(key, _sentinel, now=...)`. If it returns None, the value was stored as None. If it returns `_sentinel`, it was a miss. Correct.
+
+I think the implementation is solid. Let me clean it up one final time.
+
+Actually, one concern: in `put_many`, I'm catching `ValueError` from the unpacking and re-raising as ValueError. But what if the entry is a string? `"abc"` would unpack to `('a', 'b', 'c')`. Then `'a'` passes key validation (it's a string), `'b'` is the value (fine, arbitrary), and `'c'` would fail ttl validation (not None, not int/float). So it would raise ValueError. That's acceptable behavior.
+
+What if the entry is a generator? `key, value, ttl = (x for x in range(3))` would work and give `(0, 1, 2)`. Then 0 fails key validation. Fine.
+
+What about `key, value, ttl = [1, 2, 3]`? 1 fails key validation. Fine.
+
+I think my implementation is correct. Let me write the final version.
+
+Actually, wait. Let me reconsider the `put` method. The spec says "Treat put as a one-element atomic batch." This is just emphasizing that put is atomic - all or nothing. My implementation already does this since all validation happens before any mutation.
+
+One more edge case: what if `capacity` is 0 and we call `put`? The spec says "Capacity zero stores nothing but still validates arguments and advances time on successful calls." My implementation validates, purges (no-op since store is empty), tries to apply (but capacity is 0 so returns early), enforces capacity (no-op), advances time. Correct.
+
+What about `put` with `ttl=0` when capacity is 0? Same thing - validates, purges, tries to apply (ttl==0 so removes key if present - but store is empty so no-op), enforces capacity, advances time. Correct.
+
+I'm satisfied with the implementation. Let me write the final clean version.

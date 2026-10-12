@@ -1,0 +1,45 @@
+{
+  "task": {
+    "id": "learning",
+    "prompt": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words.",
+    "review": "Expected shapes [1,2,100,64] then [1,2,101,64]; 51200 then 51712 bytes per layer. Must explain GQA and that attention still reads previous K/V."
+  },
+  "request": {
+    "model": "qwen3.5:9b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words."
+      }
+    ],
+    "stream": false,
+    "think": false,
+    "keep_alive": 0,
+    "options": {
+      "num_ctx": 8192,
+      "num_predict": 4096,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 64,
+      "seed": 42
+    }
+  },
+  "api": "ollama",
+  "response": {
+    "model": "qwen3.5:9b",
+    "created_at": "2026-10-12T19:00:01.60431738Z",
+    "message": {
+      "role": "assistant",
+      "content": "KV cache stores projected Key and Value matrices to avoid recomputing them for previous tokens, enabling constant-time $O(1)$ inference steps instead of linear re-computation.\n\n**Worked Example (FP16):**\n*   **Context:** `batch=1`, `num_kvc_heads=2`, `seq_len=100` (cache), `head_dim=64`.\n*   **Shape Convention:** `[batch, KV heads, tokens, head dimension]`\n*   **Pre-token (100 tokens):**\n    *   $K, V \\in \\mathbb{R}^{[1, 2, 100, 64]}$\n    *   Bytes per tensor: $1 \\times 2 \\times 100 \\times 64 \\times 2 = 25,600$ bytes.\n    *   Total K+V: **51,200 bytes**.\n*   **Post-token (101 tokens):**\n    *   Append new row at `tokens=101`.\n    *   Bytes added per tensor: $1 \\times 2 \\times 64 \\times 2 = 256$ bytes.\n    *   Total K+V: **51,456 bytes**.\n\n**Key Observations:**\n1.  **Query Heads Irrelevance:** The cache size depends strictly on `num_kvc_heads`, not `num_query_heads` ($8$ in your case). Keys and Values are projected to the cache space defined by the configuration, regardless of how many distinct query heads exist to retrieve from them. The 8 query heads simply attend to the same cached 2-dimensional space.\n2.  **What It Does Not Avoid:** This optimization skips only the matrix multiplication $K_{proj} = x \\cdot W_K$ and $V_{proj} = x \\cdot W_V$. It does not save the storage of intermediate activations from prior layers or the final attention logits; those must still be computed or stored in VRAM. Furthermore, if the model architecture uses distinct Key/Value projections for each head (Mixture of Key/Value heads), the cache grows linearly with head count, making the distinction between query and KV heads critical for memory planning."
+    },
+    "done": true,
+    "done_reason": "stop",
+    "total_duration": 9592935214,
+    "load_duration": 3929182320,
+    "prompt_eval_count": 122,
+    "prompt_eval_duration": 59311252,
+    "eval_count": 485,
+    "eval_duration": 5162309836
+  },
+  "elapsed_seconds": 9.594
+}
