@@ -2,13 +2,15 @@
 
 Related: [issue #3](https://github.com/kantarcise/learning-llms/issues/3).
 
-## What this trial showed
+## Abstract
 
-Muse Glimmer is usable for interactive coding chat on this RTX 3090. In this trial it passed two small executable coding tasks, explained a KV-cache calculation correctly, and used tools to fix a tiny Python module until seven test methods passed. The user also tried the chat interface and reported that it felt fast.
+On a single RTX 3090 (24 GiB), Muse Glimmer 30B Q4_K_M completed five engineering chat tasks and a small container-backed agent task using llama.cpp with an 8,192-token context and low reasoning effort. Comparisons reused installed Qwen3.8-27B, Gemma4:26b, and Qwen3.5:9b Q4_K_M models; only Muse was downloaded.
 
-Qwen3.8-27B reused the weights already downloaded by LM Studio; Gemma4:26b and Qwen3.5:9b reused existing Ollama installations. **Only Muse was downloaded for this experiment.** The exact Gemma-4-31B and Qwen3.6-27B opponents mentioned in the issue were not downloaded or evaluated.
+Muse, Qwen3.8, and Gemma passed both executable coding tasks and calculated KV-cache shapes and bytes correctly. Their queue-worker reviews and serving designs still needed corrections. Four of Qwen3.5's five initial thinking-mode requests exhausted the output budget without final answers; a larger-budget bug-fix retry passed, while disabling thinking produced a fast but incorrect bug fix and KV-cache calculation.
 
-Muse and Qwen3.8 both gave useful answers with mistakes in code review and system design. This is an exploratory side experiment, separate from chapter progress, with one sample per task/configuration and no overall benchmark score. Read this file for the findings; the other files preserve evidence and reproduction tools.
+With models kept loaded, Muse's five requests took 6.965–19.955 seconds at 40.98–41.86 generated tokens/s; Qwen3.8 took 12.503–32.599 seconds at 38.38–40.10 tokens/s. Counts include reasoning, and Muse generated shorter outputs. Gemma wall times included cold loading. Across 897 GPU samples, maximum observed whole-device memory use was 17,188 MiB, including desktop processes; this is not a per-model peak.
+
+After a container permission repair, Muse completed the agent retry in seven turns. Independent verification passed all seven test methods and confirmed unchanged tests. The user also reported responsive chat. **Muse merits further local experimentation, but these single samples do not establish a model ranking or reliable repository-scale autonomy.** DFlash, vision, long context, and concurrency remain untested. This side experiment is separate from chapter progress; the rest of this report provides evidence, limitations, and reproduction steps.
 
 ## Question
 
