@@ -35,6 +35,14 @@ Both arrays have shape **2 × 8**. The implemented model produces **2 × 8 × 25
 
 Reproduce the fixture by sorting the training character set, enumerating it into IDs, taking the specified nine-character slices, and encoding each slice's `[:-1]` and `[1:]` portions. The full vocabulary is saved in the JSON so this mapping is inspectable.
 
+## Code reading help
+
+Start with the architecture map at the top of [model.py](model.py). Read
+`TinyTransformer` first for the whole model, then `TransformerBlock`, then
+`CausalAttention`. The file defines the inner components first, which is not the
+order an input passes through them. Use the [learning glossary](../../docs/preparation/glossary.md)
+for terms, shape letters, and small numerical examples.
+
 ## Read and run it 🔧
 
 From the repository root, install the locked optional experiment group and inspect the first batch:
@@ -58,15 +66,21 @@ Read the implementation in this order:
 2. [model.py](model.py): explicit Q/K/V, causal mask, softmax, value mixing, residual additions, and feedforward layers.
 3. [train.py](train.py): cross-entropy, optimizer updates, full-split validation, checkpoint selection, and generation.
 
-The model has one block, one head, width 32, feedforward width 64, and a 32-character context. It has **11,104 learned parameters**. Unlike our simplified arithmetic, it includes learned position embeddings added to token embeddings. The two LayerNorm modules have separate scale/shift parameters. We omit dropout for this first experiment. All parameters train from initialization using AdamW; no pretrained weights are used.
+The model has one block, one head, width 32, feedforward width 64, and a 24-character context. It has **10,848 learned parameters**. Unlike our simplified arithmetic, it includes learned position embeddings added to token embeddings. The two LayerNorm modules have separate scale/shift parameters. We omit dropout for this first experiment. All parameters train from initialization using AdamW; no pretrained weights are used.
 
-The initial inspection uses our two eight-character examples. Training then uses all stride-one, 32-character windows from the four training sequences, shuffled in batches of 16. After each epoch, both curves evaluate the whole respective split with fixed weights and no gradients. Loss is averaged by target count, including the smaller final batch. Validation examples never update parameters.
+The initial inspection uses our two eight-character examples. Training then uses all stride-one, 24-character windows from the four training sequences, shuffled in batches of 16. After each epoch, both curves evaluate the whole respective split with fixed weights and no gradients. Loss is averaged by target count, including the smaller final batch. Validation examples never update parameters.
 
-Generation starts with `job=`, greedily selects characters, and stops after 120 new characters. There is no end token. For longer sequences it uses only the last 32 characters and resets position indices within that window; KV caching is not implemented.
+Generation starts with `job=`, greedily selects characters, and stops after 120 new characters. There is no end token. For longer sequences it uses only the last 24 characters and resets position indices within that window; KV caching is not implemented.
+
+## Separate input length from vector width
+
+The current maximum input length is **24**, while vector width stays **32**. The inspection still uses **8** positions. These are separate choices: 8 positions used now, up to 24 supported, and 32 coordinates per vector.
+
+**The vocabulary size tells us how many rows. The width tells us how many coordinates per row.** Our token embedding table is still 25 × 32. The position embedding table is now 24 × 32, with only its first eight rows used during inspection. This removes 256 parameters compared with the original model. No new training run has been performed for this configuration; the results below describe the original 32-position model, not the current default. Its saved checkpoint includes that original configuration.
 
 ## First demonstration: observed, not a benchmark
 
-The assistant ran on CPU with one PyTorch thread, seed 7, learning rate 0.003, AdamW weight decay 0.01, and PyTorch 2.14.1. Dependencies are resolved in the repository's uv lockfile. No timing or GPU comparison was measured.
+For the original configuration (context length 32, width 32, 11,104 parameters), the assistant ran on CPU with one PyTorch thread, seed 7, learning rate 0.003, AdamW weight decay 0.01, and PyTorch 2.14.1. Dependencies are resolved in the repository's uv lockfile. No timing or GPU comparison was measured.
 
 | Checkpoint | Training loss | Validation loss |
 | --- | --- | --- |
@@ -100,9 +114,9 @@ Both curves decrease initially. Later, the training curve continues downward whi
 
 The windows overlap heavily: 244 windows are not 244 independent log sequences. The underlying data is only four training records and two validation records, using shared templates. Tests check mechanics (including no future-token access and no validation updates), not useful generalization. Generated text is still malformed. We have not established that this dataset or architecture is sufficient for a useful model.
 
-### Practice before merging this experiment 🌱
+### Continuing practice in a follow-up PR 🌱
 
-Keep this PR open while we work through these steps together:
+This first PR records a runnable, documented learning baseline. Merging it does not mark the walkthrough or generalization evaluation complete. Continue these steps together in a follow-up PR:
 
 1. Inspect the first input/target pair and its tensor shapes. Explain which character each position predicts.
 2. Read one training batch: clear gradients → forward/loss → backward → optimizer update. Identify what changes at each step.

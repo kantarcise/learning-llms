@@ -12,6 +12,16 @@ from torch.utils.data import DataLoader
 
 
 def loss_for(logits, targets):
+    """Return scalar mean next-character cross-entropy for a batch.
+
+    Args:
+        logits: Raw floating-point scores [B,T,V] from the model.
+        targets: Correct next-character IDs, torch.long [B,T].
+
+    Cross-entropy performs log-softmax internally, so do not softmax first.
+    The scalar averages B*T predictions and remains differentiable when gradient
+    tracking is enabled. Computing it alone does not change model parameters.
+    """
     # Cross-entropy receives logits, not probabilities. One target per position.
     # [B,T,V] -> [B*T,V], [B,T] -> [B*T]. Flattening does not mix attention.
     # The default reduction averages the loss over all B*T targets.
@@ -20,6 +30,21 @@ def loss_for(logits, targets):
 
 @torch.no_grad()
 def evaluate(model, loader):
+    """Measure mean loss on a nonempty loader without building gradient graphs.
+
+    Args:
+        model: TinyTransformer to evaluate with its current weights.
+        loader: Batches of (input_ids, target_ids), each shaped [B,T].
+
+    Returns:
+        Python float, averaged over all target positions, not batch averages.
+
+    @torch.no_grad() applies to this whole call: predictions and loss are still
+    computed, but operations are not recorded for backward. model.eval() instead
+    changes behavior of layers such as dropout (absent here); it does not disable
+    gradients. No backward or optimizer step occurs. Leaves the model in eval
+    mode; the training loop explicitly restores train mode before its next pass.
+    """
     # eval() selects evaluation behavior; no_grad above disables graph building.
     # Neither computes an optimizer update. They serve different purposes.
     model.eval()
@@ -35,6 +60,15 @@ def evaluate(model, loader):
 
 @torch.no_grad()
 def generate(model, vocabulary, prompt="job=", new_characters=120):
+    """Return the prompt plus a fixed number of greedy next-character predictions.
+
+    Uses the CPU model, its matching vocabulary, and a nonempty encodable prompt.
+    At each step, only the last position's logits select the new ID (argmax).
+    Context is cropped to the last context_length characters; position indices
+    restart at zero for that crop. No KV cache or end token is implemented.
+    @torch.no_grad() avoids building backward graphs during inference. Leaves
+    the model in eval mode and never changes its learned parameters.
+    """
     model.eval()
     ids = torch.tensor([encode(prompt, vocabulary)], dtype=torch.long)
     for _ in range(new_characters):
@@ -46,6 +80,13 @@ def generate(model, vocabulary, prompt="job=", new_characters=120):
 
 
 def inspect(model, texts, vocabulary):
+    """Print the saved two-example fixture's IDs, shapes, and current model loss.
+
+    Expects the first two training records to contain at least nine characters.
+    Inputs are the first eight, targets are characters 2 through 9. Does not
+    train or save files. main calls this before training, so its loss is labeled
+    untrained. Leaves the model in eval mode.
+    """
     # Exactly reproduce first-batch.json, rather than two adjacent windows.
     inputs = torch.tensor([encode(text[:8], vocabulary) for text in texts[:2]])
     targets = torch.tensor([encode(text[1:9], vocabulary) for text in texts[:2]])
@@ -63,6 +104,15 @@ def inspect(model, texts, vocabulary):
 
 
 def main():
+    """Run the CPU teaching experiment from command-line settings.
+
+    --inspect-only exits after showing the fixture. Otherwise, measure epoch 0,
+    train for --epochs passes, and evaluate both splits after every pass. Save
+    the checkpoint with lowest validation loss, then generate from it. Outputs
+    are best.pt (inference weights, not resumable optimizer state), run.json,
+    and loss.png under --output. Existing best.pt files are not overwritten.
+    The seed controls this run's randomness, not cross-platform reproducibility.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--inspect-only", action="store_true")
     parser.add_argument("--epochs", type=int, default=10)
@@ -81,7 +131,7 @@ def main():
     train_texts, validation_texts, vocabulary = load_data()
     config = {
         "vocabulary_size": len(vocabulary),
-        "context_length": 32,
+        "context_length": 24,
         "width": 32,
         "hidden_width": 64,
     }
