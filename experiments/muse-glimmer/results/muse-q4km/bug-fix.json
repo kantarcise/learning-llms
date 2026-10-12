@@ -1,0 +1,64 @@
+{
+  "task": {
+    "id": "bug-fix",
+    "prompt": "Fix this Python function. Return only Python source, without Markdown fences. Keep the signature. chunk_size must be a positive int (bool is invalid); otherwise raise ValueError. Accept a one-pass iterable, return a list of nonempty lists, keep order, include the final partial chunk, and never mutate input. No third-party packages.\n\ndef chunks(items, chunk_size):\n    return [items[i:i + chunk_size] for i in range(0, len(items) - chunk_size, chunk_size)]",
+    "review": "Check empty input, exact multiples, remainder, generators, invalid sizes including True, and unchanged list input. Run the same checks against every answer."
+  },
+  "request": {
+    "model": "muse-glimmer-30B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Fix this Python function. Return only Python source, without Markdown fences. Keep the signature. chunk_size must be a positive int (bool is invalid); otherwise raise ValueError. Accept a one-pass iterable, return a list of nonempty lists, keep order, include the final partial chunk, and never mutate input. No third-party packages.\n\ndef chunks(items, chunk_size):\n    return [items[i:i + chunk_size] for i in range(0, len(items) - chunk_size, chunk_size)]"
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 64,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "reasoning_strength": "low"
+    }
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "def chunks(items, chunk_size):\n    if type(chunk_size) is not int or chunk_size <= 0:\n        raise ValueError(\"chunk_size must be a positive int\")\n    result = []\n    current = []\n    for item in items:\n        current.append(item)\n        if len(current) == chunk_size:\n            result.append(current)\n            current = []\n    if current:\n        result.append(current)\n    return result",
+          "reasoning_content": "Fix this Python function. Return only Python source, without Markdown fences. Keep signature. chunk_size must be positive int (bool is invalid); otherwise raise ValueError. Accept one-pass iterable, return list of nonempty lists, keep order, include final partial chunk, never mutate input. No third-party packages.\n\nWe need fix function. Provide code.\n\nConstraints: chunk_size must be positive int, bool invalid. So check isinstance(chunk_size, int) and not isinstance(chunk_size, bool). Python bool is subclass of int. So need check type is int and not bool. Use isinstance(chunk_size, bool) or type(chunk_size) is not int.\n\nAccept one-pass iterable: cannot use len. Need iterate.\n\nReturn list of nonempty lists.\n\nImplement:\n\ndef chunks(items, chunk_size):\n    if type(chunk_size) is not int or chunk_size <=0: raise ValueError\n    ...\n\nUse iterator.\n\nReturn list of lists.\n\nNever mutate input: just iterate.\n\nReturn only Python source, no markdown fences.\n\nProvide function definition.\n\nLet's output code.\n\n"
+        }
+      }
+    ],
+    "created": 1791832559,
+    "model": "muse-glimmer-30B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 305,
+      "prompt_tokens": 157,
+      "total_tokens": 462,
+      "prompt_tokens_details": {
+        "cached_tokens": 49
+      }
+    },
+    "id": "chatcmpl-JyGs02VuTXQxKDvrkGfHcLJyvaqLFUZF",
+    "timings": {
+      "cache_n": 49,
+      "prompt_n": 108,
+      "prompt_ms": 159.967,
+      "prompt_per_token_ms": 1.481175925925926,
+      "prompt_per_second": 675.1392474697906,
+      "predicted_n": 305,
+      "predicted_ms": 7262.06,
+      "predicted_per_token_ms": 23.888355263157894,
+      "predicted_per_second": 41.861400208756194
+    }
+  },
+  "elapsed_seconds": 7.473
+}

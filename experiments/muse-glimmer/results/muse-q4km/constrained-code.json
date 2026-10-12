@@ -1,0 +1,64 @@
+{
+  "task": {
+    "id": "constrained-code",
+    "prompt": "Return only Python source without Markdown fences. Implement first_unique(events), accepting a one-pass iterable of dicts with an id key. Return a list containing the first original dict for each id, preserving order and object identity. IDs are hashable. Missing id must raise KeyError. Do not mutate any input, sort, add dependencies, or iterate the input twice. Target expected O(n) time. Include only this function.",
+    "review": "Check generators, empty input, repeated IDs with different payloads, IDs 0 and None, identity, missing keys, input mutation, and expected linear algorithm."
+  },
+  "request": {
+    "model": "muse-glimmer-30B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Return only Python source without Markdown fences. Implement first_unique(events), accepting a one-pass iterable of dicts with an id key. Return a list containing the first original dict for each id, preserving order and object identity. IDs are hashable. Missing id must raise KeyError. Do not mutate any input, sort, add dependencies, or iterate the input twice. Target expected O(n) time. Include only this function."
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 64,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "reasoning_strength": "low"
+    }
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "def first_unique(events):\n    seen = set()\n    result = []\n    for e in events:\n        if 'id' not in e:\n            raise KeyError('id')\n        id_val = e['id']\n        if id_val not in seen:\n            seen.add(id_val)\n            result.append(e)\n    return result\n",
+          "reasoning_content": "Return only Python source without Markdown fences. Implement first_unique...\n\nWe need function first_unique(events). Return list containing first original dict for each id, preserving order and object identity. IDs hashable. Missing id raise KeyError. Do not mutate any input, sort, add dependencies, or iterate input twice. Target O(n).\n\nInclude only this function.\n\nNo markdown fences. Just python code.\n\nProbably:\n\ndef first_unique(events):\n    seen = set()\n    result = []\n    for e in events:\n        if 'id' not in e:\n            raise KeyError('id')\n        id_val = e['id']\n        if id_val not in seen:\n            seen.add(id_val)\n            result.append(e)\n    return result\n\nMust raise KeyError if missing id. Could raise KeyError('id') or KeyError. Use raise KeyError.\n\nEnsure no mutation. We only read.\n\nReturn list.\n\nNo markdown fences. So output just code.\n\nProbably include no extra prints.\n\nEnsure function defined.\n\nLet's output."
+        }
+      }
+    ],
+    "created": 1791832566,
+    "model": "muse-glimmer-30B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 281,
+      "prompt_tokens": 141,
+      "total_tokens": 422,
+      "prompt_tokens_details": {
+        "cached_tokens": 49
+      }
+    },
+    "id": "chatcmpl-Kv5tpk9mD3EKi3XAymSXyNBVocPDNTd6",
+    "timings": {
+      "cache_n": 49,
+      "prompt_n": 92,
+      "prompt_ms": 140.681,
+      "prompt_per_token_ms": 1.5291413043478261,
+      "prompt_per_second": 653.9618001009376,
+      "predicted_n": 281,
+      "predicted_ms": 6767.152,
+      "predicted_per_token_ms": 24.168400000000002,
+      "predicted_per_second": 41.37634266231939
+    }
+  },
+  "elapsed_seconds": 6.965
+}

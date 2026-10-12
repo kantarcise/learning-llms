@@ -1,0 +1,20 @@
+{
+  "file": "/home/sezai/.lmstudio/models/lmstudio-community/Qwen3.8-27B-GGUF/Qwen3.8-27B-Q4_K_M.gguf",
+  "size_bytes": 16810714336,
+  "gguf_version": 3,
+  "metadata": {
+    "general.architecture": "qwen35",
+    "general.type": "model",
+    "general.sampling.top_k": 20,
+    "general.sampling.top_p": 0.949999988079071,
+    "general.sampling.temp": 1.0,
+    "general.name": "Qwen_Qwen3.8 27B",
+    "general.basename": "Qwen_Qwen3.8",
+    "general.size_label": "27B",
+    "general.quantization_version": 2,
+    "general.file_type": 15
+  },
+  "template_supports_reasoning_effort": true,
+  "template_supports_enable_thinking": true,
+  "sha256": "e00082f779fa385cee8c68a3ec8833a75778cc87272240b942f74e0b8243e520"
+}

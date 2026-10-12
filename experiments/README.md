@@ -12,3 +12,5 @@ Planned sequence:
 4. Worker-failure recovery in a document-processing pipeline.
 
 Use the [experiment template](../templates/experiment.md). Keep code and small results together in a descriptive directory when the experiment starts. The preparation demonstration above is in progress; the planned experiments have not been completed.
+
+Exploratory trial: [Muse Glimmer for everyday engineering](muse-glimmer/README.md) — one report covering installed models, coding and agent checks, timings, GPU monitoring, limitations, and reproduction.

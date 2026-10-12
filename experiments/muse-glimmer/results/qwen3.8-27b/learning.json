@@ -1,0 +1,66 @@
+{
+  "task": {
+    "id": "learning",
+    "prompt": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words.",
+    "review": "Expected shapes [1,2,100,64] then [1,2,101,64]; 51200 then 51712 bytes per layer. Must explain GQA and that attention still reads previous K/V."
+  },
+  "request": {
+    "model": "qwen3.8-27B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words."
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "enable_thinking": true,
+      "reasoning_effort": "low"
+    },
+    "reasoning_effort": "low"
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "## KV Cache: Worked Example\n\n**Setup:** batch=1, 8 query heads, 2 KV heads (GQA), head_dim=64, 100 cached tokens.\n\n### Shapes and Size\n\nThe cache stores K and V only, indexed by **KV heads**, not query heads:\n\n| Tensor | Shape [B, H_kv, T, D] | Elements | FP16 bytes |\n|--------|------------------------|----------|------------|\n| K | [1, 2, 100, 64] | 12,800 | 25,600 |\n| V | [1, 2, 100, 64] | 12,800 | 25,600 |\n| **K+V** | | **25,600** | **51,200 B/layer** |\n\nAfter appending one new token (T=101):\n\n| Tensor | Shape | Elements | FP16 bytes |\n|--------|-------|----------|------------|\n| K | [1, 2, 101, 64] | 12,928 | 25,856 |\n| V | [1, 2, 101, 64] | 12,928 | 25,856 |\n| **K+V** | | **25,856** | **51,712 B/layer** |\n\n**\u0394 = 512 bytes/layer** per new token.\n\n### Why 8 query heads don't change the cache\n\nIn GQA, 8 query heads share 2 KV heads (4:1 grouping). The cache is the stored *state* of past tokens' K and V projections. Query heads are the *consumers*\u2014they attend *to* the cached K, but they aren't stored. The QKV linear layer is larger (it produces 8\u00d764 query vectors), but that's compute, not memory. The cache size is determined solely by `B \u00d7 H_kv \u00d7 T \u00d7 D \u00d7 2 (for K and V) \u00d7 bytes_per_element`.\n\n### What the cache does NOT avoid\n\nThe cache eliminates **recomputation of K and V projections** for prior tokens. It does **not** eliminate:\n\n1. **Attention score computation** \u2014 each new query still computes dot products against all 100 (now 101) cached K vectors. The QK^T matmul still costs O(T \u00d7 D) per head per step.\n2. **Softmax + weighted sum** \u2014 the AV multiplication still touches all cached V rows.\n3. **KV cache reads from memory** \u2014 those 51,200 bytes/layer must still be loaded from HBM each step, which is the primary bottleneck in memory-bound decode (low arithmetic intensity).\n\nSo the cache trades a one-time compute cost for a recurring memory-bandwidth cost per step.",
+          "reasoning_content": "The user wants a concise explanation of KV cache for a senior SWE, with a specific worked example. Let me work through the numbers:\n\n- batch = 1\n- query heads = 8\n- KV heads = 2\n- head dimension = 64\n- cached tokens = 100\n\nShapes: [batch, KV heads, tokens, head dim]\n- K: [1, 2, 100, 64]\n- V: [1, 2, 100, 64]\n\nElements per tensor: 1 \u00d7 2 \u00d7 100 \u00d7 64 = 12,800\nFP16 = 2 bytes per element\nBytes per tensor: 12,800 \u00d7 2 = 25,600 bytes\nK + V per layer: 25,600 \u00d7 2 = 51,200 bytes\n\nAfter appending 1 token (101 tokens):\n- K: [1, 2, 101, 64]\n- V: [1, 2, 101, 64]\n- Elements: 1 \u00d7 2 \u00d7 101 \u00d7 64 = 12,928\n- Bytes per tensor: 12,928 \u00d7 2 = 25,856\n- K + V: 25,856 \u00d7 2 = 51,712 bytes\n\nDelta: 512 bytes per layer.\n\nWhy query heads don't matter: In GQA (grouped-query attention), multiple query heads share the same K and V heads. The cache stores K and V, not Q. The number of query heads affects the QKV projection and the attention computation, but not the storage.\n\nWhat the cache does NOT avoid: It avoids recomputing K and V for past tokens. It does NOT avoid recomputing the attention scores (Q\u00b7K^T) for all past tokens at each new step, nor the softmax, nor the weighted sum with V. The compute cost of the attention operation itself still scales with sequence length.\n\nLet me keep this under 300 words.\n"
+        }
+      }
+    ],
+    "created": 1791833014,
+    "model": "qwen3.8-27B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 1141,
+      "prompt_tokens": 150,
+      "total_tokens": 1291,
+      "prompt_tokens_details": {
+        "cached_tokens": 30
+      }
+    },
+    "id": "chatcmpl-mip7uIWMCdmwmROF8Q012CANfLwnZrZ5",
+    "timings": {
+      "cache_n": 30,
+      "prompt_n": 120,
+      "prompt_ms": 331.298,
+      "prompt_per_token_ms": 2.7608166666666665,
+      "prompt_per_second": 362.21166442296663,
+      "predicted_n": 1141,
+      "predicted_ms": 28559.85,
+      "predicted_per_token_ms": 25.0525,
+      "predicted_per_second": 39.916176030336295
+    }
+  },
+  "elapsed_seconds": 29.209
+}

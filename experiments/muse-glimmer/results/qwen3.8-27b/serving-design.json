@@ -1,0 +1,66 @@
+{
+  "task": {
+    "id": "serving-design",
+    "prompt": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU.",
+    "review": "Assess actionable diagnosis, token-aware memory/concurrency bounds, bounded waiting, cancellation cleanup, separate TTFT/decode/prefill metrics, and explicit uncertainty. This is a qualitative review, not a benchmark score."
+  },
+  "request": {
+    "model": "qwen3.8-27B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU."
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "enable_thinking": true,
+      "reasoning_effort": "low"
+    },
+    "reasoning_effort": "low"
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "## Smallest Practical Change\n\nIntroduce a **token-budget admission gate**. Maintain a running total of reserved KV-cache tokens across all in-flight sequences. Admit a new request only if `existing_reserved + new_input + estimated_decode_budget \u2264 B`. `B` is one number, set to the largest value that stays under your model's memory ceiling (measure it once with a stress test). Reject with a fast 503 when the gate is closed.\n\nThis single change addresses both OOM (you stop over-allocating) and timeouts (you stop queueing behind requests that will never get GPU time).\n\n## Bounded Queue & Cancellation\n\n- **Queue cap**: 5\u201310 waiting slots. Beyond that, reject immediately. An unbounded queue converts a burst into a multi-minute tail with zero user signal.\n- **Deadline cancellation**: When a request's wall-clock deadline expires, evict its KV-cache pages and free its slot. Do not let expired requests hold memory while \"finishing.\" This converts a memory leak-into-overflow into a bounded, recoverable state.\n\n## Prompt vs. Decode\n\nPrefill (prompt processing) is compute-bound; decode is memory-bandwidth-bound. A 16k-token prompt can cost 30\u00d7+ the prefill FLOPs of a 500-token one, and it reserves proportionally more KV cache. Under bursty arrivals the GPU is most likely stalling on **prefill contention** (long prompts serializing through the batch) and **KV-cache pressure** (many moderate prompts exhausting headroom), not on decode throughput. Your admission gate should weight input length accordingly.\n\n## Metrics That Distinguish the Bottlenecks\n\n| Metric | Tells you |\n|---|---|\n| KV-cache utilization (peak, 99th-pct) | OOM is memory, not compute |\n| Time-in-queue vs. time-on-GPU (per request) | Scheduling problem vs. capacity problem |\n| Prefill duration vs. decode duration | Which phase dominates latency |\n| Concurrent sequence count at each OOM | Correlates OOM with load, not a single request |\n| Queue depth over time | Actual burst shape (duration, peak) |\n| Rejection rate from the gate | How often you're hitting the ceiling |\n\n## What You Cannot Conclude Without Measurements\n\n- Whether OOM is KV-cache exhaustion or **activation memory** during a 16k-token prefill (the latter won't be fixed by the gate alone).\n- Whether your serving framework uses **continuous batching** or static batching (affects how prefill contends).\n- The true arrival distribution and burst duration (determines queue cap and `B`).\n- How much headroom the model weights leave for KV cache at your maximum context.\n\nMeasure first, set `B` and the queue cap from data, then iterate.",
+          "reasoning_content": "The user wants a concise, practical answer under 400 words. Let me think about what's actually the smallest practical design change for a single 24 GiB GPU serving an LLM with 20 users, bursty arrivals, long prompts (500\u201316k tokens), timeouts and OOM.\n\nKey constraints:\n- One GPU, 24 GiB (likely a 4090 or similar)\n- 20 users, bursty\n- Input tokens 500\u201316000\n- Timeouts + OOM\n- Smallest practical change (not \"buy another GPU\")\n- Cover: admission control, bounded queues, cancellation, prompt vs decode, metrics\n- State what can't be concluded without measurements\n- No invented throughput numbers\n- Under 400 words\n\nThe core problem: with 20 users and bursty arrivals on a single GPU, the GPU is likely batch-processing concurrent requests. Long prompts consume large KV-cache memory. The OOM is likely from too many concurrent sequences with long contexts. The timeouts are likely from queuing delay (requests waiting behind long generations).\n\nSmallest practical change: a token-budget-based admission controller that caps total in-flight KV-cache tokens (or equivalently caps concurrent sequences based on their input length), combined with a bounded queue with a hard timeout that cancels rather than silently hangs.\n\nLet me structure:\n\n1. **Smallest change**: Replace the current (likely unbounded) concurrency with a token-budget admission gate. Track total reserved KV-cache tokens across all in-flight requests. Admit a new request only if `sum(existing) + new_prompt + estimated_decode_tokens \u2264 budget`. This is one number to tune.\n\n2. **Bounded queue**: Cap the waiting queue (e.g., 5\u201310 slots). Reject with a clear 503 when full. This prevents unbounded queue growth \u2192 unbounded latency.\n\n3. **Cancellation**: When a request exceeds its deadline, actively evict its KV cache rather than letting it sit. This frees memory for other requests.\n\n4. **Prompt vs decode**: Prompt processing (prefill) is compute-bound and parallelizable; decode is memory-bandwidth-bound and sequential per token. Long prompts (16k) dominate prefill time and KV cache. The bottleneck under bursts is likely prefill contention + KV cache pressure, not decode.\n\n5. **Metrics to distinguish**:\n   - KV cache utilization (peak and tail) \u2192 OOM cause\n   - Queue depth over time \u2192 burst shape\n   - Time-in-queue vs time-on-GPU per request \u2192 is it scheduling or compute?\n   - Prefill duration vs decode duration per request \u2192 which phase dominates\n   - Concurrent sequence count at OOM moment\n\n6. **What I can't conclude without measurements**:\n   - Whether the OOM is from KV cache or from activation memory during prefill of a 16k prompt\n   - Whether the batch scheduler is already doing continuous batching or static batching\n   - Whether the model fits with headroom for KV cache at the observed context lengths\n   - The actual arrival rate and burst duration\n\nLet me write this tightly under 400 words.\n"
+        }
+      }
+    ],
+    "created": 1791832985,
+    "model": "qwen3.8-27B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 1282,
+      "prompt_tokens": 157,
+      "total_tokens": 1439,
+      "prompt_tokens_details": {
+        "cached_tokens": 30
+      }
+    },
+    "id": "chatcmpl-PhdATiKz8dVm53GbqaZF4S9q3cm7FTrY",
+    "timings": {
+      "cache_n": 30,
+      "prompt_n": 127,
+      "prompt_ms": 337.169,
+      "prompt_per_token_ms": 2.6548740157480313,
+      "prompt_per_second": 376.6657077014791,
+      "predicted_n": 1282,
+      "predicted_ms": 31941.71,
+      "predicted_per_token_ms": 24.934980483996878,
+      "predicted_per_second": 40.104302493510836
+    }
+  },
+  "elapsed_seconds": 32.599
+}

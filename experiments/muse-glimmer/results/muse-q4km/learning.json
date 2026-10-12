@@ -1,0 +1,64 @@
+{
+  "task": {
+    "id": "learning",
+    "prompt": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words.",
+    "review": "Expected shapes [1,2,100,64] then [1,2,101,64]; 51200 then 51712 bytes per layer. Must explain GQA and that attention still reads previous K/V."
+  },
+  "request": {
+    "model": "muse-glimmer-30B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Explain the KV cache to a senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give the K and V shapes using [batch, KV heads, tokens, head dimension], then the total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words."
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 64,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "reasoning_strength": "low"
+    }
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "The KV cache stores the already-computed Key and Value projections for each token so autoregressive generation doesn't recompute them.\n\nFor a decoder layer with Grouped-Query Attention:\n\n* Query heads = 8, KV heads = 2, head_dim = 64\n* The K and V projections are made per KV head, then each KV head is broadcast to 4 query heads.\n\nWith batch=1 and 100 cached tokens:\n\nK shape = [batch, KV heads, tokens, head_dim] = [1, 2, 100, 64]\nV shape = [1, 2, 100, 64]\n\nElements per tensor = 1 * 2 * 100 * 64 = 12,800\nFP16 = 2 bytes/element\n\nPer layer:\nK = 12,800 * 2 = 25,600 bytes\nV = 25,600 bytes\nK+V = 51,200 bytes \u2248 50 KiB\n\nAfter appending one token, tokens = 101\n\nK,V shape = [1, 2, 101, 64]\nElements = 1 * 2 * 101 * 64 = 12,928\nK+V = 2 * 12,928 * 2 = 51,712 bytes\n\nIncrease = 512 bytes, i.e. 2 KV heads * 1 token * 64 dim * 2 bytes * 2 tensors.\n\nQuery heads do not set cache size because K and V are only materialized for KV heads. The 8 query heads reuse the 2 KV heads via GQA/MQA, so memory scales with KV heads, not query heads.\n\nThe cache does not avoid:\n* The Q projection and attention matrix multiply for the new token, O(seq) per step and O(seq^2) overall attention cost still grows\n* Feed-forward, output projection, and other per-token work\n* Memory bandwidth pressure from reading the growing K/V\n\nIt only avoids recomputing K and V for the 100 previous tokens on every step.",
+          "reasoning_content": "Explain KV cache to senior software engineer learning transformers. Use one worked example with batch=1, 8 query heads, 2 KV heads, head dimension=64, and 100 cached tokens. Give K and V shapes using [batch, KV heads, tokens, head dimension], then total FP16 K+V bytes per layer before and after appending one token. Explain why query heads do not determine KV cache size here and what the cache does not avoid. Keep under 300 words.\n\nCompute shapes: [1,2,100,64] for K and V each.\n\nBytes per element FP16 =2 bytes.\n\nPer tensor: 1*2*100*64 =12800 elements. *2=25600 bytes =25KB.\n\nTwo tensors => 51.2 KB.\n\nBefore: 51.2 KB. After append one token: tokens=101 => 1*2*101*64=12928 elements => 25856 bytes per tensor. *2=51712 bytes = ~50.5KB? Wait compute: 51,712 bytes = 50.5 KB.\n\nActually 51.2 KB before, 51.2? Let's compute precisely: 12800*2=25600 per tensor. *2=51200 bytes. Wait earlier 25600? 12800*2=25600. Times2 =51200. So 50KB.\n\nAfter: 12928*2=25856 per tensor. *2=51712.\n\nIncrease by 512 bytes.\n\nExplain query heads don't determine KV cache size: KV heads are 2, query heads 8 via GQA.\n\nCache does not avoid compute for Q projection, attention compute O(seq^2) etc. Does not avoid recomputation of previous tokens? It avoids recomputation of K/V for past tokens.\n\nKeep under 300 words.\n\nProvide answer.\n\n"
+        }
+      }
+    ],
+    "created": 1791832618,
+    "model": "muse-glimmer-30B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 812,
+      "prompt_tokens": 158,
+      "total_tokens": 970,
+      "prompt_tokens_details": {
+        "cached_tokens": 49
+      }
+    },
+    "id": "chatcmpl-txYhIpuXuWIt1Y2NvLcogg3mNp0okqUo",
+    "timings": {
+      "cache_n": 49,
+      "prompt_n": 109,
+      "prompt_ms": 144.785,
+      "prompt_per_token_ms": 1.328302752293578,
+      "prompt_per_second": 752.8404185516456,
+      "predicted_n": 812,
+      "predicted_ms": 19750.645,
+      "predicted_per_token_ms": 24.353446362515413,
+      "predicted_per_second": 41.061950128717314
+    }
+  },
+  "elapsed_seconds": 19.955
+}

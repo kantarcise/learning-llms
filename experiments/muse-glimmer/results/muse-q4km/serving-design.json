@@ -1,0 +1,64 @@
+{
+  "task": {
+    "id": "serving-design",
+    "prompt": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU.",
+    "review": "Assess actionable diagnosis, token-aware memory/concurrency bounds, bounded waiting, cancellation cleanup, separate TTFT/decode/prefill metrics, and explicit uncertainty. This is a qualitative review, not a benchmark score."
+  },
+  "request": {
+    "model": "muse-glimmer-30B",
+    "messages": [
+      {
+        "role": "user",
+        "content": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose the smallest practical design change and a debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish the bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU."
+      }
+    ],
+    "stream": false,
+    "max_tokens": 4096,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 64,
+    "seed": 42,
+    "chat_template_kwargs": {
+      "reasoning_strength": "low"
+    }
+  },
+  "api": "llama",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Smallest practical change: add a front-door controller in front of the single GPU worker.\n\nAdmission control + bounded queues + cancellation:\n\n* Keep one in-flight prompt batch and one decode batch, with a global token budget per batch derived from current KV-cache free memory. Admit a new request only if `prompt_tokens + estimated KV cost <= budget`. Reject or queue otherwise.\n* Bounded request queue, e.g. 2\u00d7 concurrent slots, FIFO per user with fair-share. Queue depth, wait time and reject rate are exported.\n* Client-visible cancellation: propagate client disconnect / timeout back to the scheduler and free its KV slots immediately. Set server-side request timeout = client timeout - headroom, and abort long prompt prefill.\n\nWhy this helps: bursts cause OOM from large 16k prompts allocating KV at once, and time-outs from head-of-line blocking in long prefills starving decode.\n\nDebugging plan, metrics to separate bottlenecks:\n\n* Per request: arrival_ts, queue_start, prefill_start/end, first_token_latency, decode inter-token time, total tokens in/out, prompt length.\n* System: GPU memory used/free, KV cache utilization, active batch size, prompt vs decode tokens/s, prefill queue length, decode queue length, time in prefill vs decode.\n* Distinguish: rising queue wait + low GPU util = admission / queuing issue. High prefill time with low decode throughput = prompt-bound, long prefills blocking. Growing KV usage to OOM with many long prompts = memory-bound. High decode latency with high GPU util = decode-bound.\n\nLog a burst window and plot prompt tokens admitted per second vs KV growth. Correlate timeouts with queue wait > p95 and with prefill duration.\n\nWhat you cannot conclude without measurements: whether the limit is KV memory capacity, prefill compute saturation, or decode compute saturation; the actual distribution of prompt lengths in bursts; user fairness impact; and whether a larger batch would help or hurt latency. Do not assume throughput; measure first.",
+          "reasoning_content": "We have one 24 GiB GPU serving an LLM, 20 internal users, bursty arrivals, and requests ranging from 500 to 16000 input tokens. During bursts, requests time out and GPU memory sometimes runs out. Propose smallest practical design change and debugging plan. Cover admission control, bounded queues, cancellation, prompt versus decode work, and metrics that distinguish bottlenecks. State what you cannot conclude without measurements. Stay under 400 words; do not invent throughput numbers or immediately recommend another GPU.\n\nNeed stay under 400 words. Provide design change and debugging plan. Cover points.\n\nNo invent throughput numbers. Don't recommend another GPU immediately.\n\nProvide concise.\n\nLet's produce ~250 words."
+        }
+      }
+    ],
+    "created": 1791832598,
+    "model": "muse-glimmer-30B",
+    "system_fingerprint": "b1-d812350",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 565,
+      "prompt_tokens": 163,
+      "total_tokens": 728,
+      "prompt_tokens_details": {
+        "cached_tokens": 49
+      }
+    },
+    "id": "chatcmpl-mAkSmbv744lbgMS4TgkkFlMYn9iIYIaY",
+    "timings": {
+      "cache_n": 49,
+      "prompt_n": 114,
+      "prompt_ms": 148.264,
+      "prompt_per_token_ms": 1.300561403508772,
+      "prompt_per_second": 768.8987212000216,
+      "predicted_n": 565,
+      "predicted_ms": 13764.193,
+      "predicted_per_token_ms": 24.404597517730494,
+      "predicted_per_second": 40.975885763880235
+    }
+  },
+  "elapsed_seconds": 13.987
+}

@@ -1,0 +1,12 @@
+test_empty (test_chunks.ChunkTests) ... ok
+test_exact_multiple (test_chunks.ChunkTests) ... ok
+test_generator (test_chunks.ChunkTests) ... ok
+test_invalid_sizes (test_chunks.ChunkTests) ... ok
+test_no_mutation (test_chunks.ChunkTests) ... ok
+test_oversized_chunk (test_chunks.ChunkTests) ... ok
+test_remainder (test_chunks.ChunkTests) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
