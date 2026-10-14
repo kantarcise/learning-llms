@@ -15,6 +15,10 @@ experiments = [
     "torch>=2.14.1",
 ]
 
+[tool.ruff]
+# Recorded model answers may contain deliberately invalid Python.
+extend-exclude = ["experiments/muse-glimmer/results", "experiments/muse-glimmer/agent-fixture"]
+
 [tool.ruff.lint]
 extend-select = ["ANN"]
 
