@@ -2,6 +2,7 @@
 
 import argparse
 import json
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 import torch
@@ -11,7 +12,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 
 
-def loss_for(logits, targets):
+def loss_for(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """Return scalar mean next-character cross-entropy for a batch.
 
     Args:
@@ -29,7 +30,7 @@ def loss_for(logits, targets):
 
 
 @torch.no_grad()
-def evaluate(model, loader):
+def evaluate(model: TinyTransformer, loader: Iterable[Sequence[torch.Tensor]]) -> float:
     """Measure mean loss on a nonempty loader without building gradient graphs.
 
     Args:
@@ -59,7 +60,12 @@ def evaluate(model, loader):
 
 
 @torch.no_grad()
-def generate(model, vocabulary, prompt="job=", new_characters=120):
+def generate(
+    model: TinyTransformer,
+    vocabulary: Sequence[str],
+    prompt: str = "job=",
+    new_characters: int = 120,
+) -> str:
     """Return the prompt plus a fixed number of greedy next-character predictions.
 
     Uses the CPU model, its matching vocabulary, and a nonempty encodable prompt.
@@ -79,7 +85,9 @@ def generate(model, vocabulary, prompt="job=", new_characters=120):
     return decode(ids[0].tolist(), vocabulary)
 
 
-def inspect(model, texts, vocabulary):
+def inspect(
+    model: TinyTransformer, texts: Sequence[str], vocabulary: Sequence[str]
+) -> None:
     """Print the saved two-example fixture's IDs, shapes, and current model loss.
 
     Expects the first two training records to contain at least nine characters.
@@ -103,7 +111,7 @@ def inspect(model, texts, vocabulary):
         print(f"Untrained batch loss: {loss_for(logits, targets).item():.4f}")
 
 
-def main():
+def main() -> None:
     """Run the CPU teaching experiment from command-line settings.
 
     --inspect-only exits after showing the fixture. Otherwise, measure epoch 0,
@@ -129,7 +137,7 @@ def main():
     torch.manual_seed(args.seed)
     torch.set_num_threads(1)
     train_texts, validation_texts, vocabulary = load_data()
-    config = {
+    config: dict[str, int] = {
         "vocabulary_size": len(vocabulary),
         "context_length": 24,
         "width": 32,
@@ -161,7 +169,7 @@ def main():
         model.parameters(), lr=args.learning_rate, weight_decay=0.01
     )
     before = generate(model, vocabulary)
-    history = []
+    history: list[dict[str, int | float]] = []
     best_validation = float("inf")
     # Epoch 0 measures random initialization. Each later epoch visits every
     # training window once, in shuffled batches, then evaluates fixed weights.

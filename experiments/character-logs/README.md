@@ -125,3 +125,11 @@ This first PR records a runnable, documented learning baseline. Merging it does 
 5. Design a larger, more varied dataset and a meaningful held-out split before making generalization claims. Keep a separate test set untouched by checkpoint selection when we reach that stage.
 
 These are planned learning steps, not completed exercises. The added code comments explain shapes, learned weights versus temporary activations, residual paths, masking, and the training loop. We will read them in small pieces rather than treating an automated run as understanding.
+
+## Type hints and the numerical attention example
+
+Function signatures describe inputs and outputs throughout the data, model, training, and test modules. For example, `encode(text: str, vocabulary: Sequence[str]) -> list[int]` returns character IDs, while `forward(x: torch.Tensor) -> torch.Tensor` operates on tensors. Tensor shapes and numerical types remain in docstrings: a `torch.Tensor` annotation alone does not enforce either.
+
+In `model.py`, search for **Worked example** inside `CausalAttention.forward`. The comments follow the query at `o` in `job` using illustrative width-2 Q/K/V vectors: dot products → scaling → future masking → softmax → weighted values → output projection. They are not actual initialized width-32 model values.
+
+The repository's AGENTS.md makes typed Python signatures the convention. CI checks annotation presence with Ruff, formatting, and behavior tests. This is not full static type checking; existing Muse benchmark files are exempt from the annotation rule for incremental adoption and preservation of recorded answers. No new dependency is required.

@@ -1,6 +1,7 @@
 """Character IDs and windows made within already-split fictional sequences."""
 
 import json
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 import torch
@@ -9,7 +10,7 @@ from torch.utils.data import Dataset
 DATA_PATH = Path(__file__).with_name("sequences.json")
 
 
-def load_data(path=DATA_PATH):
+def load_data(path: Path = DATA_PATH) -> tuple[list[str], list[str], list[str]]:
     """Read the hand-written corpus and construct our character tokenizer's vocabulary.
 
     Args:
@@ -45,7 +46,7 @@ def load_data(path=DATA_PATH):
     return train, validation, vocabulary
 
 
-def encode(text, vocabulary):
+def encode(text: str, vocabulary: Sequence[str]) -> list[int]:
     """Map each Unicode character to its index in the supplied vocabulary.
 
     Returns a list of integer IDs, one per Python string character. For example,
@@ -56,7 +57,7 @@ def encode(text, vocabulary):
     return [char_to_id[char] for char in text]
 
 
-def decode(ids, vocabulary):
+def decode(ids: Iterable[int], vocabulary: Sequence[str]) -> str:
     """Join vocabulary entries for a sequence of valid token IDs into text.
 
     This reverses encode when both use the same vocabulary. IDs must be in
@@ -65,7 +66,7 @@ def decode(ids, vocabulary):
     return "".join(vocabulary[index] for index in ids)
 
 
-class CharacterWindows(Dataset):
+class CharacterWindows(Dataset[tuple[torch.Tensor, torch.Tensor]]):
     """Prepare overlapping input/target pairs for PyTorch's DataLoader.
 
     Args:
@@ -80,10 +81,12 @@ class CharacterWindows(Dataset):
     loader for large corpora. Overlapping windows are not independent records.
     """
 
-    def __init__(self, texts, vocabulary, context_length):
+    def __init__(
+        self, texts: Sequence[str], vocabulary: Sequence[str], context_length: int
+    ) -> None:
         if context_length < 1:
             raise ValueError("Context length must be positive.")
-        self.windows = []
+        self.windows: list[tuple[torch.Tensor, torch.Tensor]] = []
         # Each record belongs to a split BEFORE we create overlapping windows.
         # This prevents adjacent windows from one record landing in both splits.
         for text in texts:
@@ -98,8 +101,8 @@ class CharacterWindows(Dataset):
         if not self.windows:
             raise ValueError("No sequences are longer than the context length.")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.windows)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         return self.windows[index]

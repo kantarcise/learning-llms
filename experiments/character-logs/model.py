@@ -57,7 +57,9 @@ class CausalAttention(nn.Module):
     examples remain independent; only positions within an example are mixed.
     """
 
-    def __init__(self, width, context_length):
+    future_mask: torch.Tensor
+
+    def __init__(self, width: int, context_length: int) -> None:
         super().__init__()
         # Learned matrices: shared across all token positions and batch examples.
         # nn.Linear stores W as [out, in] and computes x @ W.T.
@@ -74,7 +76,7 @@ class CausalAttention(nn.Module):
             torch.triu(torch.ones(context_length, context_length, dtype=torch.bool), 1),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Map floating-point representations [B,T,D] to updates [B,T,D].
 
         T must fit the configured context. Scores have shape [B,T,T]; their
@@ -84,6 +86,10 @@ class CausalAttention(nn.Module):
         # Our inspection uses B=2, T=8, D=32. Here x has already passed norm1.
         # Each learned projection produces a new [B,T,D] tensor. These Q/K/V
         # activations are not the stored weight matrices W_Q/W_K/W_V.
+        # Worked example: follow 'o' at position 1 in the short input "job".
+        # Use illustrative width-2 PROJECTED vectors (not actual embeddings):
+        # q_o=[2,0]; keys for [j,o,b]=[[1,0],[0,1],[3,0]];
+        # values for [j,o,b]=[[1,2],[3,0],[9,9]]. The real model uses width 32.
         q, k, v = self.query(x), self.key(x), self.value(x)
 
         # Every query needs a dot product with every key in the SAME example.
@@ -95,21 +101,32 @@ class CausalAttention(nn.Module):
         # Divide by sqrt(D): dot-product scale tends to grow with key width;
         # scaling helps avoid excessively sharp softmax from that growth alone.
         # D equals the full width only because this model has ONE head.
+        # Example row for 'o': [2*1+0*0, 2*0+0*1, 2*3+0*0] = [2,0,6].
+        # Scaling by sqrt(2) gives approximately [1.4142,0,4.2426].
+        # Transposition places keys in columns; it does not change key values.
         scores = q @ k.transpose(-2, -1) / math.sqrt(x.shape[-1])
         length = x.shape[1]  # Axis 1 is positions; -1 above means the last axis.
 
         # Mask row i, column j whenever j>i (the key lies in the future).
         # Slice the preallocated mask to the actual input length T.
         # -infinity becomes zero after softmax, unlike a raw score of zero.
+        # Example row becomes [1.4142,0,-inf]: 'o' must predict 'b' using "jo",
+        # so it cannot read the future 'b'. The target ID still goes to the loss.
         scores = scores.masked_fill(self.future_mask[:length, :length], -torch.inf)
 
         # dim=-1 means normalize across key positions, separately for each query.
         # Each row's mixing amounts sum to 1; future positions have amount 0.
+        # Example exp scores: [4.1133,1,0]; normalized: [0.8044,0.1956,0].
+        # A zero score still receives positive weight; a masked score gets zero.
         mixing_amounts = torch.softmax(scores, dim=-1)
 
         # [B,T,T] @ [B,T,D] -> [B,T,D]: for query i, sum all value vectors
         # weighted by that query's mixing amounts. W_O then projects the result.
         # No residual addition here: TransformerBlock.forward adds the shortcut.
+        # Example: 0.8044*[1,2] + 0.1956*[3,0] + 0*[9,9] gives roughly
+        # [1.3911,1.6089] using unrounded amounts. W_O transforms this vector;
+        # only an illustrative identity W_O would leave it unchanged. Our W_O
+        # is learned. This returns an attention update, not vocabulary logits.
         return self.output(mixing_amounts @ v)
 
 
@@ -121,7 +138,7 @@ class TransformerBlock(nn.Module):
     LayerNorm has its own learned parameters and normalizes a token across D.
     """
 
-    def __init__(self, width, hidden_width, context_length):
+    def __init__(self, width: int, hidden_width: int, context_length: int) -> None:
         super().__init__()
         self.norm1 = nn.LayerNorm(width)
         self.attention = CausalAttention(width, context_length)
@@ -135,7 +152,7 @@ class TransformerBlock(nn.Module):
             nn.Linear(hidden_width, width),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Return updated [B,T,D] vectors from incoming [B,T,D] vectors.
 
         y = x + attention(norm1(x)); output = y + feedforward(norm2(y)).
@@ -163,7 +180,13 @@ class TinyTransformer(nn.Module):
     There is no dropout, pretrained checkpoint, or KV cache in this example.
     """
 
-    def __init__(self, vocabulary_size, context_length=24, width=32, hidden_width=64):
+    def __init__(
+        self,
+        vocabulary_size: int,
+        context_length: int = 24,
+        width: int = 32,
+        hidden_width: int = 64,
+    ) -> None:
         super().__init__()
         self.context_length = context_length
         self.token_embedding = nn.Embedding(vocabulary_size, width)
@@ -173,7 +196,7 @@ class TinyTransformer(nn.Module):
         self.final_norm = nn.LayerNorm(width)
         self.vocabulary_projection = nn.Linear(width, vocabulary_size, bias=False)
 
-    def forward(self, token_ids):
+    def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
         """Compute one vocabulary-score vector for every input position.
 
         Args:
