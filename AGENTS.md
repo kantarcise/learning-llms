@@ -24,6 +24,8 @@ Their pattern is Material for MkDocs, book-aligned navigation, detailed section 
 - Link chapter explanations to runnable code as it develops. Record input/output shapes and hand-worked examples where helpful.
 - Attribute adapted material and link to sources. Do not commit book PDFs, model weights, credentials, or private employer data.
 - Prefer small, focused, human-readable changes. Follow existing conventions.
+- Type-hint new and modified Python function/method parameters and return values, including constructors and tests (self/cls need no annotation). Prefer clear standard types and torch.Tensor; document tensor shapes, dtypes, and axis meanings in docstrings. Annotate stored collections when inference is unclear. Do not add typing dependencies or obscure the teaching code with unnecessary type machinery. Type hints do not validate tensor shapes at runtime.
+- Preserve recorded model outputs and deliberately faulty benchmark fixtures verbatim; apply the typing standard to maintained source, not historical experiment evidence. Existing unrelated source can migrate incrementally. The character-log experiment enforces annotation presence with Ruff in CI; this is not full static type checking.
 - Ask before adding new production dependencies. Use Ruff for Python linting and formatting.
 - Ask one targeted question when intent is materially ambiguous; otherwise complete authorized work.
 - Before declaring completion, verify the requested behavior and summarize changes and checks, including any unverified parts.
