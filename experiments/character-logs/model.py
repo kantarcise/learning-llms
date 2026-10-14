@@ -61,8 +61,14 @@ class CausalAttention(nn.Module):
 
     def __init__(self, width: int, context_length: int) -> None:
         super().__init__()
-        # Learned matrices: shared across all token positions and batch examples.
-        # nn.Linear stores W as [out, in] and computes x @ W.T.
+        # nn.Linear(in_features, out_features) creates a layer object and
+        # initializes its trainable weight table as [out_features,in_features].
+        # Here each table is [32,32]. Creating the object does not process input.
+        # bias defaults to True: Linear normally computes x @ weight.T + bias.
+        # We explicitly choose bias=False, so these layers have no bias vector
+        # (their .bias is None). The feedforward Linear layers keep the default.
+        # Parameters are shared across all token positions and batch examples.
+        # Query, key, value, and output each own a SEPARATE weight table.
         self.query = nn.Linear(width, width, bias=False)
         self.key = nn.Linear(width, width, bias=False)
         self.value = nn.Linear(width, width, bias=False)
@@ -90,7 +96,21 @@ class CausalAttention(nn.Module):
         # Use illustrative width-2 PROJECTED vectors (not actual embeddings):
         # q_o=[2,0]; keys for [j,o,b]=[[1,0],[0,1],[3,0]];
         # values for [j,o,b]=[[1,2],[3,0],[9,9]]. The real model uses width 32.
-        q, k, v = self.query(x), self.key(x), self.value(x)
+        # Calling a Linear object runs its forward computation with the weights
+        # it already owns; it does not create or update weights on every call.
+        # Because bias=False, the following calls are mathematically equivalent:
+        # q = x @ self.query.weight.T
+        # k = x @ self.key.weight.T
+        # v = x @ self.value.weight.T
+        # .T transposes the 2D WEIGHT table, stored as [output,input]. This is
+        # separate from transposing the calculated KEY vectors for scores below.
+        # Each call maps [B,T,32] to [B,T,32], independently at each position.
+        # For one token with illustrative x=[2,3] and weight=[[1,4],[5,6]],
+        # x @ weight.T = [2*1+3*4, 2*5+3*6] = [14,28].
+        # If bias were enabled, e.g. [0.5,-1], the result would be [14.5,27].
+        q = self.query(x)
+        k = self.key(x)
+        v = self.value(x)
 
         # Every query needs a dot product with every key in the SAME example.
         # k initially stores one key per ROW: [B,T,D]. transpose(-2,-1) swaps
