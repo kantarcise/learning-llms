@@ -12,6 +12,7 @@ nav:
   - Home: index.md
   - Step Zero: 00-step-zero.md
   - Preparation conversation: preparation/first-conversation.md
+  - Training comparison: preparation/training-comparison.md
   - Learning glossary: preparation/glossary.md
   - The Book:
       - 'Chapter 1 - Understanding Large Language Models': chapters/01-understanding-large-language-models.md

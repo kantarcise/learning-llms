@@ -1,0 +1,176 @@
+{
+  "seed": 7,
+  "device": "cpu",
+  "torch_version": "2.14.1",
+  "config": {
+    "vocabulary_size": 25,
+    "context_length": 24,
+    "width": 32,
+    "hidden_width": 64
+  },
+  "batch_size": 16,
+  "learning_rate": 0.003,
+  "train_windows": 276,
+  "validation_windows": 143,
+  "best_epoch": 8,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 3.326307003048883,
+      "validation_loss": 3.309626260837475
+    },
+    {
+      "epoch": 1,
+      "train_loss": 2.3955724239349365,
+      "validation_loss": 2.5586748790074063
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1.9330965919771057,
+      "validation_loss": 2.2293917065733795
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.5957936774129453,
+      "validation_loss": 2.0527115485051297
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.3450477140537207,
+      "validation_loss": 1.985757891114775
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.147889709127122,
+      "validation_loss": 1.9401878893792213
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.9650782441747361,
+      "validation_loss": 1.9091285458811513
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.8034988857697749,
+      "validation_loss": 1.94042321185132
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.6402173240979513,
+      "validation_loss": 1.908594271519801
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.5066937000855155,
+      "validation_loss": 1.91540253745926
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.4098928678726804,
+      "validation_loss": 1.9956978251050401
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.34692377759062726,
+      "validation_loss": 2.014395723809729
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.28566712205824646,
+      "validation_loss": 2.0284227374550348
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.2583773216043693,
+      "validation_loss": 2.127857224924581
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.22282201462033865,
+      "validation_loss": 2.104462203445968
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.20637313330519028,
+      "validation_loss": 2.143479092137797
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.1858020668876344,
+      "validation_loss": 2.154895737454608
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.1752027229986329,
+      "validation_loss": 2.190041203598876
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.17371519989725473,
+      "validation_loss": 2.2282313216816294
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.16308742372885995,
+      "validation_loss": 2.2168753380542037
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.15636527851439905,
+      "validation_loss": 2.2358463310695194
+    },
+    {
+      "epoch": 21,
+      "train_loss": 0.15931844603324283,
+      "validation_loss": 2.2790044070957425
+    },
+    {
+      "epoch": 22,
+      "train_loss": 0.1568439950545629,
+      "validation_loss": 2.2982238689502634
+    },
+    {
+      "epoch": 23,
+      "train_loss": 0.15640306494374207,
+      "validation_loss": 2.322135044978215
+    },
+    {
+      "epoch": 24,
+      "train_loss": 0.1530586625786795,
+      "validation_loss": 2.3345603542728024
+    },
+    {
+      "epoch": 25,
+      "train_loss": 0.1442697116214296,
+      "validation_loss": 2.3546892429565216
+    },
+    {
+      "epoch": 26,
+      "train_loss": 0.1484132997583652,
+      "validation_loss": 2.3739319464543485
+    },
+    {
+      "epoch": 27,
+      "train_loss": 0.1447527851315512,
+      "validation_loss": 2.395784614803074
+    },
+    {
+      "epoch": 28,
+      "train_loss": 0.14639460414216138,
+      "validation_loss": 2.4216681343692166
+    },
+    {
+      "epoch": 29,
+      "train_loss": 0.14078195749417596,
+      "validation_loss": 2.417858954076167
+    },
+    {
+      "epoch": 30,
+      "train_loss": 0.14479529630878699,
+      "validation_loss": 2.447341698866624
+    }
+  ],
+  "before": "job=dobyglcbnyjamm\nfbyaagagagagagagagagagagaaaaaaaaaagagagagagagagagaaaaaaaaaagagagagagagagagaaaaaaaaaagagagagagagagagaaaaaa",
+  "after": "job=users status=sted\njob=s status=invoinvoicetatusous=stustainvonvoinvoicetustainvoinvoicetatusous=tustainvonvoinvoicetusta",
+  "generation": "Greedy, prompt job=, 120 new characters, no end token."
+}

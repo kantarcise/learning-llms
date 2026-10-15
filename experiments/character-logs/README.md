@@ -114,17 +114,17 @@ Both curves decrease initially. Later, the training curve continues downward whi
 
 The windows overlap heavily: 244 windows are not 244 independent log sequences. The underlying data is only four training records and two validation records, using shared templates. Tests check mechanics (including no future-token access and no validation updates), not useful generalization. Generated text is still malformed. We have not established that this dataset or architecture is sufficient for a useful model.
 
-### Continuing practice in a follow-up PR 🌱
+### User-run comparison completed on October 15 📉
 
-This first PR records a runnable, documented learning baseline. Merging it does not mark the walkthrough or generalization evaluation complete. Continue these steps together in a follow-up PR:
+Sezai ran the current context-24 model (10,848 parameters) for 10 and 30 epochs, changing only duration. The saved epoch 0–10 histories match exactly. Both runs selected epoch 8 with validation loss 1.9086. Final training loss fell from 0.4099 to 0.1448, while final validation loss rose from 1.9957 to 2.4473: longer training increased overfitting in this setup.
 
-1. Inspect the first input/target pair and its tensor shapes. Explain which character each position predicts.
-2. Read one training batch: clear gradients → forward/loss → backward → optimizer update. Identify what changes at each step.
-3. Read the plot above and explain why validation has a loss without updating weights.
-4. Choose a controlled follow-up run together, changing one setting at a time. A longer run can help us observe whether the validation rise persists; it is not automatically a better model.
-5. Design a larger, more varied dataset and a meaningful held-out split before making generalization claims. Keep a separate test set untouched by checkpoint selection when we reach that stage.
+- [Ten-epoch record](results/2026-10-15-comparison/10-epochs/run.json)
+- [Thirty-epoch record](results/2026-10-15-comparison/30-epochs/run.json)
+- [Full comparison, original plots, commands, and learning handoff](../../docs/preparation/training-comparison.md)
 
-These are planned learning steps, not completed exercises. The added code comments explain shapes, learned weights versus temporary activations, residual paths, masking, and the training loop. We will read them in small pieces rather than treating an automated run as understanding.
+The generated samples are identical because both use the best epoch-8 checkpoint, not the final weights. One seed and a tiny shared-template dataset do not establish broad generalization. The reports and plots are preserved unchanged; model weights stay local. The earlier context-32 demonstration above remains historical evidence.
+
+The forward walkthrough, update discussion, user-run training, and controlled comparison are complete at the guided level described in the handoff. The assistant performed the isolated parameter inspection; Sezai ran the full training experiments. Review the documented conclusion, then start the book. Larger datasets and stronger held-out evaluations can follow later.
 
 ## Type hints and the numerical attention example
 
