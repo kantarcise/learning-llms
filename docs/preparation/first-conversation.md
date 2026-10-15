@@ -4,11 +4,11 @@ Conversation notes and handoff, October 3–15, 2026. The book has arrived; we a
 
 ## Start here on the other computer
 
-As of October 15, we have walked through the forward pass and discussed shifted targets, cross-entropy, and the four training-loop operations. Sezai correctly distinguished persistent learned weights from freshly computed batch gradients. Backpropagation computes gradients; the optimizer updates weights. The simple numerical update used plain gradient descent, while the actual experiment uses AdamW. This records the discussion, not an independent derivation of AdamW or cross-entropy gradients.
+As of October 15, Sezai has completed the guided forward walkthrough, explained the training-update sequence, and run both 10-epoch and 30-epoch experiments himself. The assistant ran the isolated one-parameter inspection; Sezai followed it but has not independently run that inspection. The [training comparison](training-comparison.md) preserves the results, plots, interpretation, and limitations.
 
-The preparation experiment is in `experiments/character-logs/`. Its current configuration has **maximum input length 24, vector width 32, and 10,848 parameters**; inspection still uses two eight-character examples. Context length was changed from 32 to 24 to distinguish it visibly from vector width. The original ten-epoch CPU demonstration used context length 32 and 11,104 parameters, with best validation loss 1.9128 at epoch 9 and malformed generated text. Its small JSON report and plot are committed; model weights stay local. No full training run has been performed for the new configuration, and useful generalization has not been established.
+The current preparation model has **maximum input length 24, vector width 32, and 10,848 parameters**. Both user-run experiments selected epoch 8 (validation loss 1.9086). Extending to 30 epochs reduced training loss but worsened final validation loss. Generated text learned recognizable fragments but remained malformed. These results supersede the earlier assistant-run context-32 demonstration for our current comparison; its historical evidence remains unchanged.
 
-**Resume here 🧩:** open `experiments/character-logs/train.py`, starting with `loss_for` and the training loop in `main`. Revisit the four lines below, then trace one actual parameter's gradient and before/after value for one batch together. That numerical inspection has not yet been performed. Introduce AdamW's moving averages gently if needed; do not jump to a longer training run or larger dataset. Use the [learning glossary](glossary.md) for unfamiliar terms.
+**Resume here 📘:** review the preparation wrap-up, then begin the book's first chapter with Sezai's reading and questions. No further data expansion or training run is needed for this preparation cycle. Chapter notes remain scaffolds. Use the [learning glossary](glossary.md) for unfamiliar terms.
 
 Keep the character tokenizer for this experiment; select an established tokenizer for the next distinct training project. Cross-entropy's detailed gradient derivation, KV caching, and multi-head attention remain open.
 
@@ -913,3 +913,6 @@ This is an illustrative gradient-descent update, **not the formula implemented b
 AdamW keeps moving averages of gradients and squared gradients to adapt updates, and applies weight decay separately from the loss-gradient calculation. Clearing `.grad` does not erase those moving averages. Thus the model retains learned weights, the optimizer retains its state, and each batch supplies fresh gradients. Our code uses `weight_decay=0.01`; a detailed AdamW calculation remains a future topic.
 
 The key distinction Sezai identified: **weights carry learning forward; gradients are recalculated for the current batch at the current weights.** Next, inspect one real parameter before and after an update together, without treating this explanation as a completed numerical exercise.
+
+
+**October 15 follow-up:** the isolated update and user-run training comparison described above have now been discussed. See the [current comparison and handoff](training-comparison.md); earlier stopping points in this conversation are historical.

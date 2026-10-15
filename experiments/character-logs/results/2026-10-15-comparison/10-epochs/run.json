@@ -1,0 +1,76 @@
+{
+  "seed": 7,
+  "device": "cpu",
+  "torch_version": "2.14.1",
+  "config": {
+    "vocabulary_size": 25,
+    "context_length": 24,
+    "width": 32,
+    "hidden_width": 64
+  },
+  "batch_size": 16,
+  "learning_rate": 0.003,
+  "train_windows": 276,
+  "validation_windows": 143,
+  "best_epoch": 8,
+  "history": [
+    {
+      "epoch": 0,
+      "train_loss": 3.326307003048883,
+      "validation_loss": 3.309626260837475
+    },
+    {
+      "epoch": 1,
+      "train_loss": 2.3955724239349365,
+      "validation_loss": 2.5586748790074063
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1.9330965919771057,
+      "validation_loss": 2.2293917065733795
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.5957936774129453,
+      "validation_loss": 2.0527115485051297
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.3450477140537207,
+      "validation_loss": 1.985757891114775
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.147889709127122,
+      "validation_loss": 1.9401878893792213
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.9650782441747361,
+      "validation_loss": 1.9091285458811513
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.8034988857697749,
+      "validation_loss": 1.94042321185132
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.6402173240979513,
+      "validation_loss": 1.908594271519801
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.5066937000855155,
+      "validation_loss": 1.91540253745926
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.4098928678726804,
+      "validation_loss": 1.9956978251050401
+    }
+  ],
+  "before": "job=dobyglcbnyjamm\nfbyaagagagagagagagagagagaaaaaaaaaagagagagagagagagaaaaaaaaaagagagagagagagagaaaaaaaaaagagagagagagagagaaaaaa",
+  "after": "job=users status=sted\njob=s status=invoinvoicetatusous=stustainvonvoinvoicetustainvoinvoicetatusous=tustainvonvoinvoicetusta",
+  "generation": "Greedy, prompt job=, 120 new characters, no end token."
+}
