@@ -32,3 +32,7 @@ jobs:
       - run: uv run --locked --group experiments ruff check experiments/character-logs
       - run: uv run --locked --group experiments ruff format --check experiments/character-logs
       - run: uv run --locked --group experiments python -m unittest discover -s experiments/character-logs -p 'test_*.py' -v
+
+      - run: uv run --locked --group experiments --group cosmopedia ruff check experiments/cosmopedia
+      - run: uv run --locked --group experiments --group cosmopedia ruff format --check experiments/cosmopedia
+      - run: uv run --locked --group experiments --group cosmopedia python -m unittest discover -s experiments/cosmopedia -p 'test_*.py' -v
