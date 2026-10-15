@@ -19,18 +19,33 @@ def loss_for(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         logits: Raw floating-point scores [B,T,V] from the model.
         targets: Correct next-character IDs, torch.long [B,T].
 
-    Shape key: B = batch size (examples), T = token positions per example,
-    V = vocabulary size (possible next characters), NOT vector width.
-    Inspection: B=2, T=8, V=25, so logits [2,8,25] pair with targets [2,8].
-    At input position 7 ('e' in 'job=orde'), 25 scores predict the next character;
-    the target is integer ID 19 ('r'), not a score or a probability.
+    Shape key: B = batch size (examples), T = input positions per example,
+    V = vocabulary size (possible next characters), not embedding vector width.
+    Inspection uses B=2, T=8, V=25: scores [2,8,25], targets [2,8].
 
-    Cross-entropy performs log-softmax internally, so do not softmax first.
+    Each input position has its OWN next-character task. For input 'job=orde'
+    and target 'ob=order', position 0 predicts 'o' using only 'j'; position 7
+    predicts 'r' using 'job=orde'. Causal attention prevents earlier positions
+    from seeing later input characters. We score all eight tasks together.
+    Each target is the correct character's integer ID, not a score: the last
+    target here is 19 ('r'), which selects one of the 25 vocabulary scores.
+
+    Conceptually, cross-entropy converts scores to probabilities and asks:
+    'How much probability did you assign to the correct next character?'
+    Its loss for one position is -log(that probability), using natural log.
+    Probability 0.8 gives about 0.223 loss; probability 0.1 gives about 2.303.
+    Confident correct predictions therefore have smaller loss. All vocabulary
+    scores contribute to the probability calculation, not just the target score.
+    PyTorch computes this stably using log-softmax internally; pass raw logits,
+    not probabilities. We do not select a winning character before computing loss.
+
+    Here there are 2*8=16 predictions. With no class weights or ignored targets,
+    the default reduction returns their mean loss as one scalar tensor.
     The scalar averages B*T predictions and remains differentiable when gradient
     tracking is enabled. Computing it alone does not change model parameters.
     """
     # Cross-entropy receives logits, not probabilities. One target per position.
-    # B=batch examples, T=positions per example, V=vocabulary entries.
+    # B=batch examples, T=input positions, V=vocabulary entries.
     # [2,8,25] -> [16,25] score rows; [2,8] -> [16] correct character IDs.
     # [B,T,V] -> [B*T,V], [B,T] -> [B*T]. Flattening does not mix attention.
     # The default reduction averages the loss over all B*T targets.
@@ -41,13 +56,13 @@ def loss_for(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
 def evaluate(model: TinyTransformer, loader: Iterable[Sequence[torch.Tensor]]) -> float:
     """Measure mean loss on a nonempty loader without building gradient graphs.
 
-    Args:
-        model: TinyTransformer to evaluate with its current weights.
-        loader: Batches of (input_ids, target_ids), each shaped [B,T].
-
     Shape key: B = examples in the current batch, T = positions per example.
     A batch [2,8] has 16 targets. The last batch may have fewer examples.
     Model scores have shape [B,T,V], with V = vocabulary size (25 here).
+
+    Args:
+        model: TinyTransformer to evaluate with its current weights.
+        loader: Batches of (input_ids, target_ids), each shaped [B,T].
 
     Returns:
         Python float, averaged over all target positions, not batch averages.
@@ -135,6 +150,19 @@ def inspect(
 def main() -> None:
     """Run the CPU teaching experiment from command-line settings.
 
+    Each training batch runs four distinct steps: clear stored gradients,
+    compute predictions and loss, backpropagate to compute fresh gradients,
+    and let AdamW update the existing weights. backward() does not update
+    weights; step() does not clear gradients. zero_grad(set_to_none=True)
+    clears parameter .grad slots, not weights or AdamW's running statistics.
+
+    For intuition, plain gradient descent uses w = w - learning_rate * gradient:
+    w=0.50, gradient=0.20, learning_rate=0.10 gives w=0.48. This is illustrative,
+    NOT our AdamW update formula. AdamW maintains moving averages of gradients
+    and squared gradients, uses them to adapt updates, and applies decoupled
+    weight decay. Fresh batch gradients coexist with persistent optimizer state.
+    We do not intentionally accumulate gradients across batches in this loop.
+
     --inspect-only exits after showing the fixture. Otherwise, measure epoch 0,
     train for --epochs passes, and evaluate both splits after every pass. Save
     the checkpoint with lowest validation loss, then generate from it. Outputs
@@ -199,6 +227,11 @@ def main() -> None:
             model.train()
             for inputs, targets in training:
                 # 1. Clear previous gradients (PyTorch otherwise accumulates them).
+                # Each trainable parameter has a .grad slot. backward() ADDS to
+                # that slot; step() uses it but does not clear it. Each batch here
+                # needs fresh gradients, so discard the previous batch's values.
+                # set_to_none=True sets slots to None instead of writing zeros.
+                # This does not reset weights or AdamW's running optimizer state.
                 optimizer.zero_grad(set_to_none=True)
                 # 2. Forward pass + compare scores with known next-character IDs.
                 loss = loss_for(model(inputs), targets)

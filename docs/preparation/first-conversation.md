@@ -1,16 +1,16 @@
 # From tokens to next-token predictions
 
-Conversation notes and handoff, October 3–12, 2026. The book has not arrived yet. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
+Conversation notes and handoff, October 3–15, 2026. The book has arrived; we are finishing the preparation experiment before beginning its chapters. These are preparation notes from a guided discussion, not completed book chapters or independently completed exercises. Explanations are condensed rather than a verbatim transcript; quoted observations are Sezai's words.
 
 ## Start here on the other computer
 
-As of October 12, Sezai has run `--inspect-only` himself, read the code in VS Code, and followed text slicing and character-to-ID encoding. We revisited tensors as numerical containers, embedding-table rows versus vector width, and learned position embeddings. Sezai confirmed that lookup retrieves stored values and optimizer updates change them during training. The next step is a slow walkthrough from token lookup through position addition, normalization, and attention, using actual code and numbers.
+As of October 15, we have walked through the forward pass and discussed shifted targets, cross-entropy, and the four training-loop operations. Sezai correctly distinguished persistent learned weights from freshly computed batch gradients. Backpropagation computes gradients; the optimizer updates weights. The simple numerical update used plain gradient descent, while the actual experiment uses AdamW. This records the discussion, not an independent derivation of AdamW or cross-entropy gradients.
 
 The preparation experiment is in `experiments/character-logs/`. Its current configuration has **maximum input length 24, vector width 32, and 10,848 parameters**; inspection still uses two eight-character examples. Context length was changed from 32 to 24 to distinguish it visibly from vector width. The original ten-epoch CPU demonstration used context length 32 and 11,104 parameters, with best validation loss 1.9128 at epoch 9 and malformed generated text. Its small JSON report and plot are committed; model weights stay local. No full training run has been performed for the new configuration, and useful generalization has not been established.
 
-**Resume here 🧩:** open the architecture overview at the top of `experiments/character-logs/model.py`, then `TinyTransformer.forward`. Trace `job=orde` from its ID tensor to the token and position vectors and their sum. Use the [learning glossary](glossary.md) for unfamiliar terms. The hand calculation originally omitted position embeddings; explicitly include them in the code walkthrough. Name the module and method for every source reference, and distinguish explanatory equivalents from exact source. Prefer small diagrams paired with code, one step at a time.
+**Resume here 🧩:** open `experiments/character-logs/train.py`, starting with `loss_for` and the training loop in `main`. Revisit the four lines below, then trace one actual parameter's gradient and before/after value for one batch together. That numerical inspection has not yet been performed. Introduce AdamW's moving averages gently if needed; do not jump to a longer training run or larger dataset. Use the [learning glossary](glossary.md) for unfamiliar terms.
 
-We are wrapping the first experiment PR as a documented learning baseline. Continued walkthroughs, a larger and more varied dataset, and controlled training comparisons belong in a follow-up PR. Keep the character tokenizer for this experiment; select an established tokenizer for the next distinct training project. Merging does not claim independent mastery or completed book exercises. Cross-entropy's detailed gradient calculation, KV caching, and multi-head attention remain open.
+Keep the character tokenizer for this experiment; select an established tokenizer for the next distinct training project. Cross-entropy's detailed gradient derivation, KV caching, and multi-head attention remain open.
 
 Teaching preferences: concrete numerical examples, small steps, and a check before advancing. When discussing embeddings, write **embeddings (vectors)**. Clearly distinguish stored model parameters from temporary activations. Sezai already understands training versus inference from his graduation project; focus on the language-model-specific connections.
 
@@ -859,3 +859,57 @@ The old repository begins with random numerical inputs, so it skips text encodin
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — original transformer paper; detailed equations can wait until the conceptual walkthrough is clear.
 
 These notes summarize our conversation and use explicitly illustrative examples; they are not excerpts from the book.
+
+
+## Eight next-token tasks and one weight update 🧩
+
+For the inspection example, input `job=orde` and target `ob=order` each contain eight characters. They form eight separate next-character tasks, computed together:
+
+| Context available at this position | Correct next character |
+| --- | --- |
+| `j` | `o` |
+| `jo` | `b` |
+| `job` | `=` |
+| `job=` | `o` |
+| `job=o` | `r` |
+| `job=or` | `d` |
+| `job=ord` | `e` |
+| `job=orde` | `r` |
+
+Causal masking keeps each position from seeing later input characters. Each position produces 25 vocabulary scores (logits), paired with one correct character ID, not a target score. During generation we normally use only the final position's logits to select the next character to append.
+
+In `train.py`, our `loss_for` wrapper calls PyTorch's `F.cross_entropy`. Here **B = batch examples, T = input positions per example, V = vocabulary size**, not vector width. Inspection uses B=2, T=8, V=25. Flattening scores `[2,8,25]` into `[16,25]` and targets `[2,8]` into `[16]` pairs each score row with its target; it does not mix attention between examples.
+
+Conceptually, cross-entropy asks: **how much probability did you assign to the correct next character?** A position's loss is the negative natural logarithm of that probability. Probability 0.8 gives about 0.223 loss; probability 0.1 gives about 2.303. PyTorch computes this stably from raw logits using log-softmax internally. We neither softmax first nor choose a winning character before computing loss. With our unweighted, non-ignored targets, the result is the mean of all 16 position losses.
+
+### Fresh gradients, persistent weights 🌱
+
+The actual training loop in `train.py::main` is:
+
+```python
+optimizer.zero_grad(set_to_none=True)
+loss = loss_for(model(inputs), targets)
+loss.backward()
+optimizer.step()
+```
+
+1. **Clear stored gradients.** Each parameter has a `.grad` slot. PyTorch's `backward()` adds to it, and `step()` does not clear it. Setting slots to `None` prepares for this batch without resetting learned weights or optimizer state.
+2. **Predict and measure error.** Current weights and the current batch produce logits and a scalar loss.
+3. **Compute fresh gradients.** Backpropagation calculates how the loss depends on the parameters. It does not change their values.
+4. **Update the existing weights.** AdamW uses those gradients and its running state. The updated weights become the starting point for the next batch.
+
+For an illustrative parameter, an old gradient of 2 plus a new gradient of 3 would leave 5 without clearing. Our loop clears first, so it uses the fresh gradient of 3. Deliberate gradient accumulation is possible, but this experiment does not use it.
+
+Basic gradient descent illustrates the direction:
+
+```text
+new weight = old weight - learning rate × gradient
+           = 0.50 - 0.10 × 0.20
+           = 0.48
+```
+
+This is an illustrative gradient-descent update, **not the formula implemented by our AdamW optimizer**. With randomly sampled examples or minibatches, this is the basic stochastic-gradient-descent approach. The direction is opposite the gradient to seek lower loss; an individual update does not guarantee that every loss measurement decreases.
+
+AdamW keeps moving averages of gradients and squared gradients to adapt updates, and applies weight decay separately from the loss-gradient calculation. Clearing `.grad` does not erase those moving averages. Thus the model retains learned weights, the optimizer retains its state, and each batch supplies fresh gradients. Our code uses `weight_decay=0.01`; a detailed AdamW calculation remains a future topic.
+
+The key distinction Sezai identified: **weights carry learning forward; gradients are recalculated for the current batch at the current weights.** Next, inspect one real parameter before and after an update together, without treating this explanation as a completed numerical exercise.
