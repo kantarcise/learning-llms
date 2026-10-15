@@ -19,11 +19,19 @@ def loss_for(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         logits: Raw floating-point scores [B,T,V] from the model.
         targets: Correct next-character IDs, torch.long [B,T].
 
+    Shape key: B = batch size (examples), T = token positions per example,
+    V = vocabulary size (possible next characters), NOT vector width.
+    Inspection: B=2, T=8, V=25, so logits [2,8,25] pair with targets [2,8].
+    At input position 7 ('e' in 'job=orde'), 25 scores predict the next character;
+    the target is integer ID 19 ('r'), not a score or a probability.
+
     Cross-entropy performs log-softmax internally, so do not softmax first.
     The scalar averages B*T predictions and remains differentiable when gradient
     tracking is enabled. Computing it alone does not change model parameters.
     """
     # Cross-entropy receives logits, not probabilities. One target per position.
+    # B=batch examples, T=positions per example, V=vocabulary entries.
+    # [2,8,25] -> [16,25] score rows; [2,8] -> [16] correct character IDs.
     # [B,T,V] -> [B*T,V], [B,T] -> [B*T]. Flattening does not mix attention.
     # The default reduction averages the loss over all B*T targets.
     return F.cross_entropy(logits.flatten(0, 1), targets.flatten())
@@ -36,6 +44,10 @@ def evaluate(model: TinyTransformer, loader: Iterable[Sequence[torch.Tensor]]) -
     Args:
         model: TinyTransformer to evaluate with its current weights.
         loader: Batches of (input_ids, target_ids), each shaped [B,T].
+
+    Shape key: B = examples in the current batch, T = positions per example.
+    A batch [2,8] has 16 targets. The last batch may have fewer examples.
+    Model scores have shape [B,T,V], with V = vocabulary size (25 here).
 
     Returns:
         Python float, averaged over all target positions, not batch averages.
@@ -68,6 +80,10 @@ def generate(
 ) -> str:
     """Return the prompt plus a fixed number of greedy next-character predictions.
 
+    Shape key: B = batch examples (1 here), T = current context positions,
+    V = vocabulary size (25 here). Scores [1,T,25] become [1,25] when
+    selecting the final position. Argmax returns one next-character ID.
+
     Uses the CPU model, its matching vocabulary, and a nonempty encodable prompt.
     At each step, only the last position's logits select the new ID (argmax).
     Context is cropped to the last context_length characters; position indices
@@ -89,6 +105,11 @@ def inspect(
     model: TinyTransformer, texts: Sequence[str], vocabulary: Sequence[str]
 ) -> None:
     """Print the saved two-example fixture's IDs, shapes, and current model loss.
+
+    Shape key: B = batch examples (2), T = positions per example (8),
+    D = embedding vector width (32), V = vocabulary size (25).
+    IDs/targets: [2,8]; vectors: [2,8,32]; scores: [2,8,25].
+    Targets contain correct character IDs, never prediction scores.
 
     Expects the first two training records to contain at least nine characters.
     Inputs are the first eight, targets are characters 2 through 9. Does not

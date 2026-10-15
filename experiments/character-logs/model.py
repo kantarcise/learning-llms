@@ -85,6 +85,11 @@ class CausalAttention(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Map floating-point representations [B,T,D] to updates [B,T,D].
 
+        Shape key: B = batch examples, T = input token positions per example,
+        D = coordinates per vector. Inspection [B,T,D] = [2,8,32].
+        Scores [B,T,T] = [2,8,8] compare query positions with key positions;
+        neither T axis means vocabulary size. Vocabulary scores come later.
+
         T must fit the configured context. Scores have shape [B,T,T]; their
         final axis indexes keys. Future keys receive zero weight after softmax.
         """
@@ -175,6 +180,10 @@ class TransformerBlock(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Return updated [B,T,D] vectors from incoming [B,T,D] vectors.
 
+        Shape key: B = batch examples, T = positions per example, D = vector
+        width. Inspection [B,T,D] = [2,8,32] at both input and output. Inside
+        the feedforward expansion only, [2,8,64] has 64 coordinates per token.
+
         y = x + attention(norm1(x)); output = y + feedforward(norm2(y)).
         The feedforward network processes positions independently with shared
         weights. Its output is an update to y, not a replacement for y.
@@ -232,6 +241,11 @@ class TinyTransformer(nn.Module):
             negative and the scores need not sum to 1. Applying softmax across
             V turns a position's scores into probabilities. No softmax or token
             selection happens in this method.
+
+        Shape key: B = batch examples, T = positions per example,
+        V = vocabulary entries, D = coordinates per embedding vector.
+        Inspection: IDs [2,8] -> vectors [2,8,32] -> scores [2,8,25].
+        V=25 and D=32 describe different things: candidates versus coordinates.
 
         At position 3 of "job=orde" (the '='), scores predict the next character,
         'o', using only positions 0 through 3. All positions are computed in

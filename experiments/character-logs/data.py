@@ -74,6 +74,10 @@ class CharacterWindows(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         vocabulary: Ordered character list shared by the tokenizer and model.
         context_length: Number T of input positions in each example.
 
+    Shape key: T = token positions per example, B = examples per batch.
+    With context_length=8, one item has shapes [8] and [8]; batching two items
+    produces inputs [2,8] and targets [2,8]. These contain IDs, not vectors.
+
     Each item is two torch.long tensors of shape [T]. A slice of T+1 IDs
     produces input=slice[:-1] and target=slice[1:]. DataLoader stacks these
     into [B,T] batches. Windows advance by one character and never cross records.
@@ -105,4 +109,9 @@ class CharacterWindows(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         return len(self.windows)
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return input/target ID tensors [T], with T = positions per example.
+
+        For T=8, each tensor contains eight integers. DataLoader later adds
+        the batch axis B (number of examples), producing [B,T].
+        """
         return self.windows[index]
