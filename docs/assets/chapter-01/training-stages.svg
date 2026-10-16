@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="830" viewBox="0 0 900 830" role="img" aria-labelledby="title desc">
+<title id="title">From pretraining to supervised fine-tuning</title>
+<desc id="desc">Raw text supplies next-token targets for pretraining. Pretraining produces a base model with learned language patterns. Continuing from its weights, supervised fine-tuning uses task examples and desired outputs to adapt behavior. Our two experiments illustrate pretraining only.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#476582" stroke-width="2"/></marker></defs>
+<rect width="900" height="830" fill="#fff" rx="16"/>
+<g font-family="Arial, sans-serif" fill="#172b4d" text-anchor="middle">
+<text x="450" y="36" font-size="25" font-weight="bold">Two stages, two kinds of training examples</text>
+<rect x="145" y="60" width="610" height="85" rx="14" fill="#edf2fa" stroke="#476582" stroke-width="2"/>
+<text x="450" y="93" font-size="22" font-weight="bold">Raw text</text>
+<text x="450" y="124" font-size="18">The next token in the text supplies the training target.</text>
+<path d="M450 146 V188" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="145" y="200" width="610" height="85" rx="14" fill="#e5f1ee" stroke="#397566" stroke-width="2"/>
+<text x="450" y="233" font-size="22" font-weight="bold">Pretraining</text>
+<text x="450" y="264" font-size="18">Our character-log and Cosmopedia experiments illustrate this.</text>
+<path d="M450 286 V328" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="145" y="340" width="610" height="85" rx="14" fill="#f0ecfa" stroke="#79639c" stroke-width="2"/>
+<text x="450" y="373" font-size="22" font-weight="bold">Pretrained / base model</text>
+<text x="450" y="404" font-size="18">Text completion; broader capabilities depend on training.</text>
+<path d="M450 426 V468" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="145" y="480" width="610" height="115" rx="14" fill="#fff3da" stroke="#a27a28" stroke-width="2"/>
+<text x="450" y="513" font-size="22" font-weight="bold">Supervised fine-tuning</text>
+<text x="450" y="544" font-size="18">Start from the base model's learned weights.</text>
+<text x="450" y="574" font-size="18">Train on task inputs paired with labels or desired responses.</text>
+<path d="M450 596 V638" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="145" y="650" width="610" height="100" rx="14" fill="#e5f1ee" stroke="#397566" stroke-width="2"/>
+<text x="450" y="684" font-size="22" font-weight="bold">Fine-tuned model</text>
+<text x="450" y="714" font-size="18">Adapted for the tasks represented in its training examples</text>
+<text x="450" y="739" font-size="16">Examples: classification, summarization, translation, assistance</text>
+<text x="450" y="790" font-size="17">A simplified supervised path—not a guarantee of every capability.</text>
+<text x="450" y="815" font-size="16">Fine-tuning is one adaptation method; other training stages are possible.</text>
+</g></svg>

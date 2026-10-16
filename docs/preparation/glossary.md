@@ -13,6 +13,18 @@ A quick reference built from our preparation questions. Examples use the charact
 
 `[B,T] = [2,8]` holds integer IDs. `[B,T,D] = [2,8,32]` holds a vector for each position. `[B,T,V] = [2,8,25]` holds next-character scores. Maximum input length is **24**; it is independent of vector width **32**.
 
+## Corpus
+
+A **corpus** is a collection of text gathered for study or training; its plural is **corpora**. Our six log sequences form a tiny corpus. A corpus does not imply a particular tokenizer or size. Available corpus tokens differ from total tokens processed during training, since training can revisit some examples or stop before covering them all.
+
+## Self-supervised learning
+
+Training where targets are constructed from the data itself. In next-token prediction, the actual next token is the target; people do not manually assign a label to every position. This still uses a loss and parameter updates. It does not mean the model invents its own correct answers.
+
+## Autoregressive generation
+
+Predict a next token from the preceding context, select it, append it, and repeat. Generated tokens become inputs to later predictions. Model weights stay fixed during this inference loop; generation is not an optimizer update. See the [Chapter 1 illustration](../chapters/01-understanding-large-language-models.md#autoregressive-generation-predict-append-repeat).
+
 ## Token, vocabulary, and encoding
 
 A **token** is a unit chosen by the tokenizer. Here it is one Python string character. A **vocabulary** lists all available tokens. An **ID** is a token's integer index in that list, not a measure of its meaning.
