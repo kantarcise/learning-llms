@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Opening notes cover the chapter overview and 2.1, “Understanding word embeddings.” Section 2.2 and later sections are still ahead; no exercises are recorded as completed.
+Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.2, “Tokenizing text.” Section 2.3 is next; no exercises are recorded as independently completed.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -81,7 +81,109 @@ Changing width has consequences beyond the embedding table. A square attention p
 
 ## 2.2 Tokenizing text
 
-This is the next section to develop as reading continues. The chapter separates the conceptual introduction to embeddings from the practical process of splitting text into tokens. No tokenization exercises are recorded as completed yet.
+Reading reached the end of this section. The examples below follow the [author's section 2.2 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb), with our explanations alongside them. They are reference snippets checked by the assistant, not exercises recorded as independently completed by Sezai.
+
+### Why do we need this step?
+
+I am still looking for the complete reasoning behind tokenization. “The model needs numbers” explains part of it, but does not explain why we split the text into these particular pieces.
+
+Our model consumes a sequence of vocabulary IDs and returns a score for each possible next ID. We therefore need a consistent rule for **what counts as one position and one prediction unit**. Tokenization supplies that rule. Later, mapping tokens to IDs makes them usable as lookup addresses; embedding lookup supplies learned vectors.
+
+```text
+Text → token pieces → integer IDs → embedding vectors → transformer
+       this section   section 2.3    section 2.7
+```
+
+Characters, bytes, words, and subwords are different choices of unit. Character-level input worked in our first experiment; splitting into whole words is not a requirement of every LLM. The book's regex tokenizer is a small, inspectable starting point. BPE in section 2.5 introduces another way to choose pieces, with different tradeoffs in sequence length, vocabulary size, and handling unfamiliar words.
+
+### Read a story into a Python string
+
+The sample is Edith Wharton's *The Verdict*, available as [`the-verdict.txt` in the official repository](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/the-verdict.txt). Once that file is present in the working directory, the reading step is ordinary Python:
+
+```python
+with open("the-verdict.txt", "r", encoding="utf-8") as f:
+    raw_text = f.read()
+
+print(len(raw_text))
+print(raw_text[:99])
+```
+
+The checked file contains **20,479 Python string characters**, not 20,479 tokens or necessarily 20,479 bytes. UTF-8 decoding creates the string; it is not the model's tokenizer. No embeddings or model calculations have happened yet.
+
+The upstream notebook also includes download code. Its current downloader may differ from the printed book; the reading and splitting examples here follow the linked revision without adding a dependency to our project.
+
+### Start with whitespace, then handle punctuation
+
+```python
+import re
+
+text = "Hello, world. This, is a test."
+result = re.split(r'(\s)', text)
+print(result)
+```
+
+```text
+['Hello,', ' ', 'world.', ' ', 'This,', ' ', 'is', ' ', 'a', ' ', 'test.']
+```
+
+`\s` matches a whitespace character, including spaces, tabs, and newlines. The parentheses form a capturing group: with `re.split`, that means the matched separators are included in the result. Punctuation is still attached to words, so the next version splits on commas and periods too:
+
+```python
+result = re.split(r'([,.]|\s)', text)
+result = [item for item in result if item.strip()]
+```
+
+The character class `[,.]` matches either punctuation mark; `|` means “or.” Splitting can produce empty strings where separators meet or occur at an edge. `if item.strip()` filters out empty and whitespace-only strings. This version yields:
+
+```text
+['Hello', ',', 'world', '.', 'This', ',', 'is', 'a', 'test', '.']
+```
+
+### Expand the punctuation rule
+
+The author's next example keeps more punctuation as separate pieces:
+
+```python
+text = "Hello, world. Is this-- a test?"
+result = re.split(r'([,.:;?_!"()\']|--|\s)', text)
+result = [item.strip() for item in result if item.strip()]
+print(result)
+```
+
+```text
+['Hello', ',', 'world', '.', 'Is', 'this', '--', 'a', 'test', '?']
+```
+
+The rule matches one listed punctuation character, a double hyphen, or a whitespace character. Because the alternatives are inside a capturing group, punctuation survives the split; the following comprehension removes whitespace and empty pieces.
+
+These punctuation pieces are different from **special model-control tokens**, such as an end-of-text marker. Section 2.4 introduces those. This regex is also not an exhaustive tokenizer for every language or punctuation mark.
+
+### Why preserve capitalization? What about whitespace?
+
+Lowercasing would erase distinctions we may want the model to learn. For example, `May` can be a name or month, while `may` can express possibility. Capitals also carry clues about sentence boundaries and the output formatting we want. We leave the case intact rather than collapsing these forms before training.
+
+Whitespace is a separate decision. In this exercise we remove it, simplifying the token list. The cost is that exact original formatting is no longer recoverable from those pieces alone. For example, `a b` and `a\n\nb` yield the same pieces despite different layout. Indentation in Python is an especially concrete reason whitespace can matter.
+
+A tokenizer can preserve spaces directly or include them within larger tokens; it does not need one separate token for every space. The choice depends on the application and representation. Our character-log experiment retained spaces and newlines as characters, while this teaching example deliberately discards whitespace.
+
+### Apply the same rule to the story
+
+```python
+preprocessed = re.split(r'([,.:;?_!"()\']|--|\s)', raw_text)
+preprocessed = [item.strip() for item in preprocessed if item.strip()]
+
+print(preprocessed[:10])
+print(len(preprocessed))
+```
+
+```text
+['I', 'HAD', 'always', 'thought', 'Jack', 'Gisburn', 'rather', 'a', 'cheap', 'genius']
+4690
+```
+
+The assistant reproduced **4,690 token occurrences** using the linked story revision. That is the sequence length after this split, not the number of unique vocabulary entries. Repeated words count repeatedly. We have a list of strings; integer IDs, embedding vectors, and training windows are still later steps.
+
+Next: [2.3 Converting tokens into token IDs](#23-converting-tokens-into-token-ids).
 
 ## 2.3 Converting tokens into token IDs
 
