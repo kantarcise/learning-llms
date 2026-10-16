@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="680" viewBox="0 0 1000 680" role="img" aria-labelledby="title desc">
+<title id="title">Where generative language models fit</title>
+<desc id="desc">Artificial intelligence contains machine learning, which contains deep learning. Within deep learning, image classifiers are non-generative examples; modern generative AI includes generative language models and image or audio generators. This map focuses on the models in the book, not all historical generative methods.</desc>
+<rect width="1000" height="680" rx="16" fill="#ffffff"/>
+<g font-family="Arial, sans-serif" fill="#172b4d">
+<rect x="20" y="20" width="960" height="610" rx="18" fill="#edf2fa" stroke="#476582" stroke-width="2"/>
+<text x="44" y="54" font-size="24" font-weight="bold">Artificial intelligence (AI)</text>
+<text x="44" y="82" font-size="18">Systems performing tasks associated with intelligence</text>
+<text x="44" y="111" font-size="16">Also includes approaches such as hand-written rules and search.</text>
+<rect x="55" y="135" width="890" height="470" rx="16" fill="#e5f1ee" stroke="#397566" stroke-width="2"/>
+<text x="79" y="170" font-size="23" font-weight="bold">Machine learning (ML)</text>
+<text x="79" y="198" font-size="18">Learn patterns from data rather than hand-writing every decision</text>
+<rect x="90" y="225" width="820" height="355" rx="14" fill="#f0ecfa" stroke="#79639c" stroke-width="2"/>
+<text x="114" y="260" font-size="23" font-weight="bold">Deep learning (DL)</text>
+<text x="114" y="288" font-size="18">Learn through multiple layers of neural-network computation</text>
+<rect x="115" y="315" width="245" height="235" rx="12" fill="#ffffff" stroke="#79639c"/>
+<text x="135" y="350" font-size="19" font-weight="bold">Non-generative example</text>
+<text x="135" y="386" font-size="18">CNN image classifier</text>
+<text x="135" y="416" font-size="17">Image → category scores</text>
+<rect x="380" y="315" width="505" height="235" rx="12" fill="#fff3da" stroke="#a27a28" stroke-width="2"/>
+<text x="400" y="350" font-size="21" font-weight="bold">Generative AI: modern DL examples</text>
+<text x="400" y="379" font-size="17">Produce text, images, audio, or other content</text>
+<rect x="400" y="400" width="245" height="125" rx="10" fill="#ffffff" stroke="#a27a28"/>
+<text x="416" y="431" font-size="20" font-weight="bold">Generative LLMs</text>
+<text x="416" y="461" font-size="17">GPT-like text generation</text>
+<text x="416" y="494" font-size="17" fill="#70501a">Our focus in this book</text>
+<text x="669" y="439" font-size="18">Image generators</text>
+<text x="669" y="475" font-size="18">Audio generators</text>
+<text x="24" y="661" font-size="16">Conceptual map, not a scale diagram. Generative methods also exist outside deep learning.</text>
+</g></svg>
