@@ -1,6 +1,6 @@
 # Chapter 1 — Understanding Large Language Models
 
-Status: reading in progress, October 16, 2026. Notes cover the reading through the end of 1.4, “Introducing the transformer architecture.” This is the stopping point for today. The chapter is not complete.
+Status: reading in progress, October 16, 2026. Notes now include 1.5, “Utilizing large datasets,” and the discussion of GPT and autoregressive generation in 1.6, “A closer look at the GPT architecture.” The chapter is not complete.
 
 The numbered headings follow the book so I can move between the reading and this companion. Smaller headings within each section organize our explanations and tangents; they are not additional book subsections.
 
@@ -211,7 +211,95 @@ The distinction at the end of this section is useful: not all Transformers are l
 
 In this book, the focus is transformer-based language models similar to GPT. That scope does not make “Transformer” and “LLM” interchangeable terms.
 
-**Stopping point, October 16:** reading and notes reach the end of 1.4. Resume with the next section of the book. No new code experiment or attention derivation is needed before then; the chapter as a whole remains unfinished.
+## 1.5 Utilizing large datasets
+
+### Corpus size is not the same as the training budget
+
+A **corpus** is a collection of text gathered for study or training; the plural is **corpora**. Our six fictional log sequences form a tiny corpus. Cosmopedia and Dolma are much larger examples. See the [glossary](../preparation/glossary.md#corpus).
+
+The GPT-3 table prompted a question: if the available sources totaled 499 billion tokens, why did training process 300 billion?
+
+| GPT-3 source | Available tokens |
+| --- | ---: |
+| Filtered Common Crawl | 410 billion |
+| WebText2 | 19 billion |
+| Books1 | 12 billion |
+| Books2 | 55 billion |
+| Wikipedia | 3 billion |
+| **Total** | **499 billion** |
+
+Common Crawl is **410 billion**, correcting the spoken transcription of 4 billion. The original [GPT-3 paper, section 2.2](https://arxiv.org/html/2005.14165v4#S2.SS2) explains unequal sampling: sources considered higher quality were revisited, while Common Crawl and Books2 received less than a complete pass. Thus 300 billion tokens processed does not mean 300 billion distinct tokens selected once.
+
+We did not find a definitive explanation for the precise 300-billion cutoff. The paper does connect its training choices to then-current scaling-law guidance favoring larger models trained on fewer tokens. Later [Chinchilla research](https://arxiv.org/abs/2203.15556) revised the model-size/training-data balance; it does not reveal the original team's exact decision process.
+
+This connects to our [Cosmopedia run](../preparation/cosmopedia.md): available text and tokens processed during training are different quantities, especially when batches can repeat.
+
+### Dolma is available, but version and units matter
+
+[Dolma](https://huggingface.co/datasets/allenai/dolma) is a publicly released corpus from AI2, with [open-source processing tools](https://github.com/allenai/dolma). The corpus uses the ODC-BY data license. The dataset card lists these **gzip-compressed** sizes:
+
+| Release | Compressed size | Context |
+| --- | ---: | --- |
+| v1.5 | 6.4 TB | Described as roughly 3 trillion tokens |
+| v1.6 | 5.4 TB | Updated corpus |
+| v1.7 | 4.5 TB | Listed as the default release when checked |
+| v1.6 sample | 16.4 GB | Roughly 10 billion tokens |
+
+Source: [official version table](https://huggingface.co/datasets/allenai/dolma#versions), checked October 16, 2026. These are download sizes, not decompressed or tokenized storage requirements. We have not downloaded Dolma; it is a reading reference, not a new experiment to complete.
+
+### The encouraging part: reuse pretrained weights
+
+The section ends with a useful practical point: we do not need to repeat enormous pretraining runs for every application. Available pretrained models can be adapted to particular tasks using much smaller task-specific datasets. The required data and resulting quality still depend on the task and starting model.
+
+This differs from both our experiments: we initialized their weights randomly. Reusing a trained model would start from language patterns already learned, then adapt them. The preparation runs helped expose the mechanism; they were not meant to reproduce the capabilities or training budgets in this table.
+
+## 1.6 A closer look at the GPT architecture
+
+### Self-supervised learning: the text supplies its own targets
+
+The phrase **self-supervised learning** connects to something that surprised me during preparation. In my supervised CNN/object-detection work, someone had to provide labels or bounding boxes. For next-token pretraining, the text already contains the answer at the next position.
+
+```text
+Input positions:   j o b = o r d e
+Target positions:  o b = o r d e r
+```
+
+There are still targets and a loss. We construct them by shifting the text, rather than manually labeling each prediction. That is the self-labeling idea here; the model is not inventing its own ground truth. Text collection, cleaning, and filtering still require work. CNNs can also be trained with self-supervised objectives, so the distinction is the training setup rather than images versus text.
+
+Our [shifted-target walkthrough](../preparation/first-conversation.md#eight-next-token-tasks-and-one-weight-update) explains those eight prediction tasks; the [training comparison](../preparation/training-comparison.md) records the subsequent runs.
+
+### Autoregressive generation: predict, append, repeat
+
+Yes, **token** is the more precise unit than word. Our first model generated characters. The Cosmopedia tokenizer can represent word fragments, whole words, and punctuation. A word-by-word illustration is helpful as long as we do not assume those are the actual token boundaries.
+
+An **autoregressive** language model predicts the next token conditioned on the available preceding tokens. At generation time, a selected output token is appended to that context and becomes input for the next prediction.
+
+![Three illustrative next-token predictions grow This into This is an example. At each step the same model predicts a next token, which is appended to the context; weights remain unchanged.](../assets/chapter-01/autoregressive-loop.svg)
+
+*Original companion illustration of the sequence described during reading. It assumes each displayed word addition is one token for clarity; actual token boundaries depend on the tokenizer. These are illustrative outputs, not results from our models.*
+
+Each row uses the **same model and weights**. We perform another forward pass to calculate scores, select the next token, and extend the input. There is no `backward()` or optimizer update in this generation loop. At each causal attention position, only that position and its predecessors are accessible.
+
+Generation is sequential across newly produced tokens. Pretraining is different: correct tokens from the dataset supply the shifted targets and prefixes, so many positions can be trained together with a causal mask. We do not have to generate a sentence token by token to calculate its training loss.
+
+### This is what we were building all along
+
+The book describes GPT as decoder-style rather than an encoder–decoder translation model. As discussed in [1.4](#14-introducing-the-transformer-architecture), that means our models do not need a separate encoder or encoder–decoder cross-attention. “Decoder-only” is not the original decoder copied unchanged.
+
+The familiar path remains:
+
+```text
+Token IDs → embeddings + positions → causal transformer blocks
+          → final normalization → vocabulary scores → next token
+```
+
+That explains why our preparation began with attention, one transformer block, and a tiny language model. We were building **small GPT-like architectures and pretraining them from scratch**. The assistant should have named that overall connection more explicitly at the beginning.
+
+The [character-log model](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) has one block. The [Cosmopedia model](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) has four blocks and multiple attention heads. Both connect the book's concepts to code we can inspect. They illustrate shared foundations, not every detail or capability of larger GPT models.
+
+“Relatively simple” is a comparison of architectural structure. It does not mean training a capable language model is easy, or that every later model uses exactly the same design. The next-token objective and the block structure give us a useful foundation to recognize as the book develops them.
+
+**Current reading position, October 16:** section 1.5 is discussed, and notes now include these observations from 1.6. No claim is made that the whole chapter or its exercises are complete.
 
 ## Questions to carry forward
 
