@@ -42,18 +42,6 @@ Notes to come as we read this section.
 
 Notes to come as we read this section.
 
-### 7.9.1 What’s next?
-
-Notes to come as we read this section.
-
-### 7.9.2 Staying up to date in a fast-moving field
-
-Notes to come as we read this section.
-
-### 7.9.3 Final words
-
-Notes to come as we read this section.
-
 ## Questions to bring to the chapter
 
 <!-- Add actual questions during reading. -->

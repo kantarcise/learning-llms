@@ -18,23 +18,7 @@ Notes to come as we read this section.
 
 Notes to come as we read this section.
 
-### 3.3.1 A simple self-attention mechanism without trainable weights
-
-Notes to come as we read this section.
-
-### 3.3.2 Computing attention weights for all input tokens
-
-Notes to come as we read this section.
-
 ## 3.4 Implementing self-attention with trainable weights
-
-Notes to come as we read this section.
-
-### 3.4.1 Computing the attention weights step by step
-
-Notes to come as we read this section.
-
-### 3.4.2 Implementing a compact self-attention Python class
 
 Notes to come as we read this section.
 
@@ -42,27 +26,7 @@ Notes to come as we read this section.
 
 Notes to come as we read this section.
 
-### 3.5.1 Applying a causal attention mask
-
-Notes to come as we read this section.
-
-### 3.5.2 Masking additional attention weights with dropout
-
-Notes to come as we read this section.
-
-### 3.5.3 Implementing a compact causal attention class
-
-Notes to come as we read this section.
-
 ## 3.6 Extending single-head attention to multi-head attention
-
-Notes to come as we read this section.
-
-### 3.6.1 Stacking multiple single-head attention layers
-
-Notes to come as we read this section.
-
-### 3.6.2 Implementing multi-head attention with weight splits
 
 Notes to come as we read this section.
 

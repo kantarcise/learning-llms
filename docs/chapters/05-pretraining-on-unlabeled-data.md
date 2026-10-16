@@ -10,35 +10,11 @@ Section names and numbering follow [Manning’s published contents](https://www.
 
 Notes to come as we read this section.
 
-### 5.1.1 Using GPT to generate text
-
-Notes to come as we read this section.
-
-### 5.1.2 Calculating the text generation loss
-
-Notes to come as we read this section.
-
-### 5.1.3 Calculating the training and validation set losses
-
-Notes to come as we read this section.
-
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
 
 ## 5.3 Decoding strategies to control randomness
-
-Notes to come as we read this section.
-
-### 5.3.1 Temperature scaling
-
-Notes to come as we read this section.
-
-### 5.3.2 Top-k sampling
-
-Notes to come as we read this section.
-
-### 5.3.3 Modifying the text generation function
 
 Notes to come as we read this section.
 
