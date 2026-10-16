@@ -1,0 +1,128 @@
+{
+  "config": {
+    "vocabulary_size": 49152,
+    "context_length": 256,
+    "width": 256,
+    "heads": 4,
+    "layers": 4,
+    "hidden_width": 1024
+  },
+  "parameter_count": 15803904,
+  "seed": 7,
+  "device": "mps",
+  "torch_version": "2.14.1",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "steps": 1000,
+  "batch_size": 4,
+  "learning_rate": 0.0003,
+  "weight_decay": 0.01,
+  "gradient_clip_norm": 1.0,
+  "data_manifest_sha256": "d954a1ab455c4a3219430ad6436aebb327ae1f3382d09d7f842b567fa7dbaaa4",
+  "dataset_revision": "3ba9d605774198c5868892d7a8deda78031a781f",
+  "tokenizer_revision": "1d461723eec654e65efdc40cf49301c89c0c92f4",
+  "data_token_counts": {
+    "train": 1000000,
+    "validation": 65536
+  },
+  "validation_indices": [
+    123,
+    201,
+    241,
+    60,
+    57,
+    116,
+    190,
+    126,
+    176,
+    82,
+    278,
+    80,
+    97,
+    173,
+    163,
+    259,
+    286,
+    99,
+    20,
+    242,
+    237,
+    200,
+    177,
+    230,
+    294,
+    164,
+    132,
+    272,
+    9,
+    280,
+    252,
+    27
+  ],
+  "validation_targets": 7220,
+  "history": [
+    {
+      "step": 0,
+      "train_batch_loss": null,
+      "validation_loss": 10.845160569510632
+    },
+    {
+      "step": 100,
+      "train_batch_loss": 8.401954399502493,
+      "validation_loss": 7.66125348433233
+    },
+    {
+      "step": 200,
+      "train_batch_loss": 7.31556974003455,
+      "validation_loss": 7.31330135007314
+    },
+    {
+      "step": 300,
+      "train_batch_loss": 7.052557980804002,
+      "validation_loss": 7.0789598796506334
+    },
+    {
+      "step": 400,
+      "train_batch_loss": 6.767509199981434,
+      "validation_loss": 6.885928627856881
+    },
+    {
+      "step": 500,
+      "train_batch_loss": 6.6206692297048875,
+      "validation_loss": 6.750180946162533
+    },
+    {
+      "step": 600,
+      "train_batch_loss": 6.45265543178639,
+      "validation_loss": 6.659599109765895
+    },
+    {
+      "step": 700,
+      "train_batch_loss": 6.35021753285951,
+      "validation_loss": 6.55645382027877
+    },
+    {
+      "step": 800,
+      "train_batch_loss": 6.284188626357529,
+      "validation_loss": 6.486732053492538
+    },
+    {
+      "step": 900,
+      "train_batch_loss": 6.181868651851839,
+      "validation_loss": 6.4103688790857625
+    },
+    {
+      "step": 1000,
+      "train_batch_loss": 6.095772862508404,
+      "validation_loss": 6.361070244133968
+    }
+  ],
+  "best_step": 1000,
+  "before": "Once upon a time critically critically culmin culmin culmin culminvesvesves judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judgesorgeorgeorgeorgeorgeorgeorge",
+  "after": "Once upon a time, I was a time, I was a time, I was a time, I was a a day, I was a day, I was a a a time, I was a a time, I was a a day, I was a a time, I was a day, I was a day, I was a day, I was a day, I was a a a a day,",
+  "generation": "Greedy; prompt Once upon a time; 40 new tokens before, 80 after; EOS can stop early",
+  "training_target_tokens_seen": 866275,
+  "loop_seconds_including_evaluation_and_saving": 96.20938616700005,
+  "training_targets_per_second_including_evaluation_and_saving": 9004.059110161264,
+  "loss_note": "Training is recent sampled batches at changing weights; validation is fixed windows at current weights. Not directly identical measurement procedures.",
+  "checkpoint_note": "best.pt is an inference-only state_dict; architecture and tokenizer provenance in report/data manifest. No optimizer state for resuming."
+}

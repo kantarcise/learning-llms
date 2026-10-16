@@ -96,6 +96,47 @@ Generation began `Once upon a time, and the the the ...` and kept repeating. Los
 
 The full unmodified samples and measurements are in [run.json](results/smoke-100steps/run.json). Data provenance is in [data-manifest.json](results/smoke-100steps/data-manifest.json). Model weights are not committed. A tokenizer provides reusable text segmentation; it does not transfer the pretrained model's language ability.
 
+## How much data did we actually use? 📦
+
+Measured on October 16 from the local files. **MB below means 1,000,000 bytes.** Source-text size counts only UTF-8 bytes of the text fields; file sizes also include formatting and metadata. These are logical byte sizes, not filesystem allocated blocks.
+
+| Measurement | Character logs | Cosmopedia sample |
+| --- | ---: | ---: |
+| Training documents | 4 | 1,393 |
+| Validation documents | 2 | 89 |
+| Training source text | 372 bytes | 5,234,080 bytes (5.23 MB) |
+| Validation source text | 191 bytes | 347,717 bytes (0.35 MB) |
+| Total source text | **563 bytes** | **5,581,797 bytes (5.58 MB)** |
+| Source JSON/JSONL file | 1,037 bytes | 5,828,130 bytes |
+
+The Cosmopedia source-text count includes each full selected document. Only the final selected document in each split may be truncated to fit the token budget. The actual prepared budgets are **1,000,000 training tokens and 65,536 validation tokens**, including EOS markers. Character-log tokens are individual characters; Cosmopedia tokens are subword units, so token counts are not a like-for-like text-size comparison. Overlapping character-log windows also reuse the same small source text.
+
+Cosmopedia's prepared folder totals **29,481,912 bytes (29.48 MB, approximately 28.12 MiB)**:
+
+| Prepared file | Bytes |
+| --- | ---: |
+| Selected documents (`documents.jsonl`) | 5,828,130 |
+| Training inputs and targets (`train.pt`) | 18,790,101 |
+| Validation inputs and targets (`validation.pt`) | 1,230,717 |
+| Tokenizer (`tokenizer.json`) | 3,522,656 |
+| Provenance (`manifest.json`) | 110,308 |
+
+Token tensors store integer inputs and targets plus padding, which explains why they occupy more space than the source text. These totals exclude model checkpoints, verification copies, library caches, and the Python environment. They are not a measurement of network bytes transferred. The earlier roughly 29 MB disk-usage answer was rounded filesystem allocation; this table uses exact file lengths.
+
+The complete Cosmopedia v2 download is approximately 122 GB according to the [dataset metadata](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus/blob/main/README.md). We did not download the full corpus. Exact local measurements are saved in [data-sizes.json](results/data-sizes.json).
+
+## Sezai's 1,000-update run
+
+Sezai subsequently ran 1,000 updates on MPS. Validation loss fell from 10.8452 initially to 7.6613 at step 100 and **6.3611 at step 1,000**; all recorded validation points improved. The loop took 96.2 seconds and processed **866,275 non-padding training targets**, sampled with replacement. This is not one complete epoch, and it does not mean 866,275 distinct tokens were visited.
+
+The best checkpoint was step 1,000. Its continuation included `Once upon a time, I was a time, I was a time` and continued repeating. Recognizable phrase fragments improved, but coherent sustained generation has not been demonstrated. The unchanged [user run report](results/user-1000steps/run.json) contains the full samples and all measurements.
+
+The step-100 recent-training loss differs from the 100-step check because that check reported 25-step intervals, while this run reports 100-step intervals. Step-100 validation loss matches. Validation still uses only 32 fixed windows.
+
+**Continuation limitation:** current `best.pt` files save weights only. Starting a new command initializes randomly; loading old weights for more training would be a warm start with a fresh optimizer. Before a multi-hour Linux run, add resumable checkpoints containing optimizer, step, RNG/sampler state, configuration, and data identity, with separate latest and best checkpoints.
+
+Linux follow-up: [issue #14](https://github.com/kantarcise/learning-llms/issues/14) tracks checkpoint support, resource checks, and a bounded two-hour experiment. Book reading can proceed now.
+
 ## Checks
 
 ```bash

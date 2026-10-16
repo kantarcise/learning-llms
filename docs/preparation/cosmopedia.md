@@ -42,6 +42,19 @@ The best-checkpoint continuation began `Once upon a time, and the the the ...` a
 
 The [experiment README](https://github.com/kantarcise/learning-llms/tree/main/experiments/cosmopedia) contains runnable download/training commands, exact revisions, shapes, and limitations. The [initial report](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/smoke-100steps/run.json) preserves both generated samples verbatim. Local checkpoints and downloaded data are excluded from Git.
 
-The next proposed user run is 1,000 updates from scratch, using the same prepared data. It may improve text quality; there is no promise of conversation or fluency. Synthetic text can contain errors, near duplicates are not removed, one seed is not a benchmark, and validation selected the checkpoint rather than serving as an untouched final test set.
+The proposed 1,000-update user run has now been completed; see the follow-up below. It may improve text quality; there is no promise of conversation or fluency. Synthetic text can contain errors, near duplicates are not removed, one seed is not a benchmark, and validation selected the checkpoint rather than serving as an untouched final test set.
 
 Track this separate experiment in [issue #12](https://github.com/kantarcise/learning-llms/issues/12). The completed character-log cycle remains documented in the [training comparison](training-comparison.md).
+
+
+## Data sizes and the user-run follow-up
+
+The character-log experiment used **563 bytes of text**: 372 training bytes and 191 validation bytes across six sequences. Its JSON file is 1,037 bytes including structure and metadata.
+
+Our selected Cosmopedia source documents contain **5,581,797 UTF-8 text bytes (5.58 MB)**: 5,234,080 training bytes and 347,717 validation bytes. The final document in each split may be truncated for tokenization. Prepared data, including integer input/target tensors, tokenizer, and manifest, totals **29,481,912 bytes (29.48 MB)**. Checkpoints, caches, and verification copies are separate. These are measured logical file sizes, not network traffic. The [experiment README](https://github.com/kantarcise/learning-llms/tree/main/experiments/cosmopedia) includes the breakdown and measurement record.
+
+Sezai has now run **1,000 updates** himself. Validation loss reached **6.3611**, with the best checkpoint at step 1,000. The loop took 96.2 seconds and processed 866,275 training targets with repeated sampling. Output improved to repeated phrase fragments such as `I was a time`, but remained incoherent. The [saved report](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/user-1000steps/run.json) preserves the actual output.
+
+**Current handoff:** before a multi-hour Linux/3090 experiment, implement resumable latest/best checkpoints and benchmark that machine. Existing weights do not preserve AdamW or sampling state. This additional experiment can proceed alongside Chapter 1; it is not a new prerequisite for the book.
+
+Track the bounded Linux run in [issue #14](https://github.com/kantarcise/learning-llms/issues/14).
