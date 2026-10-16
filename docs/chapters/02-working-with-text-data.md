@@ -6,6 +6,8 @@ These notes follow Sebastian Raschka's *Build a Large Language Model (From Scrat
 
 The chapter introduces text preparation, word and subword tokenization, byte pair encoding (BPE), sliding-window training examples, and the vectors supplied to a language model. These are the steps before the transformer blocks we explored during preparation.
 
+Section names and numbering follow [Manning’s published contents](https://www.manning.com/preview/build-a-large-language-model-from-scratch/chapter-3). Numbered headings are book sections; unnumbered headings contain our companion notes. Unwritten sections are placeholders, not completed reading.
+
 ## 2.1 Understanding word embeddings
 
 Text stored in a computer is already digital. The additional problem is giving a neural network a numerical representation on which useful computations can be learned. Characters and token IDs identify categories; their arbitrary numeric IDs do not measure meaning.
@@ -80,6 +82,30 @@ Changing width has consequences beyond the embedding table. A square attention p
 ## 2.2 Tokenizing text
 
 This is the next section to develop as reading continues. The chapter separates the conceptual introduction to embeddings from the practical process of splitting text into tokens. No tokenization exercises are recorded as completed yet.
+
+## 2.3 Converting tokens into token IDs
+
+Notes to come as we read this section.
+
+## 2.4 Adding special context tokens
+
+Notes to come as we read this section.
+
+## 2.5 Byte pair encoding
+
+Notes to come as we read this section.
+
+## 2.6 Data sampling with a sliding window
+
+Notes to come as we read this section.
+
+## 2.7 Creating token embeddings
+
+Notes to come as we read this section.
+
+## 2.8 Encoding word positions
+
+Notes to come as we read this section.
 
 ## Connection to our experiment tooling: checkpoints
 
