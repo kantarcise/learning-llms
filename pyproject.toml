@@ -9,6 +9,11 @@ dependencies = ["mkdocs-material==9.6.14"]
 package = false
 
 [dependency-groups]
+cosmopedia = [
+    "huggingface-hub>=0.26",
+    "pyarrow>=18",
+    "tokenizers>=0.20",
+]
 experiments = [
     "matplotlib>=3.11.2",
     "ruff>=0.16.10",

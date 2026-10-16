@@ -916,3 +916,6 @@ The key distinction Sezai identified: **weights carry learning forward; gradient
 
 
 **October 15 follow-up:** the isolated update and user-run training comparison described above have now been discussed. See the [current comparison and handoff](training-comparison.md); earlier stopping points in this conversation are historical.
+
+
+**Optional follow-up started October 15:** Sezai chose to try a bounded public-dataset training run now. See the separate [Cosmopedia experiment](cosmopedia.md) for the assistant-run initial check and next user command. The completed preparation cycle is not reopened, and book reading remains available alongside this experiment.

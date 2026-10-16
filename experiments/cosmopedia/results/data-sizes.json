@@ -1,0 +1,32 @@
+{
+  "measurement": "Logical file bytes (not allocated disk blocks); source text is UTF-8 text field only. Cosmopedia retains full selected documents, with final document per split possibly truncated for token budgets.",
+  "character_logs": {
+    "json_file_bytes": 1037,
+    "train": {
+      "documents": 4,
+      "source_text_utf8_bytes": 372
+    },
+    "validation": {
+      "documents": 2,
+      "source_text_utf8_bytes": 191
+    }
+  },
+  "cosmopedia": {
+    "prepared_files_bytes": {
+      "documents.jsonl": 5828130,
+      "manifest.json": 110308,
+      "tokenizer.json": 3522656,
+      "train.pt": 18790101,
+      "validation.pt": 1230717
+    },
+    "train": {
+      "documents": 1393,
+      "source_text_utf8_bytes": 5234080
+    },
+    "validation": {
+      "documents": 89,
+      "source_text_utf8_bytes": 347717
+    },
+    "prepared_total_bytes": 29481912
+  }
+}
