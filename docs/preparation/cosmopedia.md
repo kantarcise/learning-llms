@@ -4,6 +4,18 @@ After finishing the character-log preparation cycle, Sezai chose to try a larger
 
 [Cosmopedia v2](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) contains synthetic educational text, including explanations, tutorials, and stories. We sampled its text and reused the SmolLM tokenizer. **All model weights were initialized randomly**; using a pretrained tokenizer does not import a pretrained model's language ability.
 
+## Model architecture, drawn from the code 🧱
+
+[![Cosmopedia architecture: embeddings, transformer blocks, final normalization, vocabulary logits, and an expanded block showing both residual shortcuts.](../assets/model-architectures/cosmopedia.svg)](../assets/model-architectures/cosmopedia.svg)
+
+*Open the drawing for a full-size view. The three-dimensional blocks are schematic, like a CNN architecture drawing: their physical sizes do not measure parameter counts. They represent computation stages, not image height, width, or channels.*
+
+This figure follows the default architecture in [`experiments/cosmopedia/model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py). The upper row shows the whole model; the middle row opens one transformer block. The lower panels distinguish stored weights from the computed vectors flowing through the model.
+
+For four full training windows, IDs `[4,256]` become vectors `[4,256,256]`, then logits `[4,256,49152]`. The two occurrences of 256 in the representation mean different things: input positions and coordinates per token. Four attention heads each use 64 coordinates; their outputs are concatenated back to width 256.
+
+**Shape reminder:** `B` is the number of batch examples, `T` is input positions per example, and the final representation axis is vector width. Logits replace that width with the number of vocabulary candidates. Each position predicts the **next** token. Both residual additions preserve the representation shape. These diagrams end at logits: softmax and token selection are not part of these models' `forward` methods.
+
 ## From our tiny model to this one
 
 | Component | Character-log model | Cosmopedia model |

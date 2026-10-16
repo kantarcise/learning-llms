@@ -1,8 +1,20 @@
-# Our first training runs: 10 versus 30 epochs 📉
+# Character-log experiment: architecture and training 📉
 
 On October 15, 2026, Sezai ran the character-level tiny transformer from his terminal, read the losses, and compared the generated text. We then changed only the training duration to see whether more updates would help. These are preparation experiments, not completed book exercises.
 
 **Result:** extending training from 10 to 30 epochs lowered training loss further but worsened final validation loss. Both runs selected epoch 8 as their best checkpoint.
+
+## Model architecture, drawn from the code 🧱
+
+[![Character Logs architecture: embeddings, transformer blocks, final normalization, vocabulary logits, and an expanded block showing both residual shortcuts.](../assets/model-architectures/character-logs.svg)](../assets/model-architectures/character-logs.svg)
+
+*Open the drawing for a full-size view. The three-dimensional blocks are schematic, like a CNN architecture drawing: their physical sizes do not measure parameter counts. They represent computation stages, not image height, width, or channels.*
+
+This figure follows the default architecture in [`experiments/character-logs/model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py). The upper row shows the whole model; the middle row opens one transformer block. The lower panels distinguish stored weights from the computed vectors flowing through the model.
+
+The inspection batch has two examples and eight positions: IDs `[2,8]` become vectors `[2,8,32]`, then logits `[2,8,25]`. Training uses up to 24 positions. The feedforward network temporarily expands each vector from 32 to 64 coordinates before returning to 32.
+
+**Shape reminder:** `B` is the number of batch examples, `T` is input positions per example, and the final representation axis is vector width. Logits replace that width with the number of vocabulary candidates. Each position predicts the **next** token. Both residual additions preserve the representation shape. These diagrams end at logits: softmax and token selection are not part of these models' `forward` methods.
 
 ## Before training: follow one learned number
 
