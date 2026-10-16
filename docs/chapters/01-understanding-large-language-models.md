@@ -1,6 +1,6 @@
 # Chapter 1 — Understanding Large Language Models
 
-Status: reading in progress, October 16, 2026. Notes cover the opening discussion in 1.1 and a brief observation from 1.2. I am now starting 1.3, “Stages of building and using LLMs.” The chapter is not complete.
+Status: reading in progress, October 16, 2026. Notes cover the opening discussion in 1.1, a brief observation from 1.2, and the pretraining/fine-tuning distinction in 1.3, “Stages of building and using LLMs.” The chapter is not complete.
 
 The numbered headings follow the book so I can move between the reading and this companion. Smaller headings within each section organize our explanations and tangents; they are not additional book subsections.
 
@@ -68,7 +68,53 @@ The application that stood out in this section is chatbots: using an LLM to gene
 
 ## 1.3 Stages of building and using LLMs
 
-**Current reading position.** I have reached this section; detailed notes will follow as I read and bring observations or questions. No section summary has been filled in ahead of the reading.
+### Why use a specialized or locally deployed model?
+
+The argument I take from this section is that a model adapted to a particular task can sometimes outperform a general-purpose model on that task. It does not have to be better at everything to be useful. The comparison needs to be measured on the actual task; specialization alone does not guarantee an improvement.
+
+Local deployment also connects to something familiar from software engineering: if a problem can be solved on the device, we can avoid a network round trip to a remote service. That can reduce latency and remote-service costs, and is part of the appeal of edge computing.
+
+One qualification matters: **avoiding network latency does not guarantee lower total latency.** A local device can take longer to compute a response than a powerful remote server, even after including the network trip. Queueing, model size, response length, and hardware all affect the comparison. Local deployment also shifts costs toward device capacity, energy, and maintenance rather than making computation free.
+
+“Specialized,” “local,” and “trained from scratch” are separate choices. We can fine-tune an existing pretrained model and run it locally; we do not have to pay for pretraining from scratch to gain the benefits of local deployment. A specialized model can also run on a server.
+
+### Pretraining and fine-tuning are different stages 🧩
+
+The figure in this section makes an important distinction: first learn from raw text, then optionally adapt the learned model using examples of a desired task or behavior.
+
+![Raw text supplies next-token targets for pretraining, producing a base model. Supervised fine-tuning continues from those weights using task inputs and desired outputs, producing an adapted model.](../assets/chapter-01/training-stages.svg)
+
+*Original companion diagram of the supervised training path discussed in the reading; not a reproduction of the book's figure.*
+
+During **pretraining**, the model learns to predict tokens from their preceding context. The text is often called “unlabeled” because people did not manually attach task labels to each example. But there are still training targets: the actual next tokens in the text. This is the self-supervised setup we used in our experiments.
+
+The result is a **pretrained or base model**. At sufficient scale and with suitable training, base models can complete text and may respond to examples supplied in a prompt. That latter behavior is often called *few-shot prompting*: examples are placed in the context without updating weights. These capabilities are not guaranteed for every tiny model trained on next-token prediction. Our toy models illustrate the training mechanism; they are not broadly capable foundation models.
+
+During **supervised fine-tuning**, we start from pretrained weights and continue training with examples chosen for a task or desired behavior. “Labeled” can mean a category label, but it can also mean a desired output sequence:
+
+| Task | Example input | Target supplied during fine-tuning |
+| --- | --- | --- |
+| Classification | A customer review | A sentiment category |
+| Summarization | An article | A reference summary |
+| Translation | A sentence in one language | Its translation |
+| Instruction following | A question or instruction | An example of an appropriate response |
+
+These are illustrative pairings, not datasets we have prepared. A fine-tuned model is adapted toward its training tasks; fine-tuning does not automatically provide every capability in the table. For response-generation tasks, training can still use next-token prediction and cross-entropy, often focusing the loss on the desired response tokens. The data and training purpose change; the basic learning machinery need not be replaced.
+
+Some of these abilities can already appear in a base model. Fine-tuning can make a particular behavior more reliable or better matched to a domain. This figure is one useful path, not a complete account of all later training methods.
+
+### Where do our experiments fit?
+
+My interpretation is right: **both experiments so far illustrated pretraining from scratch**, rather than supervised adaptation of an existing model.
+
+- In the [character-level tiny transformer experiment](../preparation/training-comparison.md), randomly initialized weights learned from fictional log text. Each character's target was the next character. The code lives in the [character-log experiment directory](https://github.com/kantarcise/learning-llms/tree/main/experiments/character-logs).
+- In the [Cosmopedia experiment](../preparation/cosmopedia.md), randomly initialized weights learned from a public sample of synthetic text using an existing tokenizer. Reusing the tokenizer did not load pretrained model weights. The [Cosmopedia experiment directory](https://github.com/kantarcise/learning-llms/tree/main/experiments/cosmopedia) contains the implementation and reports.
+
+The fictional logs having a consistent format does not make them supervised instruction examples. Likewise, Cosmopedia being generated by another model does not make our training run fine-tuning: we used its text as next-token training material and started our weights from scratch.
+
+We have not yet taken either trained model and adapted it with labeled task examples. A useful distinction to keep is that **more training is not automatically fine-tuning**: resuming the same pretraining objective can simply continue pretraining. Our planned resumable checkpoints concern saving training state, not changing the training stage.
+
+**Current reading position:** notes now cover this discussion in 1.3; continue from here as I read. The chapter is still in progress.
 
 ## Questions to carry forward
 
