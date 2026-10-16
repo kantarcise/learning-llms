@@ -1,6 +1,6 @@
 # Chapter 1 — Understanding Large Language Models
 
-Status: reading in progress, October 16, 2026. Notes cover the opening discussion in 1.1, a brief observation from 1.2, and the pretraining/fine-tuning distinction in 1.3, “Stages of building and using LLMs.” The chapter is not complete.
+Status: reading in progress, October 16, 2026. Notes cover the reading through the end of 1.4, “Introducing the transformer architecture.” This is the stopping point for today. The chapter is not complete.
 
 The numbered headings follow the book so I can move between the reading and this companion. Smaller headings within each section organize our explanations and tangents; they are not additional book subsections.
 
@@ -103,6 +103,19 @@ These are illustrative pairings, not datasets we have prepared. A fine-tuned mod
 
 Some of these abilities can already appear in a base model. Fine-tuning can make a particular behavior more reliable or better matched to a domain. This figure is one useful path, not a complete account of all later training methods.
 
+### Instruction fine-tuning and classification fine-tuning
+
+The book highlights two useful categories. Both adapt pretrained weights with supervised examples, but the target and expected output differ.
+
+| Category | Example training input | Ground-truth target | Desired behavior |
+| --- | --- | --- | --- |
+| Instruction fine-tuning | `Translate to German: Good morning.` | `Guten Morgen.` | Generate a response that follows the instruction |
+| Classification fine-tuning | An email offering an unexpected prize | `spam` | Assign a category to the input text |
+
+An instruction example can contain an instruction, additional input text, and a desired response. The response supplies the next-token targets during training. A classification example pairs text with a label such as `spam` or `not spam`; a classifier can produce one score per category instead of next-token vocabulary scores.
+
+These describe training approaches, not mutually exclusive capabilities. An instruction-tuned model can also be prompted to classify an email by generating a label. The distinction is how we construct the training examples and outputs. Neither kind of fine-tuning has been performed in our experiments yet. The book returns to classification in [Chapter 6](06-finetuning-for-text-classification.md) and instruction following in [Chapter 7](07-finetuning-to-follow-instructions.md); those companion pages are still scaffolds.
+
 ### Where do our experiments fit?
 
 My interpretation is right: **both experiments so far illustrated pretraining from scratch**, rather than supervised adaptation of an existing model.
@@ -114,7 +127,91 @@ The fictional logs having a consistent format does not make them supervised inst
 
 We have not yet taken either trained model and adapted it with labeled task examples. A useful distinction to keep is that **more training is not automatically fine-tuning**: resuming the same pretraining objective can simply continue pretraining. Our planned resumable checkpoints concern saving training state, not changing the training stage.
 
-**Current reading position:** notes now cover this discussion in 1.3; continue from here as I read. The chapter is still in progress.
+## 1.4 Introducing the transformer architecture
+
+### Why do encoder and decoder feel like black boxes?
+
+This figure initially felt harder to follow than our detailed walkthrough. We had already unpacked tokenization, embeddings, normalization, attention, residual connections, and feedforward layers. Now the book groups many operations into two large boxes: **encoder** and **decoder**.
+
+The important bridge is that the figure describes the **original encoder–decoder Transformer**, while both our experiments use a **GPT-like, decoder-only architecture**. We did not accidentally leave an encoder out of an otherwise identical translation model.
+
+![Comparison of the original encoder-decoder translation model with our GPT-like decoder-only experiments, showing self-attention, cross-attention, feedforward layers, and next-token scores.](../assets/chapter-01/encoder-decoder.svg)
+
+*Original companion illustration. Tokenization, lookup, and position information are grouped together at the input; block internals are expanded enough to connect to our walkthrough. Normalization order and other details vary across implementations.*
+
+### The original translation model: two streams
+
+In the original Transformer, the encoder receives the source sentence and builds context-dependent vectors using self-attention and feedforward layers. Source positions can attend across the source sentence. The decoder receives the target prefix, uses causal self-attention over that prefix, and uses **cross-attention** to consult the encoder's output. Its output scores predict the next target token. Both stacks also have residual connections and normalization. During generation, selected target tokens are fed back as the prefix grows. See [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
+
+For an illustrative translation, the source might be `Good morning`, while the decoder starts with a start marker and then receives its generated German prefix. The two streams are different sequences. During training, shifted correct target tokens can be supplied so losses at many positions are computed together, while causal masking still hides future target positions.
+
+The encoder's output is a **sequence of contextual vectors**, not one label or one fixed vector for the whole sentence. It is also different from the initial embedding lookup: those vectors have already been transformed by the encoder blocks. “Encoding” here does not mean merely converting text into token IDs.
+
+Cross-attention is the new connection in that drawing: the decoder uses its current representations to query information from the encoded source. We can leave its matrix arithmetic for later. For now, distinguish it from self-attention, which mixes information within one sequence.
+
+### What does that mean for our code?
+
+Our models have **no separate encoder stack and no encoder–decoder cross-attention**. They take one sequence of token IDs and transform it through causal blocks:
+
+```text
+Token IDs
+    ↓
+Token embeddings + position embeddings
+    ↓
+Causal transformer blocks
+    normalization → self-attention → residual addition
+    normalization → feedforward   → residual addition
+    ↓
+Final normalization → vocabulary projection → next-token logits
+```
+
+That is the path we already traced in `TinyTransformer.forward` for the [character-log model](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) and `LanguageModel.forward` for the [Cosmopedia model](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py). The former has one block; the latter has four. The existing experiment pages explain the [character-log run](../preparation/training-comparison.md) and [Cosmopedia run](../preparation/cosmopedia.md).
+
+The name **decoder-only** refers to the causal, output-generating model family. It does not mean the model receives vectors from a separate encoder, and it is not identical to copying the original decoder unchanged. Also, a tokenizer's `decode` function merely turns token IDs back into text; it is not a Transformer decoder stack.
+
+We already know the operations inside our blocks. For this reading, the new idea is how those operations are arranged into different model families. We do not need to redo the attention mathematics before continuing; [Chapter 3](03-coding-attention-mechanisms.md) is where the book develops attention in detail.
+
+### BERT-like versus GPT-like models
+
+My initial picture was “BERT fills masked words; GPT continues a prefix.” That is a useful starting point, with two refinements: the units are tokens, and these describe typical **pretraining objectives**, not a requirement that every later use contain a mask or an unfinished sentence.
+
+| Question | BERT-like encoder model | GPT-like causal model |
+| --- | --- | --- |
+| Which context can a position use? | Both earlier and later visible input positions | Its own position and earlier positions |
+| Typical pretraining exercise | Recover selected hidden/corrupted tokens | Predict the next token at each position |
+| Illustrative input | `The cat sat on the [MASK].` | `The cat sat on the` |
+| Illustrative target | `mat`, using context on either side where available | The next token, such as ` mat` |
+| Our experiments? | No | Yes, simplified versions |
+
+BERT's masked-language modeling trains representations using context on both sides; its original training also used another objective. Not every selected token is literally replaced by `[MASK]`. During downstream classification, an encoder can receive an ordinary unmasked input. See the [BERT paper](https://arxiv.org/abs/1810.04805).
+
+For GPT-style training, we can supply a complete text window and calculate next-token loss at many positions in parallel. The **causal attention mask** makes each position behave as though only its prefix is visible. This connects directly to our shifted `job=orde` / `ob=order` example. At generation time, we extend the available prefix one token at a time; the initial prefix can itself be a complete sentence or instruction.
+
+I wondered whether BERT-like models are useful anymore. Encoder models still have roles in classification, retrieval, and representation learning. For example, the authors of [ModernBERT](https://huggingface.co/blog/modernbert) describe a newer encoder family evaluated on classification and retrieval tasks. That is a reason to keep the architecture distinction, rather than treating encoder models as an obsolete step toward chat models. We do not need a separate encoder experiment to continue this chapter.
+
+### Zero-shot and few-shot: examples in the prompt
+
+These terms describe how many demonstrations of the requested task are included in the prompt. In the setting discussed here, **the model's weights remain fixed**. “Few-shot learning” is also called *in-context learning* in this usage; it is different from fine-tuning with backpropagation. The [GPT-3 paper](https://arxiv.org/abs/2005.14165) evaluates zero-, one-, and few-shot settings without gradient updates for these prompt demonstrations.
+
+![Zero-shot translation supplies an instruction and query without demonstrations; few-shot translation adds example input-output pairs before the query. Neither prompt changes model weights.](../assets/chapter-01/zero-few-shot.svg)
+
+*Illustrative prompts and expected answers, not outputs measured from our toy models.*
+
+**Zero-shot does not prove the task was absent from pretraining.** It means we supplied no demonstrations in this prompt. A model may already have encountered translation data or related tasks during training. A few-shot prompt adds examples that help indicate the pattern, format, or intended meaning; it does not create an optimizer update.
+
+This helps separate three ideas:
+
+- **Pretraining:** update weights from a broad text-prediction objective.
+- **Fine-tuning:** update pretrained weights using additional training examples for an adaptation goal.
+- **Zero-/few-shot prompting:** use existing weights, with zero or a few demonstrations in the input context.
+
+### Transformer is an architecture, not a synonym for LLM
+
+The distinction at the end of this section is useful: not all Transformers are language models. A Transformer can process other kinds of sequences, such as image patches in the [Vision Transformer paper](https://arxiv.org/abs/2010.11929). That connects back to my computer-vision background.
+
+In this book, the focus is transformer-based language models similar to GPT. That scope does not make “Transformer” and “LLM” interchangeable terms.
+
+**Stopping point, October 16:** reading and notes reach the end of 1.4. Resume with the next section of the book. No new code experiment or attention derivation is needed before then; the chapter as a whole remains unfinished.
 
 ## Questions to carry forward
 

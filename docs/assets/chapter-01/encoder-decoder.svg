@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="780" viewBox="0 0 1100 780" role="img" aria-labelledby="title desc"><title id="title">Original Transformer versus our experiments</title><desc id="desc">The original translation model has source encoding and target decoding streams linked by cross-attention. Our GPT-like models have one stream with causal self-attention and no encoder or cross-attention.</desc><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#476582" stroke-width="2"/></marker></defs><rect width="1100" height="780" fill="white"/><g font-family="Arial, sans-serif" fill="#172b4d">
+<text x="25" y="35" font-size="25" font-weight="bold">Original Transformer: translation</text>
+<text x="735" y="35" font-size="24" font-weight="bold">Our GPT-like experiments</text>
+<path d="M710 55 V730" stroke="#a8b7c7" stroke-dasharray="6 6"/>
+<rect x="25" y="65" width="285" height="85" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="40" y="95" font-size="21" font-weight="bold">Source text</text>
+<text x="40" y="128" font-size="16" font-weight="normal">Example: Good morning</text>
+<path d="M167.5 150 V182" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="25" y="195" width="285" height="75" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="40" y="224" font-size="18" font-weight="normal">Tokenization → IDs</text>
+<text x="40" y="251" font-size="16" font-weight="normal">Embedding + position information</text>
+<path d="M167.5 270 V302" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="375" y="65" width="300" height="85" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="390" y="95" font-size="21" font-weight="bold">Target prefix</text>
+<text x="390" y="128" font-size="16" font-weight="normal">Start marker + generated tokens</text>
+<path d="M525.0 150 V182" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="375" y="195" width="300" height="75" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="390" y="224" font-size="18" font-weight="normal">Tokenization → IDs</text>
+<text x="390" y="251" font-size="16" font-weight="normal">Embedding + position information</text>
+<path d="M525.0 270 V302" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="735" y="65" width="340" height="85" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="750" y="95" font-size="21" font-weight="bold">One input sequence</text>
+<text x="750" y="128" font-size="16" font-weight="normal">Prompt + generated tokens</text>
+<path d="M905.0 150 V182" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="735" y="195" width="340" height="75" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="750" y="224" font-size="18" font-weight="normal">Tokenization → IDs</text>
+<text x="750" y="251" font-size="16" font-weight="normal">Embedding + position information</text>
+<path d="M905.0 270 V302" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="25" y="315" width="285" height="195" rx="12" fill="#e5f1ee" stroke="#476582" stroke-width="1.5"/>
+<text x="42" y="346" font-size="22" font-weight="bold">Encoder blocks</text>
+<text x="42" y="382" font-size="18" font-weight="normal">Self-attention: full source</text>
+<text x="42" y="416" font-size="18" font-weight="normal">Feedforward</text>
+<text x="42" y="451" font-size="18" font-weight="normal">Residuals + normalization</text>
+<text x="42" y="487" font-size="17" font-weight="normal">Output: contextual vectors</text>
+<rect x="375" y="315" width="300" height="275" rx="12" fill="#fff3da" stroke="#476582" stroke-width="1.5"/>
+<text x="392" y="346" font-size="22" font-weight="bold">Decoder blocks</text>
+<text x="392" y="386" font-size="18" font-weight="normal">Causal self-attention</text>
+<text x="392" y="413" font-size="16" font-weight="normal">over target prefix</text>
+<rect x="390" y="433" width="270" height="65" rx="12" fill="#f0ecfa" stroke="#476582" stroke-width="1.5"/>
+<text x="404" y="460" font-size="19" font-weight="bold">Cross-attention</text>
+<text x="404" y="485" font-size="16" font-weight="normal">Consult encoded source</text>
+<text x="392" y="533" font-size="18" font-weight="normal">Feedforward</text>
+<text x="392" y="567" font-size="18" font-weight="normal">Residuals + normalization</text>
+<path d="M310 465 H378" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="316" y="446" font-size="13" font-weight="normal">read</text>
+<rect x="735" y="315" width="340" height="275" rx="12" fill="#e5f1ee" stroke="#476582" stroke-width="1.5"/>
+<text x="752" y="346" font-size="22" font-weight="bold">Causal blocks</text>
+<text x="752" y="385" font-size="18" font-weight="normal">Norm → self-attention → add</text>
+<text x="752" y="423" font-size="18" font-weight="normal">Norm → feedforward → add</text>
+<text x="752" y="469" font-size="19" font-weight="bold">No separate encoder</text>
+<text x="752" y="502" font-size="19" font-weight="bold">No cross-attention</text>
+<text x="752" y="566" font-size="16" font-weight="normal">1 block (logs) / 4 (Cosmopedia)</text>
+<path d="M525.0 590 V622" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="375" y="635" width="300" height="75" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="390" y="665" font-size="17" font-weight="normal">Vocabulary scores → next token</text>
+<text x="390" y="695" font-size="16" font-weight="normal">Append token; repeat generation</text>
+<path d="M905.0 590 V622" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="735" y="635" width="340" height="75" rx="12" fill="#edf2fa" stroke="#476582" stroke-width="1.5"/>
+<text x="750" y="665" font-size="17" font-weight="normal">Vocabulary scores → next token</text>
+<text x="750" y="695" font-size="16" font-weight="normal">Append token; repeat generation</text>
+<text x="25" y="558" font-size="17" font-weight="normal">Encoder vectors are computed</text>
+<text x="25" y="584" font-size="17" font-weight="normal">from the source sentence.</text>
+<text x="25" y="749" font-size="17" font-weight="normal">Architecture map, not exact layer placement. Residuals/normalization surround sublayers; layouts vary.</text>
+</g></svg>
