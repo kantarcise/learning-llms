@@ -1,6 +1,6 @@
 # Chapter 1 — Understanding Large Language Models
 
-Status: reading in progress, October 16, 2026. Notes now include 1.5, “Utilizing large datasets,” and the discussion of GPT and autoregressive generation in 1.6, “A closer look at the GPT architecture.” The chapter is not complete.
+Status: Chapter 1 reading completed, October 16, 2026. Notes cover sections 1.1–1.7 and the closing discussion. This records reading progress, not completion of unrecorded exercises.
 
 The numbered headings follow the book so I can move between the reading and this companion. Smaller headings within each section organize our explanations and tangents; they are not additional book subsections.
 
@@ -299,15 +299,89 @@ The [character-log model](https://github.com/kantarcise/learning-llms/blob/main/
 
 “Relatively simple” is a comparison of architectural structure. It does not mean training a capable language model is easy, or that every later model uses exactly the same design. The next-token objective and the block structure give us a useful foundation to recognize as the book develops them.
 
-**Current reading position, October 16:** section 1.5 is discussed, and notes now include these observations from 1.6. No claim is made that the whole chapter or its exercises are complete.
+### Emergent behavior: capabilities beyond the explicit training task
+
+The book uses **emergent behavior** to describe an ability to perform tasks the model was not explicitly trained to perform. The connection to our discussion is that next-token prediction is the explicit pretraining objective, while a capable model may also use its learned patterns to answer questions or translate prompted text.
+
+This does not establish that the training corpus contained no related examples, nor does the term imply consciousness. It also does not mean every small next-token model acquires these abilities: our experiments learned patterns, but their generated text did not demonstrate broad task competence.
+
+## 1.7 Building a large language model
+
+The author's three stages provide a map for the implementation work ahead. Section 1.3 described the model-development process; this section explains how the book will teach us to build it.
+
+| Stage | What we will work on | Connection to our preparation |
+| --- | --- | --- |
+| 1. Data preparation and architectural foundations | Prepare text inputs and implement attention; see [Chapter 2](02-working-with-text-data.md) and [Chapter 3](03-coding-attention-mechanisms.md). | We traced characters to IDs and embeddings, then worked through queries, keys, values, and causal masking. |
+| 2. Implement and pretrain a GPT-like model | Assemble the model, train on a small educational dataset, and evaluate it; see [Chapter 4](04-implementing-a-gpt-model.md) and [Chapter 5](05-pretraining-on-unlabeled-data.md). | Our tiny models, training loops, loss plots, and validation comparison introduced this cycle. |
+| 3. Fine-tune a pretrained model | Adapt existing pretrained weights for [classification](06-finetuning-for-text-classification.md) or [instruction following](07-finetuning-to-follow-instructions.md). | This is still ahead of us. Neither preparation experiment performed fine-tuning. |
+
+Fine-tuning is a common next stage, not a requirement for every language model. A pretrained base model is already a model and can generate text. Classification and instruction following are different adaptation paths, rather than mandatory steps that every model must undergo in sequence.
+
+### Why follow the book when we can ask questions here?
+
+I wondered whether we could cover all of this just by asking the assistant. The useful division of work is that the book supplies an ordered sequence, a stable reference, and the author's explanations and implementation. Our conversations help unpack dense lines, connect them to my CNN and Python experience, and check my interpretation.
+
+The preparation means parts of the book now look familiar. That is useful, but recognizing a diagram is not the same as independently implementing and explaining it. The upcoming chapters provide an opportunity to work through those details in a deliberate order, without needing another preparation detour first.
 
 ## Questions to carry forward
 
 - How should I distinguish useful language competence from the different meanings of “understanding”?
 - As I read, how does next-token prediction connect to the broader abilities demonstrated by larger models?
 
-The consciousness question is worth keeping, but we do not need to resolve it to follow the architecture. For now, continue the chapter and bring the next passages that stand out.
+The consciousness question is worth keeping, but we do not need to resolve it to follow the architecture. We can carry it forward while moving into Chapter 2.
 
 ## End of chapter
 
-Not reached yet. No chapter exercises or end-of-chapter conclusions are recorded as completed.
+Chapter 1 reading is complete. 🎉 No unrecorded exercises are claimed as completed.
+
+### What I want to retain
+
+- Modern LLMs extend beyond individual NLP tasks. Earlier NLP included rule-based, statistical, and neural approaches; the history is broader than a single replacement of rules by LLMs.
+- Next-token pretraining is self-supervised: the text provides targets. Fine-tuning can then adapt a pretrained model to a task or instruction format.
+- GPT-like models generate autoregressively: predict a token, append it, and use the extended context for the next prediction.
+- The Transformer family includes encoder-only, decoder-only, and encoder–decoder designs. The book concentrates on a GPT-like decoder-only model.
+
+### Encoder and decoder: useful names, incomplete explanations
+
+My reaction to the summary was that “encoder parses text; decoder generates text” tells me less than the concrete calculations we have already followed. The labels feel overloaded. I find it easier to reason about tokens, embeddings, attention, normalization, residual connections, and the feedforward network.
+
+Both levels have a purpose. **Encoder and decoder describe roles and information flow**: in the original translation Transformer, the encoder produces contextual representations of the source, and the decoder predicts target tokens using earlier target tokens and those source representations. An encoder is not merely a parser. A Transformer decoder is also different from a tokenizer's operation that converts token IDs back to text.
+
+**The detailed calculation path describes how our particular model implements its role:**
+
+```text
+Token IDs
+   │
+   ▼
+Look up token vectors + position vectors
+   │
+   ▼
+┌─ Our pre-normalization transformer block ───────────┐
+│                                                    │
+│  x ──► normalization ──► causal attention ──► a      │
+│  │                         + output projection     │
+│  └──────────────────────► y = x + a                │
+│                                                    │
+│  y ──► normalization ──► linear expansion          │
+│  │                          │                      │
+│  │                          ▼                      │
+│  │                         GELU                    │
+│  │                          │                      │
+│  │                          ▼                      │
+│  │                     linear contraction ──► f    │
+│  └──────────────────────► z = y + f                │
+│                                                    │
+└────────────────────────────────────────────────────┘
+   │
+   ▼
+Further blocks, if the model has them
+   │
+   ▼
+Final normalization → vocabulary projection → logits
+```
+
+Here `x`, `y`, and `z` are representations at successive points in the block; `a` and `f` are the attention and feedforward updates. Both additions preserve the vector width. During generation we select a next token from the final position's logits; during training we compare logits at the supervised positions with their target IDs.
+
+This is the design used in our experiments, not a requirement that every Transformer use learned position embeddings, this normalization placement, or GELU. The high-level names help compare architectures; the calculation view helps us understand their implementation.
+
+Next: [Chapter 2 — Working with Text Data](02-working-with-text-data.md).
