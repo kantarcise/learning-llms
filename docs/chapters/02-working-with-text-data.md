@@ -259,19 +259,23 @@ tokenizer.encode("cat")  # KeyError: 'cat'
 
 The lookup fails because this vocabulary has no `cat` entry and V1 has no fallback. A larger word vocabulary covers more cases, but cannot enumerate every new name, typo, compound, or word in every language. Nor should we casually add IDs during inference: the model needs corresponding trained input/output parameters.
 
-This prompted my question: does a chatbot have to include every character in every language to avoid breaking?
+!!! tip "Looking ahead: how byte-based tokenizers avoid unknown words"
 
-**Not if the tokenizer supports a complete byte-level representation.** Unicode text can be encoded as UTF-8 bytes. Each byte is one of 256 values, so a tokenizer with all byte values available can represent unfamiliar text as smaller pieces instead of needing an entry for every complete word or character. Learned merges can combine common byte sequences into longer tokens.
+    Our word-based tokenizer fails when a whole piece is missing from its vocabulary. Byte-based tokenizers such as [tiktoken](https://github.com/openai/tiktoken#what-is-bpe-anyway) can represent unfamiliar text using smaller pieces:
 
-A concrete Turkish character makes the distinction visible:
+    ```text
+    Unicode text → UTF-8 bytes → byte-based tokenization → token IDs
+                                                          ↓
+                                                 model embedding lookup
+                                                          ↓
+                                                       vectors
+    ```
 
-```python
-list("ş".encode("utf-8"))  # [197, 159]
-```
+    For example, `list("ş".encode("utf-8"))` produces `[197, 159]`. These are **two byte values, not token IDs**. Together they encode the Turkish character. The tokenizer may have one token covering both bytes; otherwise, basic byte pieces can represent them.
 
-These are **byte values, not model token IDs**. A particular tokenizer may represent that character with one token or several; its vocabulary determines the actual IDs. [tiktoken's explanation](https://github.com/openai/tiktoken#what-is-bpe-anyway) describes support for text absent from its tokenizer-training data. Other tokenizer designs can use an unknown-token marker or byte fallback; not every tokenizer guarantees lossless coverage.
+    **UTF-8 encoding plus coverage of all 256 byte values** provides a route to represent any valid Unicode text. UTF-8 alone does not solve a missing-vocabulary problem. Common byte sequences can be combined into larger tokens for efficiency. Decoding joins the token's byte pieces back together before interpreting the bytes as UTF-8 text.
 
-Representation is not understanding. A model can accept text from a language while generating poor answers in it. A language may also require more tokens if its common patterns are represented less efficiently. Coverage, efficiency, and language competence are separate questions.
+    This is a preview, not a rule about every tokenizer. Being able to encode a language does not guarantee that the model understands it well—or represents it with few tokens. Section 2.5 will develop BPE in more detail.
 
 We can leave the detailed algorithms for the next sections: **2.4 introduces special tokens**, including an unknown-token approach, and **2.5 introduces BPE**. The immediate lesson is why the simple whole-piece lookup needs an explicit policy for missing entries.
 
