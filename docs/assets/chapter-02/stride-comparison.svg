@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="680" viewBox="0 0 1000 680" role="img" aria-labelledby="title desc"><title id="title">Window length four: stride one versus stride four</title><desc id="desc">Three successive windows on the same numbered token stream. Stride one starts at positions zero, one, and two, overlapping by three tokens. Stride four starts at zero, four, and eight, with no input overlap. Each window still predicts a next token at all four positions.</desc><rect width="1000" height="680" fill="#f5f7fb"/>
+<text x="30" y="42" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#26364c">Same window length. Different movement.</text>
+<text x="30" y="76" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Window length = 4 · numbered example token IDs · first three windows</text>
+<text x="30" y="115" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Stride 1: move 1 position each time</text>
+<text x="30" y="164" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Start 0</text>
+<rect x="145" y="135" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="162" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">10</text>
+<rect x="212" y="135" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="229" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">11</text>
+<rect x="279" y="135" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="296" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">12</text>
+<rect x="346" y="135" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="363" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">13</text>
+<rect x="413" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="430" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">14</text>
+<rect x="480" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="497" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">15</text>
+<rect x="547" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="564" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">16</text>
+<rect x="614" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="631" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">17</text>
+<rect x="681" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="698" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">18</text>
+<rect x="748" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="765" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">19</text>
+<rect x="815" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="832" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">20</text>
+<rect x="882" y="135" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="899" y="163" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">21</text>
+<text x="30" y="218" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Start 1</text>
+<rect x="145" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="162" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">10</text>
+<rect x="212" y="189" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="229" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">11</text>
+<rect x="279" y="189" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="296" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">12</text>
+<rect x="346" y="189" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="363" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">13</text>
+<rect x="413" y="189" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="430" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">14</text>
+<rect x="480" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="497" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">15</text>
+<rect x="547" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="564" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">16</text>
+<rect x="614" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="631" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">17</text>
+<rect x="681" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="698" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">18</text>
+<rect x="748" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="765" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">19</text>
+<rect x="815" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="832" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">20</text>
+<rect x="882" y="189" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="899" y="217" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">21</text>
+<text x="30" y="272" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Start 2</text>
+<rect x="145" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="162" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">10</text>
+<rect x="212" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="229" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">11</text>
+<rect x="279" y="243" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="296" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">12</text>
+<rect x="346" y="243" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="363" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">13</text>
+<rect x="413" y="243" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="430" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">14</text>
+<rect x="480" y="243" width="60" height="42" rx="6" fill="#d8f1eb" stroke="#387c85" stroke-width="2"/>
+<text x="497" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">15</text>
+<rect x="547" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="564" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">16</text>
+<rect x="614" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="631" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">17</text>
+<rect x="681" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="698" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">18</text>
+<rect x="748" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="765" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">19</text>
+<rect x="815" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="832" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">20</text>
+<rect x="882" y="243" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="899" y="271" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">21</text>
+<text x="145" y="324" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">Adjacent inputs share 3 tokens.</text>
+<text x="30" y="375" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Stride 4: move 4 positions each time</text>
+<text x="30" y="424" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Start 0</text>
+<rect x="145" y="395" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="162" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">10</text>
+<rect x="212" y="395" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="229" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">11</text>
+<rect x="279" y="395" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="296" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">12</text>
+<rect x="346" y="395" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="363" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">13</text>
+<rect x="413" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="430" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">14</text>
+<rect x="480" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="497" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">15</text>
+<rect x="547" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="564" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">16</text>
+<rect x="614" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="631" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">17</text>
+<rect x="681" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="698" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">18</text>
+<rect x="748" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="765" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">19</text>
+<rect x="815" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="832" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">20</text>
+<rect x="882" y="395" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="899" y="423" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">21</text>
+<text x="30" y="478" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Start 4</text>
+<rect x="145" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="162" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">10</text>
+<rect x="212" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="229" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">11</text>
+<rect x="279" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="296" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">12</text>
+<rect x="346" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="363" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">13</text>
+<rect x="413" y="449" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="430" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">14</text>
+<rect x="480" y="449" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="497" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">15</text>
+<rect x="547" y="449" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="564" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">16</text>
+<rect x="614" y="449" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="631" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">17</text>
+<rect x="681" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="698" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">18</text>
+<rect x="748" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="765" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">19</text>
+<rect x="815" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="832" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">20</text>
+<rect x="882" y="449" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="899" y="477" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">21</text>
+<text x="30" y="532" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Start 8</text>
+<rect x="145" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="162" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">10</text>
+<rect x="212" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="229" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">11</text>
+<rect x="279" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="296" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">12</text>
+<rect x="346" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="363" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">13</text>
+<rect x="413" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="430" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">14</text>
+<rect x="480" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="497" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">15</text>
+<rect x="547" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="564" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">16</text>
+<rect x="614" y="503" width="60" height="42" rx="6" fill="#fff" stroke="#e0e5ed" stroke-width="1"/>
+<text x="631" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">17</text>
+<rect x="681" y="503" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="698" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">18</text>
+<rect x="748" y="503" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="765" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">19</text>
+<rect x="815" y="503" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="832" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">20</text>
+<rect x="882" y="503" width="60" height="42" rx="6" fill="#dce9ff" stroke="#387c85" stroke-width="2"/>
+<text x="899" y="531" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">21</text>
+<text x="145" y="584" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">Adjacent inputs share no tokens.</text>
+<text x="30" y="635" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" fill="#26364c">Highlighted cells = input window. Every highlighted position predicts its next token.</text>
+<text x="30" y="663" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">The target shift is always 1. Stride changes window starts, not the prediction task.</text>
+</svg>
