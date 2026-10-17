@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.2, “Tokenizing text.” Section 2.3 is next; no exercises are recorded as independently completed.
+Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.3, “Converting tokens into token IDs.” Section 2.4 is next; no exercises are recorded as independently completed.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -187,7 +187,93 @@ Next: [2.3 Converting tokens into token IDs](#23-converting-tokens-into-token-id
 
 ## 2.3 Converting tokens into token IDs
 
-Notes to come as we read this section.
+Reading reached the end of this section. `vocab` is a mapping from token strings to integer IDs: we look up a token to get its ID. That is the same bridge our character experiment built with its 25 distinct characters.
+
+### Build a vocabulary without rearranging the input
+
+The [author's code](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb) collects the distinct pieces from section 2.2 and gives them a consistent order:
+
+```python
+all_words = sorted(set(preprocessed))
+vocab = {token: token_id for token_id, token in enumerate(all_words)}
+```
+
+`set` removes duplicates, `sorted` orders the distinct strings, and `enumerate` assigns consecutive integers starting at zero. The story has **4,690 token occurrences but 1,130 distinct vocabulary entries** under this tokenizer. Punctuation is included despite the variable name `all_words`.
+
+[![Vocabulary construction, encode/decode directions, and the separate embedding lookup, illustrated with brown and dog.](../assets/chapter-02/vocabulary-and-tokenizer.svg)](../assets/chapter-02/vocabulary-and-tokenizer.svg)
+
+*Original companion illustration with invented example text, not a reproduction of the book's figure. Open for a larger view.*
+
+For simple lowercase words, `brown` sorts before `dog`. More precisely, Python's default string sorting uses Unicode code-point order, not language-aware dictionary order. Uppercase letters and punctuation affect the order too.
+
+**Alphabetical sorting is not required for tokenization.** It gives this example a deterministic assignment. Other tokenizers use their own construction rules and saved mappings. What matters is consistent reuse: the tokenizer's IDs must match the model's embedding rows and output scores. Reordering a vocabulary after training without corresponding model changes breaks that relationship.
+
+Sorting the vocabulary does not sort the story. The input keeps its original order and repetitions; repeated tokens reuse the same ID.
+
+### A tokenizer object holds both directions
+
+Below is a typed adaptation of the author's `SimpleTokenizerV1`, with explanatory docstrings. It uses the same splitting and punctuation-cleanup rules:
+
+```python
+import re
+
+
+class SimpleTokenizerV1:
+    def __init__(self, vocab: dict[str, int]) -> None:
+        self.str_to_int = vocab
+        self.int_to_str = {token_id: token for token, token_id in vocab.items()}
+
+    def encode(self, text: str) -> list[int]:
+        """Split text and look up IDs; an unknown piece raises KeyError."""
+        pieces = re.split(r'([,.:;?_!"()\']|--|\s)', text)
+        pieces = [piece.strip() for piece in pieces if piece.strip()]
+        return [self.str_to_int[piece] for piece in pieces]
+
+    def decode(self, ids: list[int]) -> str:
+        """Join token strings and clean some punctuation spacing.
+
+        This does not restore original whitespace discarded during encoding.
+        """
+        text = " ".join(self.int_to_str[token_id] for token_id in ids)
+        return re.sub(r'\s+([,.?!"()\'])', r'\1', text)
+```
+
+A small example we can inspect completely:
+
+```python
+tokenizer = SimpleTokenizerV1({"brown": 0, "dog": 1})
+ids = tokenizer.encode("dog brown dog")
+print(ids)                    # [1, 0, 1]
+print(tokenizer.decode(ids))   # dog brown dog
+```
+
+The inverse mapping is possible because each vocabulary entry has a unique ID. `encode` includes splitting plus lookup; `decode` includes inverse lookup plus text assembly. Neither method trains embeddings. Our model's separate `nn.Embedding` layer turns those IDs into learned vectors.
+
+When an LLM generates, its forward method returns logits, not text. A selection step chooses a token ID from those scores, and the tokenizer can decode the resulting sequence. This is how the same mapping connects model inputs and generated outputs.
+
+### What if a token is missing?
+
+```python
+tokenizer.encode("cat")  # KeyError: 'cat'
+```
+
+The lookup fails because this vocabulary has no `cat` entry and V1 has no fallback. A larger word vocabulary covers more cases, but cannot enumerate every new name, typo, compound, or word in every language. Nor should we casually add IDs during inference: the model needs corresponding trained input/output parameters.
+
+This prompted my question: does a chatbot have to include every character in every language to avoid breaking?
+
+**Not if the tokenizer supports a complete byte-level representation.** Unicode text can be encoded as UTF-8 bytes. Each byte is one of 256 values, so a tokenizer with all byte values available can represent unfamiliar text as smaller pieces instead of needing an entry for every complete word or character. Learned merges can combine common byte sequences into longer tokens.
+
+A concrete Turkish character makes the distinction visible:
+
+```python
+list("ş".encode("utf-8"))  # [197, 159]
+```
+
+These are **byte values, not model token IDs**. A particular tokenizer may represent that character with one token or several; its vocabulary determines the actual IDs. [tiktoken's explanation](https://github.com/openai/tiktoken#what-is-bpe-anyway) describes support for text absent from its tokenizer-training data. Other tokenizer designs can use an unknown-token marker or byte fallback; not every tokenizer guarantees lossless coverage.
+
+Representation is not understanding. A model can accept text from a language while generating poor answers in it. A language may also require more tokens if its common patterns are represented less efficiently. Coverage, efficiency, and language competence are separate questions.
+
+We can leave the detailed algorithms for the next sections: **2.4 introduces special tokens**, including an unknown-token approach, and **2.5 introduces BPE**. The immediate lesson is why the simple whole-piece lookup needs an explicit policy for missing entries.
 
 ## 2.4 Adding special context tokens
 

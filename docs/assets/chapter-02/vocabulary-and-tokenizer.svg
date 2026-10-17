@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800" role="img" aria-labelledby="title desc">
+<title id="title">Build a vocabulary, then reuse it to encode and decode</title>
+<desc id="desc">The illustrative training text dog brown dog yields two unique sorted entries: brown maps to zero and dog to one. Encoding dog brown dog produces 1, 0, 1; decoding those IDs reconstructs dog brown dog. A separate model embedding lookup maps these IDs to three vectors, reusing row one for both dog positions.</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#52647b" stroke-width="1.5"/></marker></defs>
+<rect width="1000" height="800" fill="#f5f7fb"/>
+<g font-family="Arial, Helvetica, sans-serif" fill="#26364c">
+<text x="38" y="50" font-size="29" font-weight="700">Vocabulary first. Reuse the mapping afterward.</text>
+<text x="38" y="82" font-size="18">Illustrative word-only example · no punctuation · IDs are labels, not learned vectors</text>
+<rect x="24" y="110" width="952" height="220" rx="16" fill="white" stroke="#dbe2ed"/>
+<text x="45" y="144" font-size="17" font-weight="700">1  BUILD THE VOCABULARY FROM TRAINING TEXT</text>
+<rect x="45" y="175" width="230" height="110" rx="8" fill="#d8f1eb"/>
+<text x="62" y="207" font-size="19">Text → split into pieces</text>
+<text x="62" y="243" font-size="22">dog · brown · dog</text>
+<path d="M280,230 H330" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="340" y="175" width="260" height="110" rx="8" fill="#dce8ff"/>
+<text x="357" y="207" font-size="19">Deduplicate, then sort</text>
+<text x="357" y="243" font-size="22">brown · dog</text>
+<path d="M605,230 H660" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="670" y="175" width="280" height="110" rx="8" fill="#ffebcf"/>
+<text x="688" y="205" font-size="19">Assign IDs with enumerate</text>
+<text x="688" y="237" font-size="21">brown → 0</text>
+<text x="688" y="266" font-size="21">dog → 1</text>
+<rect x="24" y="350" width="952" height="245" rx="16" fill="white" stroke="#dbe2ed"/>
+<text x="45" y="385" font-size="17" font-weight="700">2  ONE TOKENIZER OBJECT, TWO DIRECTIONS</text>
+<text x="55" y="449" font-size="24">dog brown dog</text>
+<text x="754" y="449" font-size="24">[1, 0, 1]</text>
+<path d="M265,440 H720" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="359" y="424" font-size="19">encode: text → IDs</text>
+<path d="M720,510 H265" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="354" y="541" font-size="19">decode: IDs → text</text>
+<text x="55" y="518" font-size="24">dog brown dog</text>
+<text x="754" y="518" font-size="24">[1, 0, 1]</text>
+<text x="45" y="573" font-size="17">The vocabulary stays fixed. Decoding this simple example does not demonstrate exact whitespace recovery.</text>
+<rect x="24" y="615" width="952" height="155" rx="16" fill="white" stroke="#dbe2ed"/>
+<text x="45" y="650" font-size="17" font-weight="700">3  THE MODEL’S EMBEDDING LOOKUP IS A SEPARATE STEP</text>
+<text x="45" y="693" font-size="22">[1, 0, 1]</text>
+<path d="M155,687 H270" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="290" y="693" font-size="21">[table row 1, table row 0, table row 1]</text>
+<text x="45" y="735" font-size="18">Two vocabulary rows; three input positions. Each selected row contains D learned coordinates.</text>
+</g>
+</svg>
