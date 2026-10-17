@@ -585,6 +585,59 @@ The default collating behavior stacks corresponding tensors: inputs together, ta
 
 If these protocols still feel unfamiliar after tracing one batch, the book's Appendix A.6 on data loaders is a focused reference. There is no need to complete the entire PyTorch appendix before continuing this section.
 
+### What do the loader helper's settings control?
+
+We did use these choices in our experiments; some were defaults or fixed in the dataset code rather than exposed as command-line options. The book's helper assembles two objects: `max_length` and `stride` configure `GPTDatasetV1`; the remaining settings configure PyTorch's `DataLoader`.
+
+| Setting | Meaning | Concrete example |
+| --- | --- | --- |
+| `batch_size` | Number of examples collected into one batch | 8 windows of length 4 give inputs and targets of shape `[8,4]` |
+| `max_length` | Number of input token positions in each window | 4 input IDs and 4 shifted target IDs; requires 5 source IDs |
+| `stride` | Distance between consecutive window starts | Stride 1 starts at 0, 1, 2; stride 4 starts at 0, 4, 8 |
+| `shuffle` | Randomize example order when iterating | Does not reorder tokens within an example or separate inputs from their targets |
+| `drop_last` | Discard the final incomplete batch if true | 10 examples with batch size 4 give batches 4, 4, 2 when false; only 4, 4 when true |
+| `num_workers` | Number of worker processes loading examples | 0 loads in the main process; it is not the number of GPU cores or training threads |
+
+Dropping an incomplete batch is separate from dropping an incomplete token window in the dataset constructor. Window length is also separate from embedding width: `[8,4]` token IDs become `[8,4,D]` after lookup, with `D` coordinates per token. A window must fit the model's supported context length, but choosing a shorter window does not change its embedding width.
+
+### Where these choices appeared in our experiments
+
+The [character-log training code](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/train.py) uses the same PyTorch loader:
+
+```python
+training = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
+```
+
+Our recorded runs used `batch_size=16`. The [CharacterWindows dataset](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/data.py) used 24-character windows and advanced by one character, equivalent to stride 1. The omitted loader arguments kept PyTorch's defaults: `drop_last=False` and `num_workers=0`. Evaluation loaders did not shuffle.
+
+There were 276 training windows: 17 batches of 16 plus a final batch of 4, or **18 updates per epoch**. Full batches had input/target shapes `[16,24]`; the final batch had `[4,24]`. The printed `[2,8]` inspection fixture was not the actual training batch configuration.
+
+Cosmopedia made the same broad choices through a different implementation. Its [preparation code](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/prepare.py) built windows within each document, with length 256 and starts 256 positions apart. It padded short final windows on the right and ignored padded targets in loss.
+
+Its [training loop](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/train.py) selected rows directly from prepared tensors:
+
+```python
+selected = torch.randint(
+    len(training["inputs"]), (args.batch_size,), generator=sampling
+)
+x = training["inputs"][selected].to(device)
+y = training["targets"][selected].to(device)
+```
+
+Our run used four rows per step, giving `[4,256]` inputs and targets. This is sampling **with replacement**, so a window can be selected repeatedly, even within one batch. It is not equivalent to a shuffled once-per-epoch pass through all windows. There is no `DataLoader` here, no loader workers, and no final training batch to drop: each requested step samples four rows. Fixed validation windows are evaluated in slices, retaining any final smaller slice.
+
+| Choice in recorded runs | Character Logs | Cosmopedia |
+| --- | --- | --- |
+| Batching | PyTorch `DataLoader` | Direct indexing of prepared tensors |
+| Examples per full training batch | 16 | 4 |
+| Input positions per example | 24 | 256 |
+| Window-start stride | 1 | 256 |
+| Training order | Shuffled pass through every window per epoch | Random draws with replacement per step |
+| Incomplete training batch | Kept | Not applicable to fixed-size random draws |
+| Loader worker processes | 0 | No `DataLoader` |
+
+We do not need to tune all six settings now. First follow one pair from `dataset[0]`, then see how the loader stacks several pairs; the rest describe how that process is scheduled.
+
 ## 2.7 Creating token embeddings
 
 Notes to come as we read this section.
