@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.3, “Converting tokens into token IDs.” Section 2.4 is next; no exercises are recorded as independently completed.
+Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.4, “Adding special context tokens.” Section 2.5 is next; no exercises are recorded as independently completed.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -281,7 +281,112 @@ We can leave the detailed algorithms for the next sections: **2.4 introduces spe
 
 ## 2.4 Adding special context tokens
 
-Notes to come as we read this section.
+Reading reached the end of this section. The author adds two reserved entries to the vocabulary: `<|unk|>` for an unknown piece and `<|endoftext|>` for a text boundary. The original 1,130 entries plus these two give **1,132 entries**.
+
+The spellings are human-readable labels for dedicated IDs. In this simple tokenizer, the regex leaves these particular strings intact when used as separated pieces; the strings do not acquire special behavior merely because they contain angle brackets.
+
+### Extend the vocabulary, then handle unknown pieces
+
+Following the [author's section 2.4 code](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb):
+
+```python
+all_tokens = sorted(set(preprocessed))
+all_tokens.extend(["<|endoftext|>", "<|unk|>"])
+vocab = {token: token_id for token_id, token in enumerate(all_tokens)}
+
+print(len(vocab))             # 1132
+print(vocab["<|endoftext|>"])  # 1130
+print(vocab["<|unk|>"])        # 1131
+```
+
+These IDs apply to the story vocabulary in this example, not every tokenizer. A typed adaptation of the author's second version follows. V1 remains above for comparison; a second class is helpful pedagogically, but not required by Python. We could instead modify the original class or make the fallback configurable.
+
+```python
+class SimpleTokenizerV2:
+    def __init__(self, vocab: dict[str, int]) -> None:
+        self.str_to_int = vocab
+        self.int_to_str = {token_id: token for token, token_id in vocab.items()}
+
+    def encode(self, text: str) -> list[int]:
+        """Split text and replace missing pieces with the unknown-token ID."""
+        pieces = re.split(r'([,.:;?_!"()\']|--|\s)', text)
+        pieces = [piece.strip() for piece in pieces if piece.strip()]
+        pieces = [
+            piece if piece in self.str_to_int else "<|unk|>"
+            for piece in pieces
+        ]
+        return [self.str_to_int[piece] for piece in pieces]
+
+    def decode(self, ids: list[int]) -> str:
+        """Reconstruct text; unknown spellings and original whitespace are lost."""
+        text = " ".join(self.int_to_str[token_id] for token_id in ids)
+        return re.sub(r'\s+([,.:;?!"()\'])', r'\1', text)
+```
+
+This uses `re` imported in the previous section. V2's decoding cleanup also includes colons and semicolons, as in the author's code. The principal change is that an unknown input piece now maps to a reserved ID instead of raising `KeyError`.
+
+### Does the unknown token learn? What happens to evaluation?
+
+Yes, **if a model uses this vocabulary, the unknown token has an embedding row like any other entry**. When it appears in training inputs, gradients can update that row through the model's loss. Adding the entry to a tokenizer alone does not train it. Because this example builds its vocabulary from all the story's pieces, encoding that same story produces no unknown input pieces; their meaningful use would require a training setup that actually includes them. Output-projection parameters can still receive gradients through the vocabulary softmax even when a token is not the correct target.
+
+My concern was that this might hurt benchmarks. The issue is the information we discard:
+
+```text
+"I saw a zebra" → "I saw a <|unk|>"
+"I saw a comet" → "I saw a <|unk|>"
+```
+
+Assume both final words are missing from this illustrative vocabulary. The model gets the same input IDs for two different meanings. It can learn how an unspecified word behaves in context, but cannot recover which spelling was removed from those IDs alone.
+
+Task accuracy can suffer. However, token-level loss need not increase: if several different target words are all replaced by the same unknown ID, predicting that shared target can be easier. A lower loss on that transformed task does not prove better prediction of the original text. Compare evaluations under the same tokenizer and target rules, and report how often unknowns occur. This is a reason to improve token coverage, not merely add more unknown-token training.
+
+### End-of-text marks a boundary, not an attention barrier
+
+The author joins two sample texts using the marker:
+
+```python
+tokenizer = SimpleTokenizerV2(vocab)
+text1 = "Hello, do you like tea?"
+text2 = "In the sunlit terraces of the palace."
+text = " <|endoftext|> ".join((text1, text2))
+ids = tokenizer.encode(text)
+print(tokenizer.decode(ids))
+```
+
+The assistant verified this output against the pinned story vocabulary:
+
+```text
+<|unk|>, do you like tea? <|endoftext|> In the sunlit terraces of the <|unk|>.
+```
+
+`Hello` and `palace` are missing from this vocabulary. Both become the same unknown token; decoding cannot recover their original spellings.
+
+The marker tells the model there is an explicit boundary between source texts. With suitable training, it can learn that a new document follows rather than a continuation of the same sentence. **The marker alone does not prevent attention across that boundary.** Preventing cross-document attention requires a masking or sequence-separation choice.
+
+During generation, an application can stop when the model emits its configured end token. That stopping rule belongs to the generation loop; the token does not halt Python by itself. The name also does not guarantee that the adjacent documents are semantically unrelated—only that a boundary was inserted.
+
+### Beginning, end, and padding tokens
+
+| Role | Purpose | What it does not mean |
+| --- | --- | --- |
+| Beginning of sequence (BOS) | Mark where a sequence starts | Every model must use a distinct BOS ID |
+| End of sequence/text (EOS/EOT) | Mark a boundary; potentially act as a generation stop signal | Automatically block attention across documents |
+| Padding (PAD) | Fill unused positions so variable-length examples can form a rectangular batch | Represent spaces or indentation in the source |
+
+These roles remain relevant, but the exact tokens and conventions depend on the model and training pipeline. Interpret the book's “only end-of-text” discussion in its GPT-2 context, rather than as a rule for every GPT-like or chat model. The [GPT-2 tokenizer configuration](https://huggingface.co/openai-community/gpt2/blob/main/tokenizer_config.json) is a concrete reference; [Transformers' padding documentation](https://huggingface.co/docs/transformers/main/pad_truncation) explains batching options. Equal-length windows or packing can avoid needing padding for a particular batch.
+
+### Padding is not Python indentation
+
+```text
+Example A: [word, word, word, EOS]
+Example B: [word, EOS,  PAD,  PAD]
+```
+
+These are schematic token labels. PAD fills missing array positions; source-code indentation is actual input content whose spaces or tabs may affect program meaning. We should preserve meaningful indentation through tokenization rather than treat it as disposable batch padding.
+
+Padding targets are normally excluded from the loss, and attention handling must ensure real predictions do not consume padding as content. This is not the same as the causal mask that hides future positions. Our [Cosmopedia experiment](../preparation/cosmopedia.md) already excludes padded targets using `ignore_index=-100`. Here `-100` is a loss-ignore sentinel, not a vocabulary ID or embedding row. Its padding is on the right, so the causal mask keeps real positions from attending to that later padding.
+
+The unknown token gives V2 a defined fallback, but loses the original missing text. Next, **2.5 Byte pair encoding** explains a more flexible representation. In byte-based BPE, complete byte coverage is what lets unfamiliar Unicode text be represented without a whole-word unknown token; the name BPE alone does not guarantee that property for every tokenizer implementation.
 
 ## 2.5 Byte pair encoding
 
