@@ -479,7 +479,7 @@ Next: **2.6 Data sampling with a sliding window**. We can now encode text; the n
 
 ## 2.6 Data sampling with a sliding window
 
-Reading is in progress through the input/target examples and the introduction of `GPTDatasetV1`. We have not yet recorded completion of the section's data-loader walkthrough. Today's goal is to finish Chapter 2 and then reread Chapters 1 and 2 on the website as a new reader; that review is still ahead.
+Our notes now cover input/target windows, `GPTDatasetV1`, data-loader settings, and the guided solution to Exercise 2.2. We have not recorded a user execution of the exercise on the story. Today's goal is to finish Chapter 2 and then reread Chapters 1 and 2 on the website as a new reader; that review is still ahead.
 
 ### From one next-token prediction to many training targets
 
@@ -637,6 +637,81 @@ Our run used four rows per step, giving `[4,256]` inputs and targets. This is sa
 | Loader worker processes | 0 | No `DataLoader` |
 
 We do not need to tune all six settings now. First follow one pair from `dataset[0]`, then see how the loader stacks several pairs; the rest describe how that process is scheduled.
+
+### Exercise 2.2 — window length, stride, and overlap
+
+We worked through this exercise together on October 17, 2026. This is a guided solution using illustrative IDs, not a recorded user run on *The Verdict*. The [author's reference solution](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch02/01_main-chapter-code/exercise-solutions.ipynb) compares these configurations:
+
+| Setting | First configuration | Second configuration |
+| --- | ---: | ---: |
+| `batch_size` | 4 | 4 |
+| `max_length` | 2 | 8 |
+| `stride` | 2 | 2 |
+
+**Window length controls how much we take. Stride controls how far we move the starting position.** To see the difference, use this invented token stream:
+
+```text
+[10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, ...]
+```
+
+With length 2 and stride 2, the first batch is:
+
+```text
+inputs = [              targets = [
+    [10, 11],               [11, 12],
+    [12, 13],               [13, 14],
+    [14, 15],               [15, 16],
+    [16, 17],               [17, 18],
+]                       ]
+```
+
+Both tensors have shape `[4,2]`: four examples, two positions each. Input windows start at source positions 0, 2, 4, and 6. They do not overlap.
+
+#### Are we missing the input window [11, 12]?
+
+Yes. That was the useful question raised during our walkthrough. Stride 2 skips windows that start at odd positions; stride 1 would include `[11,12]` as a separate input window.
+
+However, **skipping that window does not mean skipping the prediction of 12 after 11**. The first example already contains:
+
+```text
+Context [10]     → target 11
+Context [10, 11] → target 12
+```
+
+The separate input window `[11,12]` would supply different contexts: `[11] → 12` and `[11,12] → 13`. It is the window and its contexts that we omit, not every next-token transition involving those IDs.
+
+#### Increase the length to 8, but keep stride 2
+
+The first two input windows are:
+
+```text
+Start position 0 → [10, 11, 12, 13, 14, 15, 16, 17]
+Start position 2 → [12, 13, 14, 15, 16, 17, 18, 19]
+```
+
+We initially considered whether the second input would start with `18`. The correction is **12**: the window became wider, but its starting position still moves only two places. Starting at `18` would require stride 8 for this stream.
+
+The complete first batch is:
+
+```text
+inputs = [
+    [10, 11, 12, 13, 14, 15, 16, 17],
+    [12, 13, 14, 15, 16, 17, 18, 19],
+    [14, 15, 16, 17, 18, 19, 20, 21],
+    [16, 17, 18, 19, 20, 21, 22, 23],
+]
+
+targets = [
+    [11, 12, 13, 14, 15, 16, 17, 18],
+    [13, 14, 15, 16, 17, 18, 19, 20],
+    [15, 16, 17, 18, 19, 20, 21, 22],
+    [17, 18, 19, 20, 21, 22, 23, 24],
+]
+```
+
+Both tensors now have shape `[4,8]`. Adjacent input windows overlap by **six positions**: length 8 minus stride 2. For these full windows, stride equal to length produces no input overlap; stride smaller than length produces overlap. The target shift remains one in both configurations.
+
+The number of examples per batch stays four. Increasing the window length changes the number of positions in each example, not the batch size or embedding width. These examples are shown in source order with shuffling disabled.
 
 ## 2.7 Creating token embeddings
 
