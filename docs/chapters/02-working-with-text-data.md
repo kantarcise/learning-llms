@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.4, “Adding special context tokens.” Section 2.5 is next; no exercises are recorded as independently completed.
+Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.5, “Byte pair encoding.” Section 2.6 is next; no exercises are recorded as independently completed.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -390,7 +390,92 @@ The unknown token gives V2 a defined fallback, but loses the original missing te
 
 ## 2.5 Byte pair encoding
 
-Notes to come as we read this section.
+Reading reached the end of this section. Instead of extending our regex tokenizer again, the book uses [tiktoken](https://github.com/openai/tiktoken), an open-source library from OpenAI with a Python interface and a Rust core. We reuse the GPT-2 encoding, including its existing vocabulary and merge rules; we are not training a new tokenizer or loading language-model weights.
+
+### Use an existing encoding
+
+```python
+import tiktoken
+
+tokenizer = tiktoken.get_encoding("gpt2")
+text = "Akwirw ier"
+ids = tokenizer.encode(text)
+print(ids)
+print(tokenizer.decode(ids))
+```
+
+The interface is familiar from `SimpleTokenizerV2`, but the implementation is more capable: this byte-based encoding represents unfamiliar text with smaller pieces and preserves the original spacing in this example.
+
+For an intentional end-of-text marker:
+
+```python
+end_ids = tokenizer.encode("<|endoftext|>", allowed_special={"<|endoftext|>"})
+print(end_ids)  # [50256]
+```
+
+The permission is explicit because special strings can have control meaning; ordinary `encode` rejects this reserved spelling by default. The large ID is a vocabulary address, not a large numeric input value or a sign of greater importance. It is specific to this encoding. Other encodings can assign different IDs.
+
+### Exercise 2.1: inspect each piece
+
+Sezai supplied the exact text and expected IDs. The assistant implemented and ran [the exercise script](https://github.com/kantarcise/learning-llms/blob/main/practice/chapter-02/exercise_2_1.py) on October 17, 2026. This records that run, not an independent user execution.
+
+From the repository root:
+
+```bash
+uv run --locked --group book python practice/chapter-02/exercise_2_1.py
+```
+
+`tiktoken` is declared in the `book` dependency group in `pyproject.toml`; `uv.lock` pins the resolved version. There is no additional requirements file. The first use may download tokenizer vocabulary data into tiktoken's cache; it does not download model weights or require an API key.
+
+Verified with **tiktoken 0.14.0**, encoding **gpt2**:
+
+```text
+Input: 'Akwirw ier'
+IDs: [33901, 86, 343, 86, 220, 959]
+Matches expected IDs: True
+ID -> raw bytes -> decoded piece
+33901 -> b'Ak' -> 'Ak'
+   86 -> b'w' -> 'w'
+  343 -> b'ir' -> 'ir'
+   86 -> b'w' -> 'w'
+  220 -> b' ' -> ' '
+  959 -> b'ier' -> 'ier'
+Decoded: 'Akwirw ier'
+Exact round trip: True
+End-of-text IDs: [50256]
+```
+
+The repeated `w` uses the same ID. The space is retained as its own token here; that does not mean every space in every text becomes a separate token. The tokenizer can represent this string without a whole-word entry or `<|unk|>`.
+
+To inspect pieces yourself:
+
+```python
+for token_id in ids:
+    print(token_id, tokenizer.decode_single_token_bytes(token_id))
+```
+
+Raw bytes matter because a token can contain only part of a multibyte UTF-8 character. Decoding each token independently is safe for this ASCII example, but can display replacement characters for other inputs. Decode the complete ID sequence to reconstruct the text.
+
+### What does BPE learn, and when?
+
+There are two separate phases:
+
+1. **Build the tokenizer:** start with basic units, count adjacent pairs in training text, merge a frequent pair into a new unit, update counts, and repeat. This produces a vocabulary and an ordered set of merge rules. For byte-level BPE, the basic coverage comes from the 256 byte values, rather than a list of every Unicode character.
+2. **Use the tokenizer:** apply those already-established rules to new text. Encoding our exercise does not recount frequencies across the training corpus or enlarge the vocabulary.
+
+The book's character-pair example gives intuition: a recurring adjacent `d` and `e` can become `de`. The resulting units need not be meaningful words. Actual choices depend on pair counts, previous merges, preprocessing boundaries, and stopping settings. A target vocabulary size or merge budget is common; a minimum-frequency cutoff can also be used, but a cutoff alone does not describe every BPE implementation. The [tiktoken educational implementation](https://github.com/openai/tiktoken/blob/main/tiktoken/_educational.py) illustrates repeated pair selection up to a target vocabulary size.
+
+No gradient descent is involved in this merge-learning procedure. Training token embeddings is a different process that happens when training the language model.
+
+### Why maintain an open-source tokenizer?
+
+My question was whether tokenization is just a single class with little left to improve. The small API hides substantial implementation and compatibility work. OpenAI publishes tiktoken, with contributions credited in its repository. Its [changelog](https://github.com/openai/tiktoken/blob/main/CHANGELOG.md) records improvements such as faster processing, fixes for unusual inputs, new model-to-encoding mappings, special-token handling, and support for additional Python versions and platforms.
+
+Open code lets us inspect how IDs are assigned, reproduce tokenization locally, report bugs, and reuse a tested implementation instead of maintaining our own. It also makes the byte-handling explanation inspectable. This does not make an associated model's weights or training data open-source.
+
+The stable contract matters: improving library speed or packaging should not silently change GPT-2's established token IDs. Choosing a different encoding is a separate decision and must remain compatible with the model.
+
+Next: **2.6 Data sampling with a sliding window**. We can now encode text; the next task is to turn its ID sequence into training examples.
 
 ## 2.6 Data sampling with a sliding window
 
@@ -412,7 +497,7 @@ If we later change the number of blocks, vector width, vocabulary, or another ar
 
 ## Questions to carry forward
 
-- How does BPE choose useful subword pieces?
+- How do different tokenizer vocabularies affect the number of tokens needed for the same text?
 - How do sliding windows produce input/target pairs from a longer text?
 - How will the book's embedding implementation connect to our existing `nn.Embedding` lookup?
 
