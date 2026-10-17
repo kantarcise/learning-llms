@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1020" viewBox="0 0 1100 1020" role="img" aria-labelledby="title desc"><title id="title">Sliding windows: inputs and one-token-shifted targets</title><desc id="desc">Original text Small models learn from text. We train them one batch at a time. GPT-2 encoding yields fifteen IDs. Three windows of length four start at offsets zero, four, and eight. Each target window starts one token after its input window. Dataset items are length-four integer tensors; a batch of three has input and target shapes three by four.</desc><rect width="1100" height="1020" fill="#f5f7fb"/>
+<text x="35" y="47" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c" font-weight="700">One token stream → paired training tensors</text>
+<text x="35" y="82" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">GPT-2 encoding · window length 4 · stride 4 · batch size 3 · shuffle off</text>
+<rect x="25" y="105" width="1050" height="225" rx="10" fill="#fff" stroke="#dbe2ed"/>
+<text x="45" y="140" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="700">SOURCE TEXT</text>
+<text x="45" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="400">Small models learn from text. We train them one batch at a time.</text>
+<text x="45" y="215" font-family="Arial,Helvetica,sans-serif" font-size="19" fill="#26364c" font-weight="400">First five positions: four inputs need a fifth token for the final target.</text>
+<rect x="165" y="237" width="145" height="67" rx="10" fill="#d8f1eb" stroke="#dbe2ed"/>
+<text x="178" y="263" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">Small</text>
+<text x="178" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">18712</text>
+<rect x="330" y="237" width="145" height="67" rx="10" fill="#d8f1eb" stroke="#dbe2ed"/>
+<text x="343" y="263" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">·models</text>
+<text x="343" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">4981</text>
+<rect x="495" y="237" width="145" height="67" rx="10" fill="#d8f1eb" stroke="#dbe2ed"/>
+<text x="508" y="263" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">·learn</text>
+<text x="508" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">2193</text>
+<rect x="660" y="237" width="145" height="67" rx="10" fill="#d8f1eb" stroke="#dbe2ed"/>
+<text x="673" y="263" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">·from</text>
+<text x="673" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">422</text>
+<rect x="825" y="237" width="145" height="67" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="838" y="263" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">·text</text>
+<text x="838" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">2420</text>
+<text x="45" y="261" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Piece</text>
+<text x="45" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">ID</text>
+<rect x="25" y="355" width="1050" height="245" rx="10" fill="#fff" stroke="#dbe2ed"/>
+<text x="45" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="700">INPUTS x   ·   integer tensor [3, 4]</text>
+<text x="45" y="420" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Row = one example; column = one prediction position.</text>
+<text x="45" y="465" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 1</text>
+<text x="165" y="465" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 0</text>
+<rect x="290" y="433" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="300" y="454" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">18712</text>
+<text x="300" y="475" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">Small</text>
+<rect x="475" y="433" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="485" y="454" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">4981</text>
+<text x="485" y="475" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·models</text>
+<rect x="660" y="433" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="670" y="454" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">2193</text>
+<text x="670" y="475" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·learn</text>
+<rect x="845" y="433" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="855" y="454" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">422</text>
+<text x="855" y="475" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·from</text>
+<text x="45" y="520" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 2</text>
+<text x="165" y="520" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 4</text>
+<rect x="290" y="488" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="300" y="509" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">2420</text>
+<text x="300" y="530" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·text</text>
+<rect x="475" y="488" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="485" y="509" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">13</text>
+<text x="485" y="530" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">.</text>
+<rect x="660" y="488" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="670" y="509" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">775</text>
+<text x="670" y="530" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·We</text>
+<rect x="845" y="488" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="855" y="509" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">4512</text>
+<text x="855" y="530" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·train</text>
+<text x="45" y="575" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 3</text>
+<text x="165" y="575" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 8</text>
+<rect x="290" y="543" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="300" y="564" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">606</text>
+<text x="300" y="585" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·them</text>
+<rect x="475" y="543" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="485" y="564" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">530</text>
+<text x="485" y="585" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·one</text>
+<rect x="660" y="543" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="670" y="564" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">15458</text>
+<text x="670" y="585" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·batch</text>
+<rect x="845" y="543" width="170" height="49" rx="10" fill="#dce8ff" stroke="#dbe2ed"/>
+<text x="855" y="564" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">379</text>
+<text x="855" y="585" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·at</text>
+<rect x="25" y="620" width="1050" height="245" rx="10" fill="#fff" stroke="#dbe2ed"/>
+<text x="45" y="655" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="700">TARGETS y   ·   integer tensor [3, 4]</text>
+<text x="45" y="685" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Row = one example; column = one prediction position.</text>
+<text x="45" y="730" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 1</text>
+<text x="165" y="730" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 1</text>
+<rect x="290" y="698" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="300" y="719" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">4981</text>
+<text x="300" y="740" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·models</text>
+<rect x="475" y="698" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="485" y="719" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">2193</text>
+<text x="485" y="740" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·learn</text>
+<rect x="660" y="698" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="670" y="719" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">422</text>
+<text x="670" y="740" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·from</text>
+<rect x="845" y="698" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="855" y="719" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">2420</text>
+<text x="855" y="740" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·text</text>
+<text x="45" y="785" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 2</text>
+<text x="165" y="785" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 5</text>
+<rect x="290" y="753" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="300" y="774" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">13</text>
+<text x="300" y="795" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">.</text>
+<rect x="475" y="753" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="485" y="774" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">775</text>
+<text x="485" y="795" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·We</text>
+<rect x="660" y="753" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="670" y="774" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">4512</text>
+<text x="670" y="795" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·train</text>
+<rect x="845" y="753" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="855" y="774" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">606</text>
+<text x="855" y="795" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·them</text>
+<text x="45" y="840" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 3</text>
+<text x="165" y="840" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 9</text>
+<rect x="290" y="808" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="300" y="829" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">530</text>
+<text x="300" y="850" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·one</text>
+<rect x="475" y="808" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="485" y="829" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">15458</text>
+<text x="485" y="850" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·batch</text>
+<rect x="660" y="808" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="670" y="829" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">379</text>
+<text x="670" y="850" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·at</text>
+<rect x="845" y="808" width="170" height="49" rx="10" fill="#ffebcf" stroke="#dbe2ed"/>
+<text x="855" y="829" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">257</text>
+<text x="855" y="850" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·a</text>
+<text x="45" y="903" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="700">Targets are token IDs—not scores. Each target is the next token after its aligned input.</text>
+<text x="45" y="938" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Example: [Small] → ·models; [Small, ·models] → ·learn; …; all four losses can be computed together.</text>
+<text x="45" y="973" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">The dot · marks a leading space for readability. Word labels explain the IDs; tensors contain only integers.</text>
+<text x="45" y="1001" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Stride moves the next window by 4. The target shift is always 1. Two trailing tokens are unused here.</text>
+</svg>

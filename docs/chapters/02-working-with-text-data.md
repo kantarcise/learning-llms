@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.5, “Byte pair encoding.” Section 2.6 is next; no exercises are recorded as independently completed.
+Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.5 and the opening of 2.6, “Data sampling with a sliding window.” The data-loader walkthrough is still in progress; no exercises are recorded as independently completed.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -479,7 +479,111 @@ Next: **2.6 Data sampling with a sliding window**. We can now encode text; the n
 
 ## 2.6 Data sampling with a sliding window
 
-Notes to come as we read this section.
+Reading is in progress through the input/target examples and the introduction of `GPTDatasetV1`. We have not yet recorded completion of the section's data-loader walkthrough. Today's goal is to finish Chapter 2 and then reread Chapters 1 and 2 on the website as a new reader; that review is still ahead.
+
+### From one next-token prediction to many training targets
+
+During generation, a selected token is appended to the input before predicting another. During training, the text already supplies the correct continuation. We can create several next-token tasks from one chunk and compute them together using causal attention.
+
+The [author's section 2.6 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb) encodes *The Verdict* with GPT-2's tokenizer, then uses `enc_text[50:]` to choose a later starting point for illustration. Dropping those 50 tokens is not a required preprocessing rule.
+
+```python
+enc_text = tokenizer.encode(raw_text)
+enc_sample = enc_text[50:]
+context_size = 4
+
+x = enc_sample[:context_size]
+y = enc_sample[1 : context_size + 1]
+
+for i in range(1, context_size + 1):
+    context = enc_sample[:i]
+    desired = enc_sample[i]
+    print(tokenizer.decode(context), "→", tokenizer.decode([desired]))
+```
+
+`x` contains four input IDs; `y` contains four corresponding next-token IDs. The loop displays a growing prefix and its next target. It explains the training tasks, rather than implementing the model's actual training loop.
+
+### An original view of the paired tensors
+
+[![Three input windows and their one-token-shifted target windows, using verified GPT-2 IDs for an original sentence.](../assets/chapter-02/sliding-window-batches.svg)](../assets/chapter-02/sliding-window-batches.svg)
+
+*Original companion illustration inspired by the input/target relationship in the book's Figure 2.13, which Sezai supplied as a reference. The text, layout, and annotations are our own. Token IDs were checked with tiktoken's GPT-2 encoding. Open the SVG for a larger view; the reference photo is not committed.*
+
+The diagram uses `Small models learn from text. We train them one batch at a time.` It displays decoded pieces alongside real IDs, but **the tensors themselves contain integers, not strings**. A leading-space marker makes otherwise invisible spaces visible.
+
+The three examples form a batch with `B=3` examples and `T=4` positions per example. Both input and target tensors have shape `[3,4]`. Targets are correct token IDs, not probabilities or logits. The model will later produce a vocabulary-sized score vector at each position.
+
+Two offsets have different jobs:
+
+- **Target shift = 1:** position `t` predicts the next token at `t+1`.
+- **Stride = 4 in the drawing:** the next input window starts four positions later. A smaller stride would create overlapping input windows.
+
+With 15 source tokens and length 4, starts 0, 4, and 8 have complete input/target pairs. Start 12 would need source position 16 for its final target, which is unavailable. This simple implementation drops incomplete windows; two trailing tokens are unused in the diagram.
+
+### What is GPTDatasetV1 storing?
+
+The two lists may look surprisingly ordinary. They hold **precomputed examples**. The constructor encodes the text once, then appends an input tensor and its matching target tensor for every valid window. The entries at the same list index belong together.
+
+Here is a typed adaptation of the author's class, with clearer validation and explicit integer dtype. It expects `torch`, `tiktoken`, and `Dataset` to be imported as shown:
+
+```python
+import tiktoken
+import torch
+from torch.utils.data import Dataset
+
+
+class GPTDatasetV1(Dataset):
+    def __init__(
+        self,
+        txt: str,
+        tokenizer: tiktoken.Encoding,
+        max_length: int,
+        stride: int,
+    ) -> None:
+        """Precompute paired windows of T=max_length token IDs.
+
+        Each stored tensor has shape [T] and dtype torch.long. No batch
+        dimension exists yet. stride controls the gap between window starts.
+        """
+        if max_length < 1 or stride < 1:
+            raise ValueError("max_length and stride must be positive")
+        token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
+        if len(token_ids) <= max_length:
+            raise ValueError("Need at least max_length + 1 tokens")
+
+        self.input_ids: list[torch.Tensor] = []
+        self.target_ids: list[torch.Tensor] = []
+        for start in range(0, len(token_ids) - max_length, stride):
+            input_chunk = token_ids[start : start + max_length]
+            target_chunk = token_ids[start + 1 : start + max_length + 1]
+            self.input_ids.append(torch.tensor(input_chunk, dtype=torch.long))
+            self.target_ids.append(torch.tensor(target_chunk, dtype=torch.long))
+
+    def __len__(self) -> int:
+        """Return the number of paired windows, not tokens or batches."""
+        return len(self.input_ids)
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return input/target tensors [T], [T] for example idx."""
+        return self.input_ids[idx], self.target_ids[idx]
+```
+
+`__init__` runs when constructing the dataset. `len(dataset)` calls `__len__`; `dataset[0]` calls `__getitem__(0)`. These special methods give PyTorch a standard way to ask how many examples exist and retrieve a particular example. There are no neural-network weights, forward passes, or optimizer steps in this class.
+
+Precomputing everything keeps the teaching code easy to inspect, but stores the windows in memory, potentially duplicating overlapping tokens. It is not a claim that this is the best data pipeline for a large corpus. A different implementation could store one token stream and slice on demand.
+
+### Dataset versus DataLoader—and whether to visit the appendix
+
+For now, we can continue here. The only distinction needed for the next step is:
+
+| Component | Responsibility | Shape in our diagram |
+| --- | --- | --- |
+| `Dataset` | Store or construct examples and return one pair by index | `[4]`, `[4]` |
+| `DataLoader` | Choose examples and collate them into batches | `[3,4]`, `[3,4]` |
+
+The default collating behavior stacks corresponding tensors: inputs together, targets together. The loader can also shuffle example order and use workers; it does not shuffle token order inside an example or perform model training.
+
+If these protocols still feel unfamiliar after tracing one batch, the book's Appendix A.6 on data loaders is a focused reference. There is no need to complete the entire PyTorch appendix before continuing this section.
 
 ## 2.7 Creating token embeddings
 
