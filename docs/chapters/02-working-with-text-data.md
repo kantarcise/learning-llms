@@ -713,6 +713,34 @@ Both tensors now have shape `[4,8]`. Adjacent input windows overlap by **six pos
 
 The number of examples per batch stays four. Increasing the window length changes the number of positions in each example, not the batch size or embedding width. These examples are shown in source order with shuffling disabled.
 
+### Choosing a stride: coverage, context, and repeated work
+
+![Three successive windows with stride 1 versus stride 4, keeping window length at four.](../assets/chapter-02/stride-comparison.svg)
+
+*Original illustration. Muted cells show the same source stream; highlighted cells show each input window. These are windows, not batches.*
+
+Stride equal to window length avoids overlap between input windows. It does **not** mean we predict only once per window. With a 128-token input, we calculate 128 next-token predictions and their losses. Positions halfway or a quarter of the way through the window still participate in training.
+
+Using source-position labels rather than vocabulary IDs:
+
+```text
+Input:   positions   0 ... 127
+Targets: positions   1 ... 128
+
+Next input:         128 ... 255
+Next targets:       129 ... 256
+```
+
+The first window includes predicting position 128 from positions 0–127. But the next window predicts position 129 using only position 128; it cannot attend to positions 0–127 from the previous example. **We retain target coverage across these complete windows, but lose earlier context at each new window boundary.** An incomplete tail may also be dropped by the book's dataset implementation.
+
+Overlapping windows can place the same target at different positions with different amounts of preceding context. For example, a window starting at position 64 can predict position 129 with positions 64–128 available. That is a real benefit, but requires extra computation. It does not create new source text.
+
+For a long stream, length 128 with stride 1 creates roughly 128 times as many windows as stride 128, ignoring edges. Increasing stride up to the window length trades these repeated views for faster coverage of distinct text. Increasing it beyond the window length can leave gaps, which is a different tradeoff.
+
+More repetition can encourage overfitting on limited data, but overlap alone does not determine whether a model overfits. Nonoverlapping windows can also be memorized over repeated epochs. Comparing strides at equal epoch counts changes the number of optimizer updates; a controlled comparison should account for processed tokens or training steps as well as validation quality.
+
+**Interview takeaway:** increasing stride reduces repeated computation and increases distinct-text coverage per training budget; the cost is fewer alternative contexts, especially around window boundaries. Stride equal to window length is a useful efficiency baseline, not a universal optimum.
+
 ## 2.7 Creating token embeddings
 
 Notes to come as we read this section.
