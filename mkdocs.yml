@@ -26,6 +26,7 @@ nav:
   - Appendices:
       - Introduction to PyTorch: appendices/a-pytorch.md
 markdown_extensions:
+  - md_in_html
   - admonition
   - pymdownx.details
   - pymdownx.superfences

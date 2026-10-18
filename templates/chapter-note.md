@@ -31,3 +31,16 @@ Record attempts, explanations, run commands, and observations.
 How do the ideas fit together? What can I explain now? What remains unclear?
 
 ## References
+
+## Figure convention
+
+Use Material's [image-caption support](https://squidfunk.github.io/mkdocs-material/reference/images/#image-captions) for every explanatory image. Keep descriptive alt text, place the explanation directly below the image, and attribute external figures. Link large diagrams to their full-size image when useful. The configured `md_in_html` extension supports this pattern without an extra dependency:
+
+```html
+<figure markdown="1">
+
+![Describe what the diagram shows](path-to-image.svg)
+
+<figcaption markdown="span">Explain the figure and link its source when applicable.</figcaption>
+</figure>
+```

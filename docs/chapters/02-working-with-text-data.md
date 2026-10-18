@@ -200,9 +200,12 @@ vocab = {token: token_id for token_id, token in enumerate(all_words)}
 
 `set` removes duplicates, `sorted` orders the distinct strings, and `enumerate` assigns consecutive integers starting at zero. The story has **4,690 token occurrences but 1,130 distinct vocabulary entries** under this tokenizer. Punctuation is included despite the variable name `all_words`.
 
+<figure markdown="1">
+
 [![Vocabulary construction, encode/decode directions, and the separate embedding lookup, illustrated with brown and dog.](../assets/chapter-02/vocabulary-and-tokenizer.svg)](../assets/chapter-02/vocabulary-and-tokenizer.svg)
 
-*Original companion illustration with invented example text, not a reproduction of the book's figure. Open for a larger view.*
+<figcaption markdown="span">Original companion illustration with invented example text, not a reproduction of the book's figure. Open for a larger view.</figcaption>
+</figure>
 
 For simple lowercase words, `brown` sorts before `dog`. More precisely, Python's default string sorting uses Unicode code-point order, not language-aware dictionary order. Uppercase letters and punctuation affect the order too.
 
@@ -505,9 +508,12 @@ for i in range(1, context_size + 1):
 
 ### An original view of the paired tensors
 
+<figure markdown="1">
+
 [![Three input windows and their one-token-shifted target windows, using verified GPT-2 IDs for an original sentence.](../assets/chapter-02/sliding-window-batches.svg)](../assets/chapter-02/sliding-window-batches.svg)
 
-*Original companion illustration inspired by the input/target relationship in the book's Figure 2.13, which Sezai supplied as a reference. The text, layout, and annotations are our own. Token IDs were checked with tiktoken's GPT-2 encoding. Open the SVG for a larger view; the reference photo is not committed.*
+<figcaption markdown="span">Original companion illustration inspired by the input/target relationship in the book's Figure 2.13, which Sezai supplied as a reference. The text, layout, and annotations are our own. Token IDs were checked with tiktoken's GPT-2 encoding. Open the SVG for a larger view; the reference photo is not committed.</figcaption>
+</figure>
 
 The diagram uses `Small models learn from text. We train them one batch at a time.` It displays decoded pieces alongside real IDs, but **the tensors themselves contain integers, not strings**. A leading-space marker makes otherwise invisible spaces visible.
 
@@ -715,9 +721,12 @@ The number of examples per batch stays four. Increasing the window length change
 
 ### Choosing a stride: coverage, context, and repeated work
 
+<figure markdown="1">
+
 ![Three successive windows with stride 1 versus stride 4, keeping window length at four.](../assets/chapter-02/stride-comparison.svg)
 
-*Original illustration. Muted cells show the same source stream; highlighted cells show each input window. These are windows, not batches.*
+<figcaption markdown="span">Original illustration. Muted cells show the same source stream; highlighted cells show each input window. These are windows, not batches.</figcaption>
+</figure>
 
 Stride equal to window length avoids overlap between input windows. It does **not** mean we predict only once per window. With a 128-token input, we calculate 128 next-token predictions and their losses. Positions halfway or a quarter of the way through the window still participate in training.
 
@@ -743,9 +752,12 @@ More repetition can encourage overfitting on limited data, but overlap alone doe
 
 ## 2.7 Creating token embeddings
 
+<figure markdown="1">
+
 ![Text becomes token IDs, which select rows from an embedding table before entering the rest of the model.](../assets/chapter-02/token-embedding-pipeline.svg)
 
-*Original companion illustration inspired by Figure 2.15 in Sebastian Raschka's Build a Large Language Model (From Scratch). The text, toy IDs, and illustrative vectors are ours. Position information is shown explicitly as a later step.*
+<figcaption markdown="span">Original companion illustration inspired by Figure 2.15 in Sebastian Raschka's Build a Large Language Model (From Scratch). The text, toy IDs, and illustrative vectors are ours. Position information is shown explicitly as a later step.</figcaption>
+</figure>
 
 **Vocabulary size tells us how many rows. Width tells us how many coordinates per row.**
 
@@ -891,9 +903,12 @@ A separate distinction is **learned versus fixed** positional information. The o
 
 The book now increases the width to 256 and uses the existing GPT-2 BPE tokenizer through `tiktoken`; we did not implement that BPE tokenizer ourselves. Its vocabulary contains 50,257 token entries.
 
+<figure markdown="1">
+
 ![Token IDs and position IDs select vectors from separate learned tables, which are added to form the transformer input.](../assets/chapter-02/position-embedding-batch.svg)
 
-*Original companion diagram extending our section 2.7 pipeline. Shapes follow the book's batch-of-eight, length-four example. This depicts data preparation, not the internal layers of a transformer block.*
+<figcaption markdown="span">Original companion diagram extending our section 2.7 pipeline. Shapes follow the book's batch-of-eight, length-four example. This depicts data preparation, not the internal layers of a transformer block.</figcaption>
+</figure>
 
 With the book's loader configured for `batch_size=8` and `max_length=4`:
 

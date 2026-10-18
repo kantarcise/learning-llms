@@ -4,13 +4,13 @@ Status: Chapter 1 reading completed, October 16, 2026. Notes cover sections 1.1�
 
 The numbered headings follow the book so I can move between the reading and this companion. Smaller headings within each section organize our explanations and tangents; they are not additional book subsections.
 
-These notes paraphrase ideas from Chapter 1 of Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with our discussion and preparation experiments alongside them. They are not a transcript or a reproduction of the book's figure. See the [author's official companion repository](https://github.com/rasbt/LLMs-from-scratch).
+These notes paraphrase ideas from Chapter 1 of Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with our discussion and preparation experiments alongside them. They are not a transcript of the book. Original companion illustrations and the author's roadmap figure are identified in their captions. See the [author's official companion repository](https://github.com/rasbt/LLMs-from-scratch).
 
 Section names and numbering follow [Manning’s published contents](https://www.manning.com/preview/build-a-large-language-model-from-scratch/chapter-3). Numbered headings are book sections; unnumbered headings contain our companion notes. Unwritten sections are placeholders, not completed reading.
 
 ## Before the chapter: the Python foundation 📘
 
-In “About this book,” the emphasis on a strong Python foundation made me feel good about the time I invested in *Fluent Python* and *Data Structures and Algorithms in Python*. I have already taken steps toward that prerequisite. The new challenge is connecting familiar programming ideas to tensors, model architecture, and training.
+In “About this book,” the emphasis on a strong Python foundation made me feel good about the time I invested in [*Fluent Python*](https://www.amazon.com/dp/1492056359) and [*Data Structures and Algorithms in Python*](https://www.amazon.com/dp/1118290275). I have already taken steps toward that prerequisite. The new challenge is connecting familiar programming ideas to tensors, model architecture, and training.
 
 ## 1.1 What is an LLM?
 
@@ -32,9 +32,12 @@ This is a shift in breadth, not a claim that all earlier NLP was limited to one 
 
 The basic nesting is **artificial intelligence → machine learning → deep learning**. AI is the broad field of systems performing tasks associated with intelligence; it does not require a claim of human-like consciousness. Machine learning learns patterns from data, although people still write the training code and choose the objectives. Deep learning uses neural networks with multiple layers of learned computation.
 
+<figure markdown="1">
+
 ![AI contains machine learning, which contains deep learning. Modern generative deep-learning models include generative LLMs and image or audio generators; CNN classifiers are another deep-learning example.](../assets/chapter-01/ai-map.svg)
 
-*Original companion diagram based on the relationships discussed in the opening reading. It focuses on modern deep-learning examples rather than reproducing the book's figure.*
+<figcaption markdown="span">Original companion diagram based on the relationships discussed in the opening reading. It focuses on modern deep-learning examples rather than reproducing the book's figure.</figcaption>
+</figure>
 
 **Generative AI describes producing content; it is not another name for LLMs.** A GPT-like language model produces text, while other generative models produce images or audio. The diagram places the generative LLMs we study inside that broader group. It also leaves room for non-generative deep learning, such as the CNN classifiers I know from earlier work.
 
@@ -84,9 +87,12 @@ One qualification matters: **avoiding network latency does not guarantee lower t
 
 The figure in this section makes an important distinction: first learn from raw text, then optionally adapt the learned model using examples of a desired task or behavior.
 
+<figure markdown="1">
+
 ![Raw text supplies next-token targets for pretraining, producing a base model. Supervised fine-tuning continues from those weights using task inputs and desired outputs, producing an adapted model.](../assets/chapter-01/training-stages.svg)
 
-*Original companion diagram of the supervised training path discussed in the reading; not a reproduction of the book's figure.*
+<figcaption markdown="span">Original companion diagram of the supervised training path discussed in the reading; not a reproduction of the book's figure.</figcaption>
+</figure>
 
 During **pretraining**, the model learns to predict tokens from their preceding context. The text is often called “unlabeled” because people did not manually attach task labels to each example. But there are still training targets: the actual next tokens in the text. This is the self-supervised setup we used in our experiments.
 
@@ -116,7 +122,7 @@ The book highlights two useful categories. Both adapt pretrained weights with su
 
 An instruction example can contain an instruction, additional input text, and a desired response. The response supplies the next-token targets during training. A classification example pairs text with a label such as `spam` or `not spam`; a classifier can produce one score per category instead of next-token vocabulary scores.
 
-These describe training approaches, not mutually exclusive capabilities. An instruction-tuned model can also be prompted to classify an email by generating a label. The distinction is how we construct the training examples and outputs. Neither kind of fine-tuning has been performed in our experiments yet. The book returns to classification in [Chapter 6](06-finetuning-for-text-classification.md) and instruction following in [Chapter 7](07-finetuning-to-follow-instructions.md); those companion pages are still scaffolds.
+These describe training approaches, not mutually exclusive capabilities. An instruction-tuned model can also be prompted to classify an email by generating a label. The distinction is how we construct the training examples and outputs. Neither kind of fine-tuning has been performed in our experiments yet. The book returns to classification in [Chapter 6](06-finetuning-for-text-classification.md) and instruction following in [Chapter 7](07-finetuning-to-follow-instructions.md).
 
 ### Where do our experiments fit?
 
@@ -137,9 +143,12 @@ This figure initially felt harder to follow than our detailed walkthrough. We ha
 
 The important bridge is that the figure describes the **original encoder–decoder Transformer**, while both our experiments use a **GPT-like, decoder-only architecture**. We did not accidentally leave an encoder out of an otherwise identical translation model.
 
+<figure markdown="1">
+
 ![Comparison of the original encoder-decoder translation model with our GPT-like decoder-only experiments, showing self-attention, cross-attention, feedforward layers, and next-token scores.](../assets/chapter-01/encoder-decoder.svg)
 
-*Original companion illustration. Tokenization, lookup, and position information are grouped together at the input; block internals are expanded enough to connect to our walkthrough. Normalization order and other details vary across implementations.*
+<figcaption markdown="span">Original companion illustration. Tokenization, lookup, and position information are grouped together at the input; block internals are expanded enough to connect to our walkthrough. Normalization order and other details vary across implementations.</figcaption>
+</figure>
 
 ### The original translation model: two streams
 
@@ -195,9 +204,12 @@ I wondered whether BERT-like models are useful anymore. Encoder models still hav
 
 These terms describe how many demonstrations of the requested task are included in the prompt. In the setting discussed here, **the model's weights remain fixed**. “Few-shot learning” is also called *in-context learning* in this usage; it is different from fine-tuning with backpropagation. The [GPT-3 paper](https://arxiv.org/abs/2005.14165) evaluates zero-, one-, and few-shot settings without gradient updates for these prompt demonstrations.
 
+<figure markdown="1">
+
 ![Zero-shot translation supplies an instruction and query without demonstrations; few-shot translation adds example input-output pairs before the query. Neither prompt changes model weights.](../assets/chapter-01/zero-few-shot.svg)
 
-*Illustrative prompts and expected answers, not outputs measured from our toy models.*
+<figcaption markdown="span">Illustrative prompts and expected answers, not outputs measured from our toy models.</figcaption>
+</figure>
 
 **Zero-shot does not prove the task was absent from pretraining.** It means we supplied no demonstrations in this prompt. A model may already have encountered translation data or related tasks during training. A few-shot prompt adds examples that help indicate the pattern, format, or intended meaning; it does not create an optimizer update.
 
@@ -274,11 +286,14 @@ Our [shifted-target walkthrough](../preparation/first-conversation.md#eight-next
 
 Yes, **token** is the more precise unit than word. Our first model generated characters. The Cosmopedia tokenizer can represent word fragments, whole words, and punctuation. A word-by-word illustration is helpful as long as we do not assume those are the actual token boundaries.
 
-An **autoregressive** language model predicts the next token conditioned on the available preceding tokens. At generation time, a selected output token is appended to that context and becomes input for the next prediction.
+An **[autoregressive](../preparation/glossary.md#autoregressive-generation)** language model predicts the next token conditioned on the available preceding tokens. At generation time, a selected output token is appended to that context and becomes input for the next prediction.
+
+<figure markdown="1">
 
 ![Three illustrative next-token predictions grow This into This is an example. At each step the same model predicts a next token, which is appended to the context; weights remain unchanged.](../assets/chapter-01/autoregressive-loop.svg)
 
-*Original companion illustration of the sequence described during reading. It assumes each displayed word addition is one token for clarity; actual token boundaries depend on the tokenizer. These are illustrative outputs, not results from our models.*
+<figcaption markdown="span">Original companion illustration of the sequence described during reading. It assumes each displayed word addition is one token for clarity; actual token boundaries depend on the tokenizer. These are illustrative outputs, not results from our models.</figcaption>
+</figure>
 
 Each row uses the **same model and weights**. We perform another forward pass to calculate scores, select the next token, and extend the input. There is no `backward()` or optimizer update in this generation loop. At each causal attention position, only that position and its predecessors are accessible.
 
@@ -311,6 +326,14 @@ This does not establish that the training corpus contained no related examples, 
 
 The author's three stages provide a map for the implementation work ahead. Section 1.3 described the model-development process; this section explains how the book will teach us to build it.
 
+<figure markdown="1">
+
+[![Sebastian Raschka's roadmap: data preparation, attention, and architecture lead to pretraining a foundation model, followed by classification or instruction fine-tuning.](https://sebastianraschka.com/images/LLMs-from-scratch-images/mental-model.jpg)](https://sebastianraschka.com/images/LLMs-from-scratch-images/mental-model.jpg)
+
+<figcaption markdown="span">The book's three-stage roadmap, by [Sebastian Raschka](https://sebastianraschka.com/llms-from-scratch/), embedded from his website. Open the image for the full-size view. This is the author's figure, not an original companion illustration.</figcaption>
+</figure>
+
+
 | Stage | What we will work on | Connection to our preparation |
 | --- | --- | --- |
 | 1. Data preparation and architectural foundations | Prepare text inputs and implement attention; see [Chapter 2](02-working-with-text-data.md) and [Chapter 3](03-coding-attention-mechanisms.md). | We traced characters to IDs and embeddings, then worked through queries, keys, values, and causal masking. |
@@ -340,7 +363,7 @@ Chapter 1 reading is complete. 🎉 No unrecorded exercises are claimed as compl
 
 - Modern LLMs extend beyond individual NLP tasks. Earlier NLP included rule-based, statistical, and neural approaches; the history is broader than a single replacement of rules by LLMs.
 - Next-token pretraining is self-supervised: the text provides targets. Fine-tuning can then adapt a pretrained model to a task or instruction format.
-- GPT-like models generate autoregressively: predict a token, append it, and use the extended context for the next prediction.
+- GPT-like models generate [autoregressively](../preparation/glossary.md#autoregressive-generation): predict a token, append it, and use the extended context for the next prediction.
 - The Transformer family includes encoder-only, decoder-only, and encoder–decoder designs. The book concentrates on a GPT-like decoder-only model.
 
 ### Encoder and decoder: useful names, incomplete explanations

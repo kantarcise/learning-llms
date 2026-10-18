@@ -6,9 +6,12 @@ On October 15, 2026, Sezai ran the character-level tiny transformer from his ter
 
 ## Model architecture, drawn from the code 🧱
 
+<figure markdown="1">
+
 [![Character Logs architecture: embeddings, transformer blocks, final normalization, vocabulary logits, and an expanded block showing both residual shortcuts.](../assets/model-architectures/character-logs.svg)](../assets/model-architectures/character-logs.svg)
 
-*Open the drawing for a full-size view. The three-dimensional blocks are schematic, like a CNN architecture drawing: their physical sizes do not measure parameter counts. They represent computation stages, not image height, width, or channels.*
+<figcaption markdown="span">Open the drawing for a full-size view. The three-dimensional blocks are schematic, like a CNN architecture drawing: their physical sizes do not measure parameter counts. They represent computation stages, not image height, width, or channels.</figcaption>
+</figure>
 
 This figure follows the default architecture in [`experiments/character-logs/model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py). The upper row shows the whole model; the middle row opens one transformer block. The lower panels distinguish stored weights from the computed vectors flowing through the model.
 
@@ -86,9 +89,19 @@ Epoch 0 measures the randomly initialized model before updates. After each train
 | Best validation epoch | 8 | 8 |
 | Best validation loss | 1.9086 | 1.9086 |
 
+<figure markdown="1">
+
 ![Ten-epoch run: training loss falls while validation loss levels off](../assets/character-logs/10-epochs.png)
 
+<figcaption markdown="span">Ten-epoch run: training loss falls while validation loss levels off.</figcaption>
+</figure>
+
+<figure markdown="1">
+
 ![Thirty-epoch run: training loss remains low while validation loss rises](../assets/character-logs/30-epochs.png)
+
+<figcaption markdown="span">Thirty-epoch run: training loss remains low while validation loss rises.</figcaption>
+</figure>
 
 Early training helps both datasets. Around epoch 6, validation improvement largely stops, while training loss keeps falling. Extending to epoch 30 makes that divergence clearer: training examples become easier for the model, but held-out predictions become worse on average. This is evidence of overfitting in this experiment. Small fluctuations are normal; the training loss does not decrease at every epoch either.
 
