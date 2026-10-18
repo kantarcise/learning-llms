@@ -9,6 +9,9 @@ dependencies = ["mkdocs-material==9.6.14"]
 package = false
 
 [dependency-groups]
+book = [
+    "tiktoken>=0.14.0",
+]
 cosmopedia = [
     "huggingface-hub>=0.26",
     "pyarrow>=18",

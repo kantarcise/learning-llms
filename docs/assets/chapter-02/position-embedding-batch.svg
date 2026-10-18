@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">Preparing a batch for the transformer</title><desc id="desc">Text is tokenized with GPT-2 BPE and divided into input-target windows. Eight four-token inputs select vectors from a 50257 by 256 table. Position IDs zero through three select a four by 256 position tensor. Broadcasting adds it to all eight examples, yielding eight by four by 256 input embeddings.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
+<text x="35" y="45" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">Chapter 2: the inputs are ready</text>
+<text x="35" y="80" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">8 examples · 4 tokens per example · 256 coordinates per token</text>
+<rect x="35" y="105" width="930" height="100" rx="12" fill="#fff" stroke="#ccd6e4"/>
+<text x="60" y="140" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">Text → GPT-2 BPE tokens → token IDs</text>
+<text x="60" y="180" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Sliding windows pair each input position with its next-token target.</text>
+<text x="220" y="235" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↓</text>
+<text x="675" y="235" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Position indices</text>
+<rect x="35" y="255" width="450" height="115" rx="12" fill="#dce9ff" stroke="#ccd6e4"/>
+<text x="55" y="290" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">INPUT IDs: [8, 4]</text>
+<text x="55" y="325" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">8 examples, each containing 4 IDs</text>
+<text x="55" y="353" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Target IDs: [8, 4] → used later for loss</text>
+<rect x="515" y="255" width="450" height="115" rx="12" fill="#fff" stroke="#ccd6e4"/>
+<text x="535" y="290" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">POSITION IDs: [4]</text>
+<text x="535" y="325" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">torch.arange(4) → [0, 1, 2, 3]</text>
+<text x="535" y="353" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">These integers are not embedding vectors.</text>
+<text x="220" y="405" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">↓ lookup</text>
+<text x="690" y="405" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">↓ lookup</text>
+<rect x="35" y="425" width="450" height="145" rx="12" fill="#dce9ff" stroke="#ccd6e4"/>
+<text x="55" y="460" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Token table: [50_257, 256]</text>
+<text x="55" y="498" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">One learned row per vocabulary token</text>
+<text x="55" y="544" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Selected vectors: [8, 4, 256]</text>
+<rect x="515" y="425" width="450" height="145" rx="12" fill="#d8f1eb" stroke="#ccd6e4"/>
+<text x="535" y="460" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Position table: [4, 256]</text>
+<text x="535" y="498" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">One learned row per supported position</text>
+<text x="535" y="544" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Selected vectors: [4, 256]</text>
+<text x="220" y="610" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↘</text>
+<text x="735" y="610" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↙</text>
+<rect x="120" y="630" width="760" height="105" rx="12" fill="#fff" stroke="#ccd6e4"/>
+<text x="145" y="666" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">ADD coordinate by coordinate — do not concatenate</text>
+<text x="145" y="704" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" fill="#26364c">[8, 4, 256] + [4, 256] → [8, 4, 256]</text>
+<text x="120" y="766" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">The same four position vectors are broadcast across all eight examples.</text>
+<text x="480" y="805" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↓</text>
+<rect x="80" y="825" width="840" height="70" rx="12" fill="#d8f1eb" stroke="#ccd6e4"/>
+<text x="105" y="867" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">Input embeddings [8, 4, 256] → transformer blocks</text>
+<text x="480" y="928" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↓</text>
+<text x="80" y="969" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Later: final normalization → vocabulary scores → loss or next-token selection</text>
+</svg>

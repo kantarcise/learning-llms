@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="900" viewBox="0 0 1000 900" role="img" aria-labelledby="title desc"><title id="title">From text to token embedding rows</title><desc id="desc">An illustrative word tokenizer maps Small models learn to IDs two, three, five. Each ID selects one row of a six by three embedding table. Position information and transformer blocks follow the lookup, then vocabulary scores and next-token selection.</desc><rect width="1000" height="900" fill="#f5f7fb"/>
+<text x="40" y="45" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">Text → IDs → learned vectors</text>
+<text x="40" y="78" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">A toy word tokenizer for illustration; these are not GPT-2 token IDs.</text>
+<rect x="40" y="100" width="920" height="100" rx="12" fill="#fff" stroke="#ccd6e4"/>
+<text x="65" y="135" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#26364c">INPUT TEXT</text>
+<text x="65" y="175" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">Small models learn</text>
+<text x="485" y="232" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">↓</text>
+<rect x="40" y="250" width="920" height="105" rx="12" fill="#fff" stroke="#ccd6e4"/>
+<text x="65" y="282" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#26364c">TOKENIZATION + ID MAPPING</text>
+<text x="65" y="325" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Small → 2     |     models → 3     |     learn → 5</text>
+<text x="485" y="389" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">↓</text>
+<rect x="40" y="405" width="920" height="210" rx="12" fill="#d8f1eb" stroke="#ccd6e4"/>
+<text x="65" y="438" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#26364c">EMBEDDING LOOKUP — SECTION 2.7</text>
+<text x="65" y="475" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">6 vocabulary entries → 6 rows. Width 3 → 3 coordinates per row.</text>
+<text x="65" y="516" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">ID 2 → row 2 → [ 0.4, −0.2,  0.7 ]</text>
+<text x="65" y="551" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">ID 3 → row 3 → [ 0.1,  0.8, −0.5 ]</text>
+<text x="65" y="586" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">ID 5 → row 5 → [−0.3,  0.6,  0.2 ]</text>
+<text x="485" y="648" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">↓</text>
+<rect x="40" y="665" width="920" height="75" rx="12" fill="#dce9ff" stroke="#ccd6e4"/>
+<text x="65" y="697" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">NEXT: position information + transformer blocks + final normalization</text>
+<text x="65" y="723" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">The lookup is the entry point, not the complete model.</text>
+<text x="485" y="773" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">↓</text>
+<rect x="40" y="790" width="920" height="70" rx="12" fill="#fff" stroke="#ccd6e4"/>
+<text x="65" y="820" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Vocabulary scores → select a next token → append and repeat</text>
+<text x="65" y="846" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">During training, every input position contributes a next-token prediction.</text>
+<text x="40" y="886" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="400" fill="#26364c">Illustrative vectors. The runnable example below uses seeded PyTorch values.</text>
+</svg>
