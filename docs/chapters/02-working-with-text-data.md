@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover the chapter overview, 2.1, “Understanding word embeddings,” and reading through 2.5 and the opening of 2.6, “Data sampling with a sliding window.” The data-loader walkthrough is still in progress; no exercises are recorded as independently completed.
+Status: reading in progress. Notes cover sections 2.1–2.6 and the opening embedding-table walkthrough in 2.7. Exercise 2.2 has a guided solution; no exercises are recorded as independently completed. Section 2.8 is still ahead.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -743,7 +743,85 @@ More repetition can encourage overfitting on limited data, but overlap alone doe
 
 ## 2.7 Creating token embeddings
 
-Notes to come as we read this section.
+![Text becomes token IDs, which select rows from an embedding table before entering the rest of the model.](../assets/chapter-02/token-embedding-pipeline.svg)
+
+*Original companion illustration inspired by Figure 2.15 in Sebastian Raschka's Build a Large Language Model (From Scratch). The text, toy IDs, and illustrative vectors are ours. Position information is shown explicitly as a later step.*
+
+**Vocabulary size tells us how many rows. Width tells us how many coordinates per row.**
+
+An embedding table stores one trainable vector for every token ID in the vocabulary. It does not search for words or characters: the tokenizer has already converted text into IDs, and those IDs select rows directly. Our Character Logs tokenizer uses characters; a BPE tokenizer can use whole words, word pieces, punctuation, whitespace, or byte fragments. “Token” is the more precise term here.
+
+The book's example uses six vocabulary entries and three coordinates per vector:
+
+```python
+import torch
+
+input_ids = torch.tensor([2, 3, 5, 1], dtype=torch.long)
+vocab_size = 6
+output_dim = 3
+
+torch.manual_seed(123)  # Make this random initialization reproducible.
+embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
+print(embedding_layer.weight)
+```
+
+`embedding_layer.weight` is an `nn.Parameter`: a tensor registered as a trainable parameter of the layer. Its shape is `[6,3]`, containing 18 learned numbers. They start randomly initialized, not already trained. Running the example locally produced:
+
+```text
+Parameter containing:
+tensor([[ 0.3374, -0.1778, -0.1690],
+        [ 0.9178,  1.5810,  1.3010],
+        [ 1.2753, -0.2010, -0.1606],
+        [-0.4015,  0.9666, -1.1481],
+        [-1.1589,  0.3255, -0.6315],
+        [-2.8400, -0.7849, -1.4096]], requires_grad=True)
+```
+
+These are seeded execution results, unlike the simpler illustrative values in the diagram. Exact random values may differ across environments or PyTorch versions; the lookup and shapes are the point.
+
+### Selecting one row, then several rows
+
+```python
+print(embedding_layer(torch.tensor([3], dtype=torch.long)))
+```
+
+```text
+tensor([[-0.4015,  0.9666, -1.1481]], grad_fn=<EmbeddingBackward0>)
+```
+
+ID 3 selects the **fourth row**, because indexing starts at zero. The input `[3]` has shape `[1]`, so the result has shape `[1,3]`: one token, three coordinates. Passing a scalar `torch.tensor(3)` instead gives shape `[3]`. The embedding operation appends the vector-width dimension to the input shape.
+
+`grad_fn=<EmbeddingBackward0>` means PyTorch has recorded this lookup in the computation graph so a later backward pass can route gradients to the selected embedding rows. No backward pass or weight update has happened merely by printing this result. `requires_grad=True` on the parameter means gradients can be tracked for it.
+
+```python
+print(embedding_layer(input_ids))
+```
+
+```text
+tensor([[ 1.2753, -0.2010, -0.1606],
+        [-0.4015,  0.9666, -1.1481],
+        [-2.8400, -0.7849, -1.4096],
+        [ 0.9178,  1.5810,  1.3010]], grad_fn=<EmbeddingBackward0>)
+```
+
+The four IDs select rows 2, 3, 5, and 1 in that order: shape `[4]` becomes `[4,3]`. This is row selection, not multiplication of each ID by a vector.
+
+In our earlier illustrative table, the answer for `[5,2]` was:
+
+```text
+[[-0.3,  0.6,  0.2],   # Row 5
+ [ 0.4, -0.2,  0.7]]   # Row 2
+```
+
+That is shape `[2,3]`, not one flattened six-number vector. Repeating an ID selects the same row at this stage; position information and contextual transformations come later.
+
+### What does greater width buy us?
+
+“More granular” is an understandable intuition, but **more representational capacity** is more precise. Increasing width gives the model more learned coordinates to represent each token and increases the size of many later weight matrices. It does not subdivide tokens into finer pieces, and the coordinates do not have manually assigned meanings. Greater width costs memory and computation and does not guarantee better results.
+
+Vocabulary size and embedding width are separate choices. The book's GPT-2 tokenizer has 50,257 **token entries**, not 50,257 words; that is a property of this tokenizer, not of BPE universally. The 12,288-coordinate example refers to the largest GPT-3 variant, not every GPT-3 variant.
+
+Our [Character Logs model](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) uses the same `nn.Embedding` operation with 25 rows and 32 coordinates per row. Its input shape `[B,T]` becomes `[B,T,32]`: `B` is the number of examples in the batch and `T` the number of token positions per example. The table itself remains `[25,32]` regardless of how many IDs we look up.
 
 ## 2.8 Encoding word positions
 
