@@ -6,9 +6,12 @@ After finishing the character-log preparation cycle, Sezai chose to try a larger
 
 ## Model architecture, drawn from the code 🧱
 
+<figure markdown="1">
+
 [![Cosmopedia architecture: embeddings, transformer blocks, final normalization, vocabulary logits, and an expanded block showing both residual shortcuts.](../assets/model-architectures/cosmopedia.svg)](../assets/model-architectures/cosmopedia.svg)
 
-*Open the drawing for a full-size view. The three-dimensional blocks are schematic, like a CNN architecture drawing: their physical sizes do not measure parameter counts. They represent computation stages, not image height, width, or channels.*
+<figcaption markdown="span">Open the drawing for a full-size view. The three-dimensional blocks are schematic, like a CNN architecture drawing: their physical sizes do not measure parameter counts. They represent computation stages, not image height, width, or channels.</figcaption>
+</figure>
 
 This figure follows the default architecture in [`experiments/cosmopedia/model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py). The upper row shows the whole model; the middle row opens one transformer block. The lower panels distinguish stored weights from the computed vectors flowing through the model.
 

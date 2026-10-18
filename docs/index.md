@@ -1,6 +1,6 @@
 # Learning LLMs From Scratch
 
-My notes, explanations, and experiments while reading Sebastian Raschka's *Build a Large Language Model (From Scratch)*.
+My notes, explanations, and experiments while reading Sebastian Raschka's [*Build a Large Language Model (From Scratch)*](https://sebastianraschka.com/llms-from-scratch/).
 
 ## Why?
 
@@ -18,7 +18,7 @@ I learn by reading with full attention, writing things down, and unpacking ideas
 - [Chapter 7 — Finetuning to Follow Instructions](chapters/07-finetuning-to-follow-instructions.md)
 - [Appendix A — Introduction to PyTorch](appendices/a-pytorch.md)
 
-Pages are currently scaffolds, not completed chapter notes.
+This companion grows chapter by chapter. Each chapter page records its reading progress and distinguishes developed notes from sections still to come.
 
 ## How these notes grow
 

@@ -23,6 +23,8 @@ Training where targets are constructed from the data itself. In next-token predi
 
 ## Autoregressive generation
 
+**Autoregressive** means predicting the next element using earlier elements of the sequence. In language generation, the model uses its own previously generated tokens as part of the context for later predictions. For example, `the` → `the cat` → `the cat sleeps` illustrates successive token additions; actual token boundaries depend on the tokenizer.
+
 Predict a next token from the preceding context, select it, append it, and repeat. Generated tokens become inputs to later predictions. Model weights stay fixed during this inference loop; generation is not an optimizer update. See the [Chapter 1 illustration](../chapters/01-understanding-large-language-models.md#autoregressive-generation-predict-append-repeat).
 
 ## Token, vocabulary, and encoding
