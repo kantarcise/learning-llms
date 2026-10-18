@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover sections 2.1–2.6 and the opening embedding-table walkthrough in 2.7. Exercise 2.2 has a guided solution; no exercises are recorded as independently completed. Section 2.8 now introduces why position information is needed; the rest of the section is still ahead.
+Status: Chapter 2 reading complete. Notes cover sections 2.1–2.8. Exercise 2.2 has a guided solution; no exercises are recorded as independently completed. The planned fresh-reader review of Chapters 1 and 2 on the published website is still pending.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -879,18 +879,108 @@ All numbers here are illustrative. Width three stays width three. The token iden
 
 We introduced token embeddings first during preparation, then added positional embeddings when inspecting the actual model. The book now makes the motivation explicit before moving further into attention.
 
+### Absolute versus relative position
+
+Absolute position describes where a token occurs: position 0, 1, 2, and so on. Relative position describes how far one token is from another: one position earlier, two positions later, and so on. Adding a prefix changes absolute positions but preserves distances between the existing tokens.
+
+Relative-position methods can incorporate distances into attention rather than adding an absolute-position row to each input. They can help transfer relationships across positions, but reliable performance at unseen lengths is not guaranteed. See the [original relative-position attention paper](https://aclanthology.org/N18-2074/).
+
+A separate distinction is **learned versus fixed** positional information. The original Transformer's sinusoidal encoding is a fixed absolute encoding; GPT-2 uses learned absolute position embeddings. Keep the book's claim scoped to GPT-2 and our implementation rather than assuming all models named GPT use the same design. See [GPT-2 documentation](https://huggingface.co/docs/transformers/model_doc/gpt2) and the [positional-encoding overview](https://github.com/huggingface/transformers/blob/main/docs/source/en/llm_tutorial_optimization.md).
+
+### From a batch of IDs to transformer inputs
+
+The book now increases the width to 256 and uses the existing GPT-2 BPE tokenizer through `tiktoken`; we did not implement that BPE tokenizer ourselves. Its vocabulary contains 50,257 token entries.
+
+![Token IDs and position IDs select vectors from separate learned tables, which are added to form the transformer input.](../assets/chapter-02/position-embedding-batch.svg)
+
+*Original companion diagram extending our section 2.7 pipeline. Shapes follow the book's batch-of-eight, length-four example. This depicts data preparation, not the internal layers of a transformer block.*
+
+With the book's loader configured for `batch_size=8` and `max_length=4`:
+
+```python
+# dataloader is the loader from section 2.6, configured as above.
+inputs, targets = next(iter(dataloader))
+# inputs:  torch.long IDs [8, 4]
+# targets: torch.long IDs [8, 4], shifted one token ahead
+
+vocab_size = 50_257
+output_dim = 256
+context_length = 4
+
+token_embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
+token_embeddings = token_embedding_layer(inputs)
+# [8, 4] → [8, 4, 256]
+
+position_embedding_layer = torch.nn.Embedding(context_length, output_dim)
+positions = torch.arange(context_length)
+# positions is [0, 1, 2, 3], shape [4], dtype torch.long.
+position_embeddings = position_embedding_layer(positions)
+# [4] → [4, 256]
+
+input_embeddings = token_embeddings + position_embeddings
+print(input_embeddings.shape)  # torch.Size([8, 4, 256])
+```
+
+`iter(dataloader)` creates an iterator over batches; `next(...)` retrieves one batch, consisting of its input and target tensors. `torch.arange(4)` creates **position IDs**, not placeholder embedding vectors. The second lookup retrieves the actual learned vectors.
+
+| Object | Shape | Meaning |
+| --- | --- | --- |
+| Token embedding weights | `[50_257,256]` | One row per vocabulary token |
+| Input IDs | `[8,4]` | Eight examples with four IDs each |
+| Looked-up token vectors | `[8,4,256]` | 256 coordinates for every input token |
+| Position embedding weights | `[4,256]` | One row per supported position in this example |
+| Position IDs | `[4]` | Positions 0 through 3 |
+| Looked-up position vectors | `[4,256]` | 256 coordinates for each position |
+| Sum supplied to the model | `[8,4,256]` | Identity and position combined, with width unchanged |
+
+**Why can we add tensors with different numbers of dimensions?** PyTorch broadcasts the `[4,256]` position tensor across the batch dimension. Every example gets position vector 0 at its first position, position vector 1 at its second, and so on. Conceptually, for example `b` and position `t`:
+
+```text
+input_embeddings[b, t] = token_embeddings[b, t] + position_embeddings[t]
+```
+
+The eight examples share one position table, just as they share one token table. We do not learn a different position table for every batch example. The targets remain integer IDs for the later prediction loss; we do not add them to the input embeddings.
+
+Here the supported context length and actual window length both equal four. They need not always match: our Character Logs model supports 24 positions, while its inspection example uses only eight. In that case, we select the first eight position rows from the larger table.
+
+Our early hand calculation simplified the input stage to focus on attention. Our implemented Character Logs model already performs both lookups and addition before normalization, attention, and the feedforward network. Chapter 2 is now unpacking that preparation explicitly; the book has not yet implemented the transformer blocks.
+
 ## Connection to our experiment tooling: checkpoints
 
 The planned [resumable Cosmopedia training work](https://github.com/kantarcise/learning-llms/issues/14) saves and restores model parameters, optimizer state, progress, and randomness/sampling state. It does not require changing layers or the forward computation, so the architecture drawings remain valid. Weight values may change with training while shapes stay the same.
 
 If we later change the number of blocks, vector width, vocabulary, or another architectural choice, we should update the drawings separately. Current inference-only checkpoints cannot restore optimizer state that was never saved.
 
-## Questions to carry forward
+## Questions to carry into Chapter 3
 
-- How do different tokenizer vocabularies affect the number of tokens needed for the same text?
-- How do sliding windows produce input/target pairs from a longer text?
-- How will the book's embedding implementation connect to our existing `nn.Embedding` lookup?
+- How do queries, keys, and values transform these input embeddings?
+- How does causal masking protect every next-token training task?
+- How does attention mix information across positions while preserving vector width?
 
 ## End of chapter
 
-Not reached yet. Continue reading; this page records the opening discussion, not a completed chapter.
+Chapter 2 reading is complete. We can now trace the preparation pipeline:
+
+```text
+Raw text
+  → tokenizer
+  → token IDs
+  → sliding input/target windows
+  → batches of IDs
+  → token embedding lookup + position embedding lookup
+  → input embeddings ready for transformer blocks
+```
+
+The core distinctions to keep:
+
+- **Tokens are units of text; IDs identify them; embeddings represent them with learned vectors.** Token IDs are not meaningful magnitudes.
+- A tokenizer can be shared across models, while each model has its own embedding table. **Training changes the embedding values, so the model learns how to represent tokens right from its input layer.**
+- Special tokens can mark boundaries or handle unknown items in a simple tokenizer. Byte-level BPE handles unfamiliar words through smaller units and byte coverage rather than needing an unknown-word token. An end-of-text marker does not by itself block attention across documents.
+- Sliding windows produce one-token-shifted targets. Every input position contributes a next-token prediction during training. Stride controls window starts; overlap trades repeated computation for alternative contexts.
+- **Vocabulary size tells us how many rows. Width tells us how many coordinates per row.** Embedding lookup selects those rows without changing the weights by itself.
+- Repeated token IDs retrieve the same token vector. Learned absolute position vectors distinguish their positions in our implementation. Adding those vectors preserves width; relative-position methods offer other ways to represent order and distance.
+- `[8,4]` input IDs become `[8,4,256]` input embeddings. The next chapter explains how attention processes them.
+
+The broader bridge also applies to images and audio: neural networks need numerical representations suited to their architecture. Images and audio may already be numerical arrays; they need not pass through the same tokenizer-and-lookup process as text.
+
+Next: Chapter 3, implementing attention mechanisms. The separate fresh-reader review of Chapters 1 and 2 on the website remains to be done; reading completion does not imply every exercise was independently run.
