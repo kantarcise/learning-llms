@@ -1,6 +1,6 @@
 # Chapter 2 — Working with Text Data
 
-Status: reading in progress. Notes cover sections 2.1–2.6 and the opening embedding-table walkthrough in 2.7. Exercise 2.2 has a guided solution; no exercises are recorded as independently completed. Section 2.8 is still ahead.
+Status: reading in progress. Notes cover sections 2.1–2.6 and the opening embedding-table walkthrough in 2.7. Exercise 2.2 has a guided solution; no exercises are recorded as independently completed. Section 2.8 now introduces why position information is needed; the rest of the section is still ahead.
 
 These notes follow Sebastian Raschka's *Build a Large Language Model (From Scratch)*, with explanations from our discussion and links to our experiments. See the [author's Chapter 2 code](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch02).
 
@@ -822,6 +822,12 @@ In our earlier illustrative table, the answer for `[5,2]` was:
 
 That is shape `[2,3]`, not one flattened six-number vector. Repeating an ID selects the same row at this stage; position information and contextual transformations come later.
 
+### Same tokenizer, different model embeddings
+
+**The same tokenizer can be used and token IDs can be the same, but each model has its own learned embedding table.** The tokenizer maps text to IDs; the model maps those IDs to its own learned vectors. Separately trained models can have different values and different vector widths even when their token-to-ID mapping is identical. Models initialized from the same checkpoint may initially share the same values, so different model instances do not necessarily imply different numbers.
+
+Within one model, embedding values also change across training checkpoints. During ordinary inference the stored table stays fixed, while the contextual representations produced by transformer blocks depend on the input.
+
 ### What does greater width buy us?
 
 “More granular” is an understandable intuition, but **more representational capacity** is more precise. Increasing width gives the model more learned coordinates to represent each token and increases the size of many later weight matrices. It does not subdivide tokens into finer pieces, and the coordinates do not have manually assigned meanings. Greater width costs memory and computation and does not guarantee better results.
@@ -832,7 +838,46 @@ Our [Character Logs model](https://github.com/kantarcise/learning-llms/blob/main
 
 ## 2.8 Encoding word positions
 
-Notes to come as we read this section.
+The book makes a useful bridge: the token lookup tells us **which token**, but not **where it occurs**. For a fixed embedding table, the same token ID always selects the same vector, regardless of its position in the sequence.
+
+Using our toy IDs avoids a subtle issue with word examples: capitalization and leading spaces can change tokenization, so `Fox` and `fox` need not have the same ID. Here the repeated ID really is identical:
+
+```text
+Input position:     0             1             2
+Token ID:           2             3             2
+Token vector:   [0.4,-0.2,0.7] [0.1,0.8,-0.5] [0.4,-0.2,0.7]
+                └──── same ID selects the same row ──────┘
+```
+
+These are illustrative vectors. The lookup is deterministic for fixed weights; training can change those weights. Repeatable lookup is useful, but it is not itself an encoding of sequence order.
+
+Plain self-attention without positional information or an order-dependent mask does not distinguish sequence order: rearranging the input rows just rearranges its output rows. Causal masking does provide an order-dependent visibility rule—each position sees only itself and earlier positions—but does not directly attach a position vector or distance to each token. This is why “attention has no notion of order” needs that qualification in our decoder-only model.
+
+### Add identity and position information
+
+Our Character Logs model uses a second learned table, indexed by **position** rather than token ID. Its implementation is in `experiments/character-logs/model.py`, in `TinyTransformer.forward`:
+
+```python
+x = self.token_embedding(token_ids) + self.position_embedding(positions)
+```
+
+Both tables produce vectors of the same width. We **add** them coordinate by coordinate; we do not concatenate them:
+
+```text
+Same token vector:       [ 0.4, -0.2,  0.7]
+Position 0 vector:     + [ 0.1,  0.0, -0.1]
+                         -----------------
+Starting representation: [ 0.5, -0.2,  0.6]
+
+Same token vector:       [ 0.4, -0.2,  0.7]
+Position 2 vector:     + [-0.2,  0.3,  0.1]
+                         -----------------
+Starting representation: [ 0.2,  0.1,  0.8]
+```
+
+All numbers here are illustrative. Width three stays width three. The token identity is the same, but the position contribution gives the model different starting representations. Both tables are learned during training in this architecture. Other architectures can incorporate position differently; this is the learned absolute-position approach used in our small experiment.
+
+We introduced token embeddings first during preparation, then added positional embeddings when inspecting the actual model. The book now makes the motivation explicit before moving further into attention.
 
 ## Connection to our experiment tooling: checkpoints
 
