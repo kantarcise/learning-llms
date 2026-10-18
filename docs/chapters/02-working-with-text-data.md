@@ -779,6 +779,13 @@ tensor([[ 0.3374, -0.1778, -0.1690],
 
 These are seeded execution results, unlike the simpler illustrative values in the diagram. Exact random values may differ across environments or PyTorch versions; the lookup and shapes are the point.
 
+**Training changes the embedding values, so the model learns how to represent tokens right from its input layer.** The lookup rule is fixed; the values being looked up are learned.
+
+??? note "Why does the book mention one-hot encoding?"
+    Multiplying a one-hot vector by the embedding weight matrix selects the same row as a lookup: zeros eliminate the other rows, and the single one keeps the selected row. This is equivalent to a linear transformation without a bias. Adding a bias would add another vector to the selected row.
+
+    This is a mathematical connection, not an additional step in our model. An embedding lookup obtains the result directly, without constructing the mostly-zero vector or performing unnecessary multiplication. We use the lookup; its stored values remain trainable parameters.
+
 ### Selecting one row, then several rows
 
 ```python
