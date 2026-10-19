@@ -44,3 +44,7 @@ Use Material's [image-caption support](https://squidfunk.github.io/mkdocs-materi
 <figcaption markdown="span">Explain the figure and link its source when applicable.</figcaption>
 </figure>
 ```
+
+## Code-block titles
+
+Add `title="..."` after the language on a code fence when a title helps locate or understand the snippet. Use the real repository path and function name for source excerpts. For illustrative snippets that do not live in a module, use a descriptive title rather than inventing a filename. See [Material's code-block title documentation](https://squidfunk.github.io/mkdocs-material/reference/code-blocks/#adding-a-title).
