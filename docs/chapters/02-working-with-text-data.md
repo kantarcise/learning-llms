@@ -81,7 +81,7 @@ Changing width has consequences beyond the embedding table. A square attention p
 
 ## 2.2 Tokenizing text
 
-Reading reached the end of this section. The examples below follow the [author's section 2.2 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb), with our explanations alongside them. They are reference snippets checked by the assistant, not exercises recorded as independently completed by Sezai.
+The examples below follow the [author's section 2.2 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb), with our explanations alongside them.
 
 ### Why do we need this step?
 
@@ -183,11 +183,9 @@ print(len(preprocessed))
 
 The assistant reproduced **4,690 token occurrences** using the linked story revision. That is the sequence length after this split, not the number of unique vocabulary entries. Repeated words count repeatedly. We have a list of strings; integer IDs, embedding vectors, and training windows are still later steps.
 
-Next: [2.3 Converting tokens into token IDs](#23-converting-tokens-into-token-ids).
-
 ## 2.3 Converting tokens into token IDs
 
-Reading reached the end of this section. `vocab` is a mapping from token strings to integer IDs: we look up a token to get its ID. That is the same bridge our character experiment built with its 25 distinct characters.
+`vocab` is a mapping from token strings to integer IDs: we look up a token to get its ID. That is the same bridge our character experiment built with its 25 distinct characters.
 
 ### Build a vocabulary without rearranging the input
 
@@ -217,7 +215,7 @@ Sorting the vocabulary does not sort the story. The input keeps its original ord
 
 Below is a typed adaptation of the author's `SimpleTokenizerV1`, with explanatory docstrings. It uses the same splitting and punctuation-cleanup rules:
 
-```python
+```python title="SimpleTokenizerV1 — teaching example"
 import re
 
 
@@ -284,7 +282,7 @@ We can leave the detailed algorithms for the next sections: **2.4 introduces spe
 
 ## 2.4 Adding special context tokens
 
-Reading reached the end of this section. The author adds two reserved entries to the vocabulary: `<|unk|>` for an unknown piece and `<|endoftext|>` for a text boundary. The original 1,130 entries plus these two give **1,132 entries**.
+The author adds two reserved entries to the vocabulary: `<|unk|>` for an unknown piece and `<|endoftext|>` for a text boundary. The original 1,130 entries plus these two give **1,132 entries**.
 
 The spellings are human-readable labels for dedicated IDs. In this simple tokenizer, the regex leaves these particular strings intact when used as separated pieces; the strings do not acquire special behavior merely because they contain angle brackets.
 
@@ -304,7 +302,7 @@ print(vocab["<|unk|>"])        # 1131
 
 These IDs apply to the story vocabulary in this example, not every tokenizer. A typed adaptation of the author's second version follows. V1 remains above for comparison; a second class is helpful pedagogically, but not required by Python. We could instead modify the original class or make the fallback configurable.
 
-```python
+```python title="SimpleTokenizerV2 — unknown-token fallback"
 class SimpleTokenizerV2:
     def __init__(self, vocab: dict[str, int]) -> None:
         self.str_to_int = vocab
@@ -393,7 +391,7 @@ The unknown token gives V2 a defined fallback, but loses the original missing te
 
 ## 2.5 Byte pair encoding
 
-Reading reached the end of this section. Instead of extending our regex tokenizer again, the book uses [tiktoken](https://github.com/openai/tiktoken), an open-source library from OpenAI with a Python interface and a Rust core. We reuse the GPT-2 encoding, including its existing vocabulary and merge rules; we are not training a new tokenizer or loading language-model weights.
+Instead of extending our regex tokenizer again, the book uses [tiktoken](https://github.com/openai/tiktoken), an open-source library from OpenAI with a Python interface and a Rust core. We reuse the GPT-2 encoding, including its existing vocabulary and merge rules; we are not training a new tokenizer or loading language-model weights.
 
 ### Use an existing encoding
 
@@ -478,11 +476,7 @@ Open code lets us inspect how IDs are assigned, reproduce tokenization locally, 
 
 The stable contract matters: improving library speed or packaging should not silently change GPT-2's established token IDs. Choosing a different encoding is a separate decision and must remain compatible with the model.
 
-Next: **2.6 Data sampling with a sliding window**. We can now encode text; the next task is to turn its ID sequence into training examples.
-
 ## 2.6 Data sampling with a sliding window
-
-Our notes now cover input/target windows, `GPTDatasetV1`, data-loader settings, and the guided solution to Exercise 2.2. We have not recorded a user execution of the exercise on the story. Today's goal is to finish Chapter 2 and then reread Chapters 1 and 2 on the website as a new reader; that review is still ahead.
 
 ### From one next-token prediction to many training targets
 
@@ -532,7 +526,7 @@ The two lists may look surprisingly ordinary. They hold **precomputed examples**
 
 Here is a typed adaptation of the author's class, with clearer validation and explicit integer dtype. It expects `torch`, `tiktoken`, and `Dataset` to be imported as shown:
 
-```python
+```python title="GPTDatasetV1 — teaching example"
 import tiktoken
 import torch
 from torch.utils.data import Dataset
@@ -852,9 +846,11 @@ Our [Character Logs model](https://github.com/kantarcise/learning-llms/blob/main
 
 The book makes a useful bridge: the token lookup tells us **which token**, but not **where it occurs**. For a fixed embedding table, the same token ID always selects the same vector, regardless of its position in the sequence.
 
-Using our toy IDs avoids a subtle issue with word examples: capitalization and leading spaces can change tokenization, so `Fox` and `fox` need not have the same ID. Here the repeated ID really is identical:
+Consider **“Fox loves Fox”** with an illustrative word tokenizer that splits on spaces and maps `Fox` to ID 2 and `loves` to ID 3. Both occurrences of `Fox` therefore select the same embedding row. This is a toy mapping, not GPT-2 tokenization: a real tokenizer may distinguish leading spaces and capitalization.
 
 ```text
+Input text:     Fox loves Fox
+Token:              Fox           loves         Fox
 Input position:     0             1             2
 Token ID:           2             3             2
 Token vector:   [0.4,-0.2,0.7] [0.1,0.8,-0.5] [0.4,-0.2,0.7]
@@ -998,4 +994,4 @@ The core distinctions to keep:
 
 The broader bridge also applies to images and audio: neural networks need numerical representations suited to their architecture. Images and audio may already be numerical arrays; they need not pass through the same tokenizer-and-lookup process as text.
 
-Next: Chapter 3, implementing attention mechanisms. The separate fresh-reader review of Chapters 1 and 2 on the website remains to be done; reading completion does not imply every exercise was independently run.
+Chapter 3 develops the attention mechanisms that process these input embeddings.
