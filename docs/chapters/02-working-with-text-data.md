@@ -100,7 +100,7 @@ Characters, bytes, words, and subwords are different choices of unit. Character-
 
 The sample is Edith Wharton's *The Verdict*, available as [`the-verdict.txt` in the official repository](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/the-verdict.txt). Once that file is present in the working directory, the reading step is ordinary Python:
 
-```python title="Read the story into raw_text"
+```python
 with open("the-verdict.txt", "r", encoding="utf-8") as f:
     raw_text = f.read()
 
@@ -395,7 +395,7 @@ Instead of extending our regex tokenizer again, the book uses [tiktoken](https:/
 
 ### Use an existing encoding
 
-```python title="GPT-2 BPE encoding with tiktoken"
+```python
 import tiktoken
 
 tokenizer = tiktoken.get_encoding("gpt2")
@@ -484,7 +484,7 @@ During generation, a selected token is appended to the input before predicting a
 
 The [author's section 2.6 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/cdbd33e6d57a71e20ea31434841095fac50cecd8/ch02/01_main-chapter-code/ch02.ipynb) encodes *The Verdict* with GPT-2's tokenizer, then uses `enc_text[50:]` to choose a later starting point for illustration. Dropping those 50 tokens is not a required preprocessing rule.
 
-```python title="Construct one-token-shifted input and target windows"
+```python
 enc_text = tokenizer.encode(raw_text)
 enc_sample = enc_text[50:]
 context_size = 4
@@ -604,7 +604,7 @@ Dropping an incomplete batch is separate from dropping an incomplete token windo
 
 The [character-log training code](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/train.py) uses the same PyTorch loader:
 
-```python title="experiments/character-logs/train.py — training loader excerpt"
+```python
 training = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
 ```
 
@@ -616,7 +616,7 @@ Cosmopedia made the same broad choices through a different implementation. Its [
 
 Its [training loop](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/train.py) selected rows directly from prepared tensors:
 
-```python title="experiments/cosmopedia/train.py — batch sampling excerpt"
+```python
 selected = torch.randint(
     len(training["inputs"]), (args.batch_size,), generator=sampling
 )
@@ -759,7 +759,7 @@ An embedding table stores one trainable vector for every token ID in the vocabul
 
 The book's example uses six vocabulary entries and three coordinates per vector:
 
-```python title="Create a six-row embedding table"
+```python
 import torch
 
 input_ids = torch.tensor([2, 3, 5, 1], dtype=torch.long)
@@ -865,7 +865,7 @@ Plain self-attention without positional information or an order-dependent mask d
 
 Our Character Logs model uses a second learned table, indexed by **position** rather than token ID. Its implementation is in `experiments/character-logs/model.py`, in `TinyTransformer.forward`:
 
-```python title="experiments/character-logs/model.py — TinyTransformer.forward excerpt"
+```python
 x = self.token_embedding(token_ids) + self.position_embedding(positions)
 ```
 
@@ -908,7 +908,7 @@ The book now increases the width to 256 and uses the existing GPT-2 BPE tokenize
 
 With the book's loader configured for `batch_size=8` and `max_length=4`:
 
-```python title="Combine token and position embeddings for a batch"
+```python
 # dataloader is the loader from section 2.6, configured as above.
 inputs, targets = next(iter(dataloader))
 # inputs:  torch.long IDs [8, 4]
