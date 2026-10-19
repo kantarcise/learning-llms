@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+<title id="title">Translation needs more than word replacement</title><desc id="desc">German Ich habe das Buch gelesen becomes I have the book read under literal same-order substitution. Natural English I have read the book moves read before the book. Arrows illustrate word correspondence, not measured attention.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52677f"/></marker></defs><rect width="1000" height="1000" fill="#f5f7fb"/>
+<text x="35" y="50" font-family="Arial,Helvetica,sans-serif" font-size="29" font-weight="700" fill="#26364c">Translation needs context and the right order</text>
+<text x="35" y="93" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Our example: Ich habe das Buch gelesen. → I have read the book.</text>
+<text x="35" y="150" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">1. Replace words but keep the source order</text>
+<rect x="45" y="185" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="60" y="225.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Ich</text>
+<path d="M120,260 L120,295" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="45" y="310" width="150" height="65" rx="10" fill="#ffe6dc" stroke="#b5c6d9"/>
+<text x="60" y="350.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">I</text>
+<rect x="235" y="185" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="250" y="225.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">habe</text>
+<path d="M310,260 L310,295" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="235" y="310" width="150" height="65" rx="10" fill="#ffe6dc" stroke="#b5c6d9"/>
+<text x="250" y="350.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">have</text>
+<rect x="425" y="185" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="440" y="225.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">das</text>
+<path d="M500,260 L500,295" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="425" y="310" width="150" height="65" rx="10" fill="#ffe6dc" stroke="#b5c6d9"/>
+<text x="440" y="350.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">the</text>
+<rect x="615" y="185" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="630" y="225.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Buch</text>
+<path d="M690,260 L690,295" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="615" y="310" width="150" height="65" rx="10" fill="#ffe6dc" stroke="#b5c6d9"/>
+<text x="630" y="350.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">book</text>
+<rect x="805" y="185" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="820" y="225.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">gelesen</text>
+<path d="M880,260 L880,295" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="805" y="310" width="150" height="65" rx="10" fill="#ffe6dc" stroke="#b5c6d9"/>
+<text x="820" y="350.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">read</text>
+<text x="45" y="425" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">“I have the book read.” is not the intended ordinary English translation.</text>
+<text x="35" y="510" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">2. Preserve meaning while changing the word order</text>
+<rect x="45" y="550" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="60" y="590.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Ich</text>
+<rect x="235" y="550" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="250" y="590.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">habe</text>
+<rect x="425" y="550" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="440" y="590.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">das</text>
+<rect x="615" y="550" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="630" y="590.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Buch</text>
+<rect x="805" y="550" width="150" height="65" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="820" y="590.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">gelesen</text>
+<path d="M120,625 L120,750" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M310,625 L310,750" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M500,625 L690,750" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M690,625 L880,750" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M880,625 L500,750" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="45" y="765" width="150" height="65" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="60" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">I</text>
+<rect x="235" y="765" width="150" height="65" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="250" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">have</text>
+<rect x="425" y="765" width="150" height="65" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="440" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">read</text>
+<rect x="615" y="765" width="150" height="65" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="630" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">the</text>
+<rect x="805" y="765" width="150" height="65" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="820" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">book</text>
+<text x="45" y="885" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">The final German word supplies “read,” which appears earlier in English.</text>
+<text x="45" y="928" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Word-level illustration only: arrows are correspondences, not attention weights.</text>
+</svg>
