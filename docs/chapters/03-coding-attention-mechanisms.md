@@ -263,6 +263,54 @@ The weights describe how to distribute the mixture across the input vectors: pos
 
     Arbitrary dot products can be negative, and their sum can be zero or very close to zero. Dividing by that sum is therefore not a general solution for attention. Softmax will give us nonnegative weights summing to one even when scores are negative. Normalization alone does not guarantee stable training.
 
+#### Reproduce the book's six-token example
+
+Our diagrams use four simple vectors to make the arithmetic easy to inspect. To compare directly with the book, here are the six input vectors and the score/normalization calculation from the [official Chapter 3 notebook, section 3.3.1](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb). The code below adapts that example with explicit names and comments; it is independent of the four-position example above.
+
+```python
+import torch
+
+# Floating-point input vectors, not token IDs.
+# T=6 token positions; d=3 coordinates per vector; shape [6, 3].
+book_inputs = torch.tensor([
+    [0.43, 0.15, 0.89],  # Your
+    [0.55, 0.87, 0.66],  # journey
+    [0.57, 0.85, 0.64],  # starts
+    [0.22, 0.58, 0.33],  # with
+    [0.77, 0.25, 0.10],  # one
+    [0.05, 0.80, 0.55],  # step
+])
+
+# Position 2 is Python row index 1. This query has shape [3].
+book_query = book_inputs[1]
+
+# Allocate six score slots. torch.empty does not initialize their values;
+# the loop fills every slot before we read or print the tensor.
+book_scores = torch.empty(book_inputs.shape[0])
+for position_index, input_vector in enumerate(book_inputs):
+    # Two vectors of shape [3] -> one scalar dot product.
+    book_scores[position_index] = torch.dot(input_vector, book_query)
+
+# Shape [6]: omega_21 through omega_26, in input-position order.
+print(book_scores)
+
+# Divide each score by the sum of all six scores for this query.
+# Shape stays [6]: alpha_21 through alpha_26.
+book_weights = book_scores / book_scores.sum()
+print(book_weights)
+print(book_weights.sum())
+```
+
+```text
+tensor([0.9544, 1.4950, 1.4754, 0.8434, 0.7070, 1.0865])
+tensor([0.1455, 0.2278, 0.2249, 0.1285, 0.1077, 0.1656])
+tensor(1.0000)
+```
+
+For the first score, ω<sub>21</sub>, the calculation is `0.43×0.55 + 0.15×0.87 + 0.89×0.66 = 0.9544`. The score sum is `6.5617`, so α<sub>21</sub> is `0.9544 / 6.5617 ≈ 0.1455`. These printed decimals are rounded; the calculation uses the tensor's stored precision. The last printed sum may display as `1.` or `1.0000` depending on floating-point and display details.
+
+The loop makes each comparison visible. `book_inputs @ book_query` computes the same six scores at once, which is the form used in our smaller example. This remains simple sum normalization, not softmax.
+
 We now have mixing weights. Using them to calculate the context vector is the next part of the walkthrough.
 
 ## 3.4 Implementing self-attention with trainable weights
