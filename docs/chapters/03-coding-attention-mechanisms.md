@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2; sections 3.3–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the context-vector goal and first score calculation in 3.3.1. The remaining attention calculations and sections 3.4–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -155,7 +155,80 @@ Before calculating attention, locate it in the complete model. Chapter 2 prepare
 
 ## 3.3 Attending to different parts of the input with self-attention
 
-Notes to come as we read this section.
+!!! note "What does the self in self-attention mean?"
+
+    **Self means that the positions being related belong to the same sequence.** It does not mean a token attends only to itself. A token can incorporate information from other positions as well as its own.
+
+    In the translation example from section 3.2, a decoder attends to representations from a separate encoder sequence. That is **cross-attention**. Both are attention mechanisms; the distinction is where their inputs come from. Image models can likewise use self-attention between representations of image patches.
+
+### 3.3.1 A simple self-attention mechanism without trainable weights
+
+The goal is to turn each input vector into a **context vector**: a representation that incorporates information from the other available positions, including the position itself. Calling it an “enriched embedding” is a useful intuition. In this simplified calculation, it is a weighted combination of the input vectors, not an extra row permanently written into the token embedding table.
+
+Keep these symbols separate:
+
+| Symbol | Meaning | Small example |
+| --- | --- | --- |
+| `T` | Number of token positions in this sequence | 4 positions |
+| `d` | Number of coordinates in each input vector | 3 numbers per vector |
+| `x(2)` | Input vector at the second position; the number is a position, not an exponent | `[0, 2, 1]` |
+| `z(2)` | Context vector computed for the second position | Also 3 numbers here |
+| `a23` | Mixing weight for input position 3 when computing the output for position 2 | One scalar, not a vector |
+
+The book uses six word-labeled positions for “Your journey starts with one step.” Its input tensor therefore has six rows, each containing three numbers. In general, **the input shape is `[T, d]`: positions × coordinates per vector**. This is one sequence, with no batch axis in this example. Word labels help us read the example; a real tokenizer may split words into multiple tokens.
+
+For our companion drawings, use four word-labeled positions and deliberately simple, invented vectors. These are teaching inputs, not representations from a trained model:
+
+```python
+import torch
+
+# One sequence: T=4 positions, d=3 coordinates per vector.
+# These are floating-point vectors already, not integer token IDs.
+inputs = torch.tensor([
+    [1.0, 0.0, 1.0],  # Small   — position 1
+    [0.0, 2.0, 1.0],  # models  — position 2
+    [1.0, 1.0, 0.0],  # learn   — position 3
+    [0.0, 1.0, 2.0],  # patterns — position 4
+])
+```
+
+<figure markdown="1">
+
+[![Four three-coordinate vectors are weighted separately and summed to form the context vector for the second position, models.](../assets/chapter-03/self-attention-context.svg)](../assets/chapter-03/self-attention-context.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.7 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/), using a different sentence and invented vectors. The weights are symbolic: this drawing shows the goal before we calculate the mixing amounts. All four positions are accessible because this example has no causal mask.</figcaption>
+</figure>
+
+We focus on `z(2)` first, but the eventual goal is **one context vector per input position**. There is no concatenation here: multiplying each three-coordinate vector by a scalar and summing the results still produces three coordinates. Four input positions will ultimately produce four context vectors.
+
+**First calculate scores, not mixing amounts.** Use the second input vector as the query—the position for which we want context—and take its dot product with each input vector. In this simplified version, “query” describes the role of an input vector; we have not introduced a learned query projection yet.
+
+```python
+# Python index 1 selects position 2: [0, 2, 1], shape [3].
+query = inputs[1]
+
+# For each row, multiply matching coordinates and add them.
+# inputs has shape [4, 3]; query has shape [3]; scores has shape [4].
+scores = inputs @ query
+print(scores)  # tensor([1., 5., 2., 4.])
+```
+
+<figure markdown="1">
+
+[![The query vector zero two one is compared with each input by dot product, producing scores one five two four.](../assets/chapter-03/self-attention-scores.svg)](../assets/chapter-03/self-attention-scores.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.8, using the same invented inputs as our preceding figure. The displayed scores are exact for these inputs. A score is an intermediate comparison value; it is not yet a normalized attention weight.</figcaption>
+</figure>
+
+For example, the score comparing position 2 with position 3 is `0×1 + 2×1 + 1×0 = 2`. These dot products depend on the vectors and their magnitudes; with invented inputs, we should not read semantic understanding into the resulting rankings.
+
+!!! tip "Attention weights are not the same as trainable model weights"
+
+    This section has no learned query/key/value matrices. It still computes attention scores and, subsequently, mixing weights from the inputs. Those mixing weights are computed activations, not stored parameters adjusted directly by the optimizer. In a full model, the input embeddings can themselves be learned even when a particular attention operation has no trainable projections.
+
+The book's figures shorten the displayed decimal values to save space. Two rows can therefore look identical in a drawing while differing in the actual tensor. Use the full values from the code for calculations; do not expect dot products of truncated display values to reproduce the original scores exactly.
+
+The next step is to turn scores into mixing weights, then use those weights to form the context vector. We have established the goal and the score calculation here.
 
 ## 3.4 Implementing self-attention with trainable weights
 
