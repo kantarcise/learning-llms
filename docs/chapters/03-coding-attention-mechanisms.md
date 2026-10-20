@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction, sections 3.1–3.2, and the opening model overview in 3.3. The worked attention calculations and sections 3.4–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2; sections 3.3–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -142,8 +142,6 @@ The translation example has a decoder attending to an encoder's representations.
 
     Here, “better representations” means that a token's vector can reflect its surrounding context. It does not mean that attention necessarily takes less computation.
 
-## 3.3 Attending to different parts of the input with self-attention
-
 Before calculating attention, locate it in the complete model. Chapter 2 prepared input vectors from text. This chapter develops the attention mechanism that mixes information between positions. Chapter 4 assembles the full GPT-like architecture around it.
 
 <figure markdown="1">
@@ -155,7 +153,9 @@ Before calculating attention, locate it in the complete model. Chapter 2 prepare
 
 **Attention receives vectors and produces vectors.** It does not directly produce words or token IDs. The complete model eventually projects its representations into vocabulary scores; selecting token IDs and decoding them gives us generated text.
 
-The worked self-attention calculation will follow as we read this section.
+## 3.3 Attending to different parts of the input with self-attention
+
+Notes to come as we read this section.
 
 ## 3.4 Implementing self-attention with trainable weights
 
