@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">Where self-attention fits in a GPT-like model</title><desc id="desc">Text becomes token IDs and input vectors in Chapter 2. Chapter 3 develops self-attention inside transformer blocks. Chapter 4 assembles the model with normalization, residual connections, feedforward networks, and vocabulary scores. Token selection and decoding produce text.</desc><rect width="1000" height="1000" fill="#f5f7fb"/><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#526783"/></marker></defs>
+<text x="40" y="52" font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="700" fill="#26364c">Where does self-attention fit?</text>
+<text x="40" y="88" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">From text to vectors, through the model, back to text.</text>
+<rect x="80" y="120" width="840" height="80" rx="14" fill="#fff" stroke="#aebed1"/>
+<text x="110" y="152" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#26364c">INPUT TEXT</text>
+<text x="110" y="184" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Example prompt: “The river bank”</text>
+<path d="M 500 200 V 225" stroke="#526783" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="80" y="230" width="840" height="125" rx="14" fill="#dce9ff" stroke="#aebed1"/>
+<text x="110" y="266" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">CHAPTER 2 · Prepare the input vectors</text>
+<text x="110" y="303" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Text → tokens → token IDs → embedding lookup</text>
+<text x="110" y="335" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Add positional embeddings in the GPT-style model used here.</text>
+<path d="M 500 355 V 385" stroke="#526783" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="50" y="390" width="900" height="355" rx="14" fill="#e8edf5" stroke="#aebed1"/>
+<text x="80" y="426" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="700" fill="#26364c">GPT-LIKE DECODER-ONLY TRANSFORMER</text>
+<text x="80" y="458" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Chapter 4 assembles the complete architecture.</text>
+<rect x="90" y="485" width="820" height="110" rx="14" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="115" y="523" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">CHAPTER 3 · Self-attention inside transformer blocks</text>
+<text x="115" y="558" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Mix information across allowed positions in the same sequence.</text>
+<text x="115" y="583" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Input: vectors → output: context-aware vectors</text>
+<text x="90" y="632" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Each block also includes normalization, residual connections,</text>
+<text x="90" y="662" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">and a feedforward network. Blocks can be stacked.</text>
+<text x="90" y="712" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#26364c">Final normalization + vocabulary projection → token scores</text>
+<path d="M 500 745 V 775" stroke="#526783" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+<rect x="80" y="780" width="840" height="100" rx="14" fill="#fff" stroke="#aebed1"/>
+<text x="110" y="819" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#26364c">Select the next token ID, then decode IDs into text.</text>
+<text x="110" y="854" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Append the selected token and repeat to generate more text.</text>
+<text x="80" y="925" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">Learning map, not an exact layer-by-layer computation graph.</text>
+<text x="80" y="958" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">Attention is one component of the model; it does not directly output text.</text>
+</svg>

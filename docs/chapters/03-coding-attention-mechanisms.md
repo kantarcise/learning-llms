@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2; sections 3.3–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction, sections 3.1–3.2, and the opening model overview in 3.3. The worked attention calculations and sections 3.4–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -144,7 +144,18 @@ The translation example has a decoder attending to an encoder's representations.
 
 ## 3.3 Attending to different parts of the input with self-attention
 
-Notes to come as we read this section.
+Before calculating attention, locate it in the complete model. Chapter 2 prepared input vectors from text. This chapter develops the attention mechanism that mixes information between positions. Chapter 4 assembles the full GPT-like architecture around it.
+
+<figure markdown="1">
+
+[![Text becomes input vectors, then enters a GPT-like transformer with self-attention and other components; vocabulary scores lead to token selection and decoded text.](../assets/chapter-03/attention-in-model.svg)](../assets/chapter-03/attention-in-model.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.6 in [Sebastian Raschka's book](https://sebastianraschka.com/llms-from-scratch/), using our own layout and example. This is a learning map, not an exact execution graph: normalization, residual connections, and feedforward operations surround attention within each block. The input phrase is illustrative; no tokenization or prediction result is claimed.</figcaption>
+</figure>
+
+**Attention receives vectors and produces vectors.** It does not directly produce words or token IDs. The complete model eventually projects its representations into vocabulary scores; selecting token IDs and decoding them gives us generated text.
+
+The worked self-attention calculation will follow as we read this section.
 
 ## 3.4 Implementing self-attention with trainable weights
 
