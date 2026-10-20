@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+<title id="title">A basic recurrent encoder-decoder without attention</title><desc id="desc">Five encoder steps update a hidden state. Only the final encoder state is passed to initialize the decoder. Decoder states evolve as previous output tokens are fed back. Earlier encoder states have no direct route to the decoder in this design.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52677f"/></marker></defs><rect width="1000" height="1000" fill="#f5f7fb"/>
+<text x="35" y="50" font-family="Arial,Helvetica,sans-serif" font-size="29" font-weight="700" fill="#26364c">One fixed-size summary connects two sequences</text>
+<text x="35" y="90" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">Basic recurrent encoder–decoder WITHOUT attention</text>
+<text x="35" y="145" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">ENCODER: update the state as each source word arrives</text>
+<rect x="55" y="185" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="70" y="220.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Ich</text>
+<path d="M127,249 L127,275" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="55" y="290" width="145" height="60" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="70" y="328.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">h1</text>
+<path d="M205,320 L233,320" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="240" y="185" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="255" y="220.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">habe</text>
+<path d="M312,249 L312,275" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="240" y="290" width="145" height="60" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="255" y="328.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">h2</text>
+<path d="M390,320 L418,320" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="425" y="185" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="440" y="220.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">das</text>
+<path d="M497,249 L497,275" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="425" y="290" width="145" height="60" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="440" y="328.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">h3</text>
+<path d="M575,320 L603,320" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="610" y="185" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="625" y="220.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">Buch</text>
+<path d="M682,249 L682,275" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="610" y="290" width="145" height="60" rx="10" fill="#dce9ff" stroke="#b5c6d9"/>
+<text x="625" y="328.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">h4</text>
+<path d="M760,320 L788,320" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="795" y="185" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="810" y="220.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">gelesen</text>
+<path d="M867,249 L867,275" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="795" y="290" width="145" height="60" rx="10" fill="#ffe1b5" stroke="#b5c6d9"/>
+<text x="810" y="328.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">h5</text>
+<text x="55" y="385" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Same encoder weights reused at each step; h1 … h5 are changing activations.</text>
+<path d="M867,360 L867,430" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="240" y="445" width="700" height="85" rx="10" fill="#ffe1b5" stroke="#b5c6d9"/>
+<text x="255" y="478" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">h5: the source summary handed to the decoder</text>
+<text x="255" y="510" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">Its width stays fixed as the source sequence gets longer.</text>
+<path d="M240,488 L30,488 L30,680 L53,680" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<text x="55" y="585" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">DECODER: use that summary to begin generation</text>
+<text x="55" y="620" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="400" fill="#26364c">Start marker first; each following step also receives the previous output token.</text>
+<rect x="55" y="650" width="145" height="60" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="70" y="688.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">s1</text>
+<path d="M127,720 L127,755" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="55" y="770" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="70" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">I</text>
+<path d="M205,680 L233,680" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M200,798 L220,798 L220,705 L238,705" stroke="#52677f" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="240" y="650" width="145" height="60" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="255" y="688.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">s2</text>
+<path d="M312,720 L312,755" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="240" y="770" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="255" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">have</text>
+<path d="M390,680 L418,680" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M385,798 L405,798 L405,705 L423,705" stroke="#52677f" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="425" y="650" width="145" height="60" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="440" y="688.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">s3</text>
+<path d="M497,720 L497,755" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="425" y="770" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="440" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">read</text>
+<path d="M575,680 L603,680" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M570,798 L590,798 L590,705 L608,705" stroke="#52677f" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="610" y="650" width="145" height="60" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="625" y="688.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">s4</text>
+<path d="M682,720 L682,755" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="610" y="770" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="625" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">the</text>
+<path d="M760,680 L788,680" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M755,798 L775,798 L775,705 L793,705" stroke="#52677f" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="795" y="650" width="145" height="60" rx="10" fill="#d8f1eb" stroke="#b5c6d9"/>
+<text x="810" y="688.0" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">s5</text>
+<path d="M867,720 L867,755" stroke="#52677f" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="795" y="770" width="145" height="55" rx="10" fill="#fff" stroke="#b5c6d9"/>
+<text x="810" y="805.5" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">book</text>
+<text x="45" y="885" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#26364c">No direct access from decoder steps to h1, h2, h3, or h4 in this design.</text>
+<text x="45" y="927" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">The decoder state changes; the source information must survive the summary.</text>
+<text x="45" y="965" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="400" fill="#26364c">Illustrative outputs, not a trained model run. Words stand in for tokens.</text>
+</svg>
