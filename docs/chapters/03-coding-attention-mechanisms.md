@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the context-vector goal, score calculation, and first normalization in 3.3.1. The remaining attention calculations and sections 3.4–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the single-position self-attention walkthrough in 3.3.1. The all-position calculation in 3.3.2 and sections 3.4–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -311,7 +311,73 @@ For the first score, ω<sub>21</sub>, the calculation is `0.43×0.55 + 0.15×0.8
 
 The loop makes each comparison visible. `book_inputs @ book_query` computes the same six scores at once, which is the form used in our smaller example. This remains simple sum normalization, not softmax.
 
-We now have mixing weights. Using them to calculate the context vector is the next part of the walkthrough.
+#### Use softmax for attention weights
+
+Instead of dividing the raw scores by their sum, softmax first exponentiates each score and divides by the sum of those exponentials. For finite scores, the resulting weights are nonnegative and sum to one, even when some scores are negative. This is a smooth, differentiable transformation; changing one score also affects the other weights through the shared denominator. It does not guarantee that gradients will always be large or that training will always be stable.
+
+Continuing with `book_scores` from the six-token example, the [official notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb) first demonstrates a naive implementation. Here it has a type hint and a shape explanation:
+
+```python
+def softmax_naive(scores: torch.Tensor) -> torch.Tensor:
+    """Normalize a floating-point score vector [T] into weights [T].
+
+    T is the number of input positions for one query. This direct
+    exponential formula illustrates softmax but is not numerically stable.
+    """
+    exponentials = torch.exp(scores)
+    return exponentials / exponentials.sum(dim=0)
+
+book_weights_naive = softmax_naive(book_scores)
+print(book_weights_naive)
+print(book_weights_naive.sum())
+```
+
+```text
+tensor([0.1385, 0.2379, 0.2333, 0.1240, 0.1082, 0.1581])
+tensor(1.)
+```
+
+Directly exponentiating large positive scores can overflow. A stable implementation subtracts the largest score before exponentiation; this leaves the mathematical result unchanged while avoiding that overflow for ordinary finite inputs. In practice, use PyTorch's implementation:
+
+```python
+# book_scores has shape [6]. Axis 0 is its only axis: input positions.
+# Normalize across those six positions for the single query "journey".
+book_weights_softmax = torch.softmax(book_scores, dim=0)
+print(book_weights_softmax)
+print(book_weights_softmax.sum())
+```
+
+This prints the same weights as the naive implementation for our modest scores. It is **not** the same result as the earlier division by the raw score sum. The context-vector calculation below uses these **softmax weights**. Our experiment models also use PyTorch softmax; here we are unpacking the operation one step at a time.
+
+#### Finish one context vector: multiply, then sum
+
+For z<sup>(2)</sup>, multiply each input vector x<sup>(i)</sup> by its scalar weight α<sub>2i</sub>, then add the resulting vectors coordinate by coordinate. The parenthesized superscript still labels the position, not a power.
+
+```python
+# book_query has shape [3]: d=3 coordinates per vector.
+# Begin with three zeros to accumulate the weighted contributions.
+book_context_2 = torch.zeros_like(book_query)
+for position_index, input_vector in enumerate(book_inputs):
+    # One scalar weight times one [3] vector produces another [3] vector.
+    weighted_input = book_weights_softmax[position_index] * input_vector
+    book_context_2 += weighted_input
+
+print(book_context_2)
+# tensor([0.4419, 0.6515, 0.5683])
+```
+
+Those are **three numbers: 0.4419, 0.6515, and 0.5683**. Six input vectors of width three contribute to one output vector of width three. For example, its first coordinate is approximately `0.1385×0.43 + 0.2379×0.55 + 0.2333×0.57 + 0.1240×0.22 + 0.1082×0.77 + 0.1581×0.05 = 0.4419`. The code uses full-precision weights, not the rounded ones displayed here.
+
+<figure markdown="1">
+
+[![Our four toy inputs are multiplied by their softmax weights and summed to form the second context vector, approximately zero point zero four seven four, one point six eight three six, one point two two one five.](../assets/chapter-03/self-attention-weighted-sum.svg)](../assets/chapter-03/self-attention-weighted-sum.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.10 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The diagram continues our four-position toy example; the code above reproduces the book's separate six-position example. Weights and output coordinates are rounded for display, but the calculation uses full precision. These weights come from softmax, replacing the simple sum normalization illustrated earlier.</figcaption>
+</figure>
+
+The same weighted sum can be expressed compactly as `book_weights_softmax @ book_inputs`: shape `[6] @ [6, 3]` gives `[3]`. The loop exposes each contribution; the matrix operation combines them in one expression.
+
+We have calculated the context vector for **one position**. Section **3.3.2** extends the calculation to all input positions simultaneously.
 
 ## 3.4 Implementing self-attention with trainable weights
 
