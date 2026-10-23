@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the context-vector goal and first score calculation in 3.3.1. The remaining attention calculations and sections 3.4–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the single-position self-attention walkthrough in 3.3.1. The all-position calculation in 3.3.2 and sections 3.4–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -165,15 +165,69 @@ Before calculating attention, locate it in the complete model. Chapter 2 prepare
 
 The goal is to turn each input vector into a **context vector**: a representation that incorporates information from the other available positions, including the position itself. Calling it an “enriched embedding” is a useful intuition. In this simplified calculation, it is a weighted combination of the input vectors, not an extra row permanently written into the token embedding table.
 
+#### First, what are we trying to do?
+
+We already have a sequence of input vectors. Choose **one position** and ask:
+
+> What information from this sequence should contribute to the new representation at this position?
+
+The vector asking that question is called the **query**. For example, in our companion sentence “Small models learn patterns,” we will choose the position labeled “models.” Its input vector becomes the query because we want to calculate context **for that position**. “Question” is an analogy for its role in a numerical calculation; the model is not forming a literal question.
+
+The calculation has three steps:
+
+| Step | What we do | What we get |
+| --- | --- | --- |
+| **Compare** | Take the query's dot product with every available input vector, including itself. | One **score** for each contributing position. |
+| **Normalize** | Apply softmax across those scores. | **Mixing amounts**, called attention weights, that sum to one. |
+| **Mix** | Multiply each input vector by its mixing amount, then add the weighted vectors coordinate by coordinate. | One **context vector** for the chosen position. |
+
+```text
+Choose the position whose context we want
+    ↓
+Use its input vector as the query
+    ↓
+Compare with every input vector, including itself
+    ↓
+Scores → softmax → mixing amounts
+    ↓
+Use those amounts to combine the input vectors
+    ↓
+A context vector for the chosen position
+```
+
+**A score is a comparison result. A mixing amount tells us how much a vector contributes to the sum.** Keeping those two stages separate makes the calculation easier to follow. We will first demonstrate simple division by the score sum, then replace it with softmax.
+
+The result is still a vector of the same width in this example. It now contains contributions from positions in the sequence. We have calculated **one new representation**, not predicted the next token or updated the stored embedding table. The calculation for another query position produces that position's own scores, weights, and context vector.
+
+This already counts as **self-attention**: the query and the vectors it consults belong to the same sequence. “Self” does not restrict attention to the query's own position.
+
+#### Why is this version simplified?
+
+**We use the input vectors themselves to decide how to mix the input vectors themselves.** They do two jobs: provide the numbers being compared, and provide the information being mixed. No learned query/key/value projections separate those jobs yet.
+
+If you followed the [character-log experiment](../preparation/training-comparison.md), we previously explored attention inside a complete transformer block, alongside normalization, residual additions, and a feedforward network. Here we are zooming into the attention component and temporarily removing some machinery so we can see its core calculation.
+
+| Job | This simplified version | Version with learned projections |
+| --- | --- | --- |
+| Ask for information at a position | That position's input vector | A query vector produced using W<sub>Q</sub> |
+| Supply vectors to compare against | The input vectors | Key vectors produced using W<sub>K</sub> |
+| Supply information to mix | The input vectors | Value vectors produced using W<sub>V</sub> |
+
+The learned version retains **compare → normalize → mix**, but learns how to prepare the vectors for those jobs. We will introduce those projections in section 3.4; causal masking follows in 3.5. For now, all positions in the example are accessible. The attention output still needs the rest of the model before it becomes vocabulary scores for predicting a token.
+
+With that purpose in mind, we can follow the symbols and arithmetic below. Section 3.3.1 works through **one query position**; section 3.3.2 extends the calculation to **every position**.
+
+#### Follow one position through the calculation
+
 Keep these symbols separate:
 
 | Symbol | Meaning | Small example |
 | --- | --- | --- |
 | `T` | Number of token positions in this sequence | 4 positions |
 | `d` | Number of coordinates in each input vector | 3 numbers per vector |
-| `x(2)` | Input vector at the second position; the number is a position, not an exponent | `[0, 2, 1]` |
-| `z(2)` | Context vector computed for the second position | Also 3 numbers here |
-| `a23` | Mixing weight for input position 3 when computing the output for position 2 | One scalar, not a vector |
+| x<sup>(2)</sup> | Input vector at the second position; the number is a position, not an exponent | `[0, 2, 1]` |
+| z<sup>(2)</sup> | Context vector computed for the second position | Also 3 numbers here |
+| α<sub>23</sub> | Mixing weight for input position 3 when computing the output for position 2 | One scalar, not a vector |
 
 The book uses six word-labeled positions for “Your journey starts with one step.” Its input tensor therefore has six rows, each containing three numbers. In general, **the input shape is `[T, d]`: positions × coordinates per vector**. This is one sequence, with no batch axis in this example. Word labels help us read the example; a real tokenizer may split words into multiple tokens.
 
@@ -199,7 +253,7 @@ inputs = torch.tensor([
 <figcaption markdown="span">Original companion illustration inspired by Figure 3.7 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/), using a different sentence and invented vectors. The weights are symbolic: this drawing shows the goal before we calculate the mixing amounts. All four positions are accessible because this example has no causal mask.</figcaption>
 </figure>
 
-We focus on `z(2)` first, but the eventual goal is **one context vector per input position**. There is no concatenation here: multiplying each three-coordinate vector by a scalar and summing the results still produces three coordinates. Four input positions will ultimately produce four context vectors.
+We focus on z<sup>(2)</sup> first, but the eventual goal is **one context vector per input position**. There is no concatenation here: multiplying each three-coordinate vector by a scalar and summing the results still produces three coordinates. Four input positions will ultimately produce four context vectors.
 
 **First calculate scores, not mixing amounts.** Use the second input vector as the query—the position for which we want context—and take its dot product with each input vector. In this simplified version, “query” describes the role of an input vector; we have not introduced a learned query projection yet.
 
@@ -228,7 +282,156 @@ For example, the score comparing position 2 with position 3 is `0×1 + 2×1 + 1�
 
 The book's figures shorten the displayed decimal values to save space. Two rows can therefore look identical in a drawing while differing in the actual tensor. Use the full values from the code for calculations; do not expect dot products of truncated display values to reproduce the original scores exactly.
 
-The next step is to turn scores into mixing weights, then use those weights to form the context vector. We have established the goal and the score calculation here.
+#### Reading the book's notation
+
+The raised parenthesized number is a **position label, not a power**: x<sup>(2)</sup> means the input vector at position 2. More generally, x<sup>(T)</sup> is the last input vector when the sequence has T positions. The corresponding context vector is z<sup>(2)</sup>.
+
+- **ω (omega)** denotes an attention score: ω<sub>23</sub> = x<sup>(2)</sup> · x<sup>(3)</sup>.
+- **α (alpha)** denotes a normalized attention weight: α<sub>23</sub> is how much position 3 contributes to the context vector for position 2.
+- The first subscript identifies the query position; the second identifies the contributing position. These figures use omega and alpha, not theta.
+
+A dot product multiplies matching coordinates and sums the products. It measures alignment **and depends on vector magnitudes**. If we double a vector without changing its direction, its dot product with the query doubles. So a higher score is not automatically evidence of a closer semantic relationship. In this example, larger positive scores will receive larger mixing weights after normalization.
+
+#### From scores to weights that sum to one
+
+For our query at position 2, the scores are `[1, 5, 2, 4]`. A first, simple normalization divides each score by their sum, `12`:
+
+```python
+# scores: shape [4], one scalar per input position for this query.
+# All four scores in this toy example are positive.
+attention_weights = scores / scores.sum()
+print(attention_weights)  # tensor([0.0833, 0.4167, 0.1667, 0.3333])
+print(attention_weights.sum())  # tensor(1.)
+```
+
+<figure markdown="1">
+
+[![Scores omega 21 through omega 24 are divided by their sum 12 to obtain weights alpha 21 through alpha 24, summing to one.](../assets/chapter-03/self-attention-normalization.svg)](../assets/chapter-03/self-attention-normalization.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.9 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). We retain our four-position example and show exact fractions to avoid rounding ambiguity. This figure demonstrates simple division by the score sum, not softmax.</figcaption>
+</figure>
+
+The weights describe how to distribute the mixture across the input vectors: position 2 receives `5/12` of the weight, position 4 receives `4/12`, and so on. This makes the combination interpretable as a weighted average and prevents its scale from growing merely because we add more equally weighted contributors. **This normalization is across positions for one query; it is not LayerNorm across a token vector's coordinates.**
+
+!!! warning "This first normalization is only a teaching step"
+
+    Arbitrary dot products can be negative, and their sum can be zero or very close to zero. Dividing by that sum is therefore not a general solution for attention. Softmax will give us nonnegative weights summing to one even when scores are negative. Normalization alone does not guarantee stable training.
+
+#### Reproduce the book's six-token example
+
+Our diagrams use four simple vectors to make the arithmetic easy to inspect. To compare directly with the book, here are the six input vectors and the score/normalization calculation from the [official Chapter 3 notebook, section 3.3.1](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb). The code below adapts that example with explicit names and comments; it is independent of the four-position example above.
+
+```python
+import torch
+
+# Floating-point input vectors, not token IDs.
+# T=6 token positions; d=3 coordinates per vector; shape [6, 3].
+book_inputs = torch.tensor([
+    [0.43, 0.15, 0.89],  # Your
+    [0.55, 0.87, 0.66],  # journey
+    [0.57, 0.85, 0.64],  # starts
+    [0.22, 0.58, 0.33],  # with
+    [0.77, 0.25, 0.10],  # one
+    [0.05, 0.80, 0.55],  # step
+])
+
+# Position 2 is Python row index 1. This query has shape [3].
+book_query = book_inputs[1]
+
+# Allocate six score slots. torch.empty does not initialize their values;
+# the loop fills every slot before we read or print the tensor.
+book_scores = torch.empty(book_inputs.shape[0])
+for position_index, input_vector in enumerate(book_inputs):
+    # Two vectors of shape [3] -> one scalar dot product.
+    book_scores[position_index] = torch.dot(input_vector, book_query)
+
+# Shape [6]: omega_21 through omega_26, in input-position order.
+print(book_scores)
+
+# Divide each score by the sum of all six scores for this query.
+# Shape stays [6]: alpha_21 through alpha_26.
+book_weights = book_scores / book_scores.sum()
+print(book_weights)
+print(book_weights.sum())
+```
+
+```text
+tensor([0.9544, 1.4950, 1.4754, 0.8434, 0.7070, 1.0865])
+tensor([0.1455, 0.2278, 0.2249, 0.1285, 0.1077, 0.1656])
+tensor(1.0000)
+```
+
+For the first score, ω<sub>21</sub>, the calculation is `0.43×0.55 + 0.15×0.87 + 0.89×0.66 = 0.9544`. The score sum is `6.5617`, so α<sub>21</sub> is `0.9544 / 6.5617 ≈ 0.1455`. These printed decimals are rounded; the calculation uses the tensor's stored precision. The last printed sum may display as `1.` or `1.0000` depending on floating-point and display details.
+
+The loop makes each comparison visible. `book_inputs @ book_query` computes the same six scores at once, which is the form used in our smaller example. This remains simple sum normalization, not softmax.
+
+#### Use softmax for attention weights
+
+Instead of dividing the raw scores by their sum, softmax first exponentiates each score and divides by the sum of those exponentials. For finite scores, the resulting weights are nonnegative and sum to one, even when some scores are negative. This is a smooth, differentiable transformation; changing one score also affects the other weights through the shared denominator. It does not guarantee that gradients will always be large or that training will always be stable.
+
+Continuing with `book_scores` from the six-token example, the [official notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb) first demonstrates a naive implementation. Here it has a type hint and a shape explanation:
+
+```python
+def softmax_naive(scores: torch.Tensor) -> torch.Tensor:
+    """Normalize a floating-point score vector [T] into weights [T].
+
+    T is the number of input positions for one query. This direct
+    exponential formula illustrates softmax but is not numerically stable.
+    """
+    exponentials = torch.exp(scores)
+    return exponentials / exponentials.sum(dim=0)
+
+book_weights_naive = softmax_naive(book_scores)
+print(book_weights_naive)
+print(book_weights_naive.sum())
+```
+
+```text
+tensor([0.1385, 0.2379, 0.2333, 0.1240, 0.1082, 0.1581])
+tensor(1.)
+```
+
+Directly exponentiating large positive scores can overflow. A stable implementation subtracts the largest score before exponentiation; this leaves the mathematical result unchanged while avoiding that overflow for ordinary finite inputs. In practice, use PyTorch's implementation:
+
+```python
+# book_scores has shape [6]. Axis 0 is its only axis: input positions.
+# Normalize across those six positions for the single query "journey".
+book_weights_softmax = torch.softmax(book_scores, dim=0)
+print(book_weights_softmax)
+print(book_weights_softmax.sum())
+```
+
+This prints the same weights as the naive implementation for our modest scores. It is **not** the same result as the earlier division by the raw score sum. The context-vector calculation below uses these **softmax weights**. Our experiment models also use PyTorch softmax; here we are unpacking the operation one step at a time.
+
+#### Finish one context vector: multiply, then sum
+
+For z<sup>(2)</sup>, multiply each input vector x<sup>(i)</sup> by its scalar weight α<sub>2i</sub>, then add the resulting vectors coordinate by coordinate. The parenthesized superscript still labels the position, not a power.
+
+```python
+# book_query has shape [3]: d=3 coordinates per vector.
+# Begin with three zeros to accumulate the weighted contributions.
+book_context_2 = torch.zeros_like(book_query)
+for position_index, input_vector in enumerate(book_inputs):
+    # One scalar weight times one [3] vector produces another [3] vector.
+    weighted_input = book_weights_softmax[position_index] * input_vector
+    book_context_2 += weighted_input
+
+print(book_context_2)
+# tensor([0.4419, 0.6515, 0.5683])
+```
+
+Those are **three numbers: 0.4419, 0.6515, and 0.5683**. Six input vectors of width three contribute to one output vector of width three. For example, its first coordinate is approximately `0.1385×0.43 + 0.2379×0.55 + 0.2333×0.57 + 0.1240×0.22 + 0.1082×0.77 + 0.1581×0.05 = 0.4419`. The code uses full-precision weights, not the rounded ones displayed here.
+
+<figure markdown="1">
+
+[![Our four toy inputs are multiplied by their softmax weights and summed to form the second context vector, approximately zero point zero four seven four, one point six eight three six, one point two two one five.](../assets/chapter-03/self-attention-weighted-sum.svg)](../assets/chapter-03/self-attention-weighted-sum.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.10 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The diagram continues our four-position toy example; the code above reproduces the book's separate six-position example. Weights and output coordinates are rounded for display, but the calculation uses full precision. These weights come from softmax, replacing the simple sum normalization illustrated earlier.</figcaption>
+</figure>
+
+The same weighted sum can be expressed compactly as `book_weights_softmax @ book_inputs`: shape `[6] @ [6, 3]` gives `[3]`. The loop exposes each contribution; the matrix operation combines them in one expression.
+
+We have calculated the context vector for **one position**. Section **3.3.2** extends the calculation to all input positions simultaneously.
 
 ## 3.4 Implementing self-attention with trainable weights
 

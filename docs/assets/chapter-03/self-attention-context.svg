@@ -3,41 +3,41 @@
 <text x="40" y="93" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">One sequence · 4 positions · 3 coordinates per input vector</text>
 <rect x="40" y="145" width="200" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="55" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">1. Small</text>
-<text x="55" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x(1)</text>
+<text x="55" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(1)</tspan></text>
 <text x="55" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[1, 0, 1]</text>
 <rect x="280" y="145" width="200" height="125" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
 <text x="295" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">2. models</text>
-<text x="295" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x(2)</text>
+<text x="295" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan></text>
 <text x="295" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[0, 2, 1]</text>
 <rect x="520" y="145" width="200" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="535" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">3. learn</text>
-<text x="535" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x(3)</text>
+<text x="535" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(3)</tspan></text>
 <text x="535" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[1, 1, 0]</text>
 <rect x="760" y="145" width="200" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="775" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">4. patterns</text>
-<text x="775" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x(4)</text>
+<text x="775" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(4)</tspan></text>
 <text x="775" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[0, 1, 2]</text>
 <path d="M140 275 L140 340" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="50" y="350" width="180" height="60" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="70" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight a21</text>
+<text x="70" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight α<tspan baseline-shift="sub" font-size="70%">21</tspan></text>
 <path d="M140 415 L500 525" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <path d="M380 275 L380 340" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="290" y="350" width="180" height="60" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="310" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight a22</text>
+<text x="310" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight α<tspan baseline-shift="sub" font-size="70%">22</tspan></text>
 <path d="M380 415 L500 525" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <path d="M620 275 L620 340" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="530" y="350" width="180" height="60" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="550" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight a23</text>
+<text x="550" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight α<tspan baseline-shift="sub" font-size="70%">23</tspan></text>
 <path d="M620 415 L500 525" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <path d="M860 275 L860 340" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="770" y="350" width="180" height="60" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="790" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight a24</text>
+<text x="790" y="389" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">× weight α<tspan baseline-shift="sub" font-size="70%">24</tspan></text>
 <path d="M860 415 L500 525" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="270" y="535" width="460" height="90" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
 <text x="300" y="570" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#26364c">Sum the four weighted vectors</text>
-<text x="300" y="604" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">z(2): still a vector of 3 numbers</text>
-<text x="40" y="682" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">z(2) = a21 x(1) + a22 x(2) + a23 x(3) + a24 x(4)</text>
-<text x="40" y="728" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">a23 means: contribution from position 3 when updating position 2.</text>
+<text x="300" y="604" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">z<tspan baseline-shift="super" font-size="70%">(2)</tspan>: still a vector of 3 numbers</text>
+<text x="40" y="682" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="700" fill="#26364c">z<tspan baseline-shift="super" font-size="70%">(2)</tspan> = α<tspan baseline-shift="sub" font-size="70%">21</tspan> x<tspan baseline-shift="super" font-size="70%">(1)</tspan> + α<tspan baseline-shift="sub" font-size="70%">22</tspan> x<tspan baseline-shift="super" font-size="70%">(2)</tspan> + α<tspan baseline-shift="sub" font-size="70%">23</tspan> x<tspan baseline-shift="super" font-size="70%">(3)</tspan> + α<tspan baseline-shift="sub" font-size="70%">24</tspan> x<tspan baseline-shift="super" font-size="70%">(4)</tspan></text>
+<text x="40" y="728" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">23</tspan> means: contribution from position 3 when updating position 2.</text>
 <text x="40" y="770" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Repeat with a different set of weights for each other output position.</text>
 <text x="40" y="810" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Invented inputs; weights are symbolic here. No causal mask yet.</text>
 </svg>
