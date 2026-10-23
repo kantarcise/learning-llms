@@ -165,6 +165,60 @@ Before calculating attention, locate it in the complete model. Chapter 2 prepare
 
 The goal is to turn each input vector into a **context vector**: a representation that incorporates information from the other available positions, including the position itself. Calling it an “enriched embedding” is a useful intuition. In this simplified calculation, it is a weighted combination of the input vectors, not an extra row permanently written into the token embedding table.
 
+#### First, what are we trying to do?
+
+We already have a sequence of input vectors. Choose **one position** and ask:
+
+> What information from this sequence should contribute to the new representation at this position?
+
+The vector asking that question is called the **query**. For example, in our companion sentence “Small models learn patterns,” we will choose the position labeled “models.” Its input vector becomes the query because we want to calculate context **for that position**. “Question” is an analogy for its role in a numerical calculation; the model is not forming a literal question.
+
+The calculation has three steps:
+
+| Step | What we do | What we get |
+| --- | --- | --- |
+| **Compare** | Take the query's dot product with every available input vector, including itself. | One **score** for each contributing position. |
+| **Normalize** | Apply softmax across those scores. | **Mixing amounts**, called attention weights, that sum to one. |
+| **Mix** | Multiply each input vector by its mixing amount, then add the weighted vectors coordinate by coordinate. | One **context vector** for the chosen position. |
+
+```text
+Choose the position whose context we want
+    ↓
+Use its input vector as the query
+    ↓
+Compare with every input vector, including itself
+    ↓
+Scores → softmax → mixing amounts
+    ↓
+Use those amounts to combine the input vectors
+    ↓
+A context vector for the chosen position
+```
+
+**A score is a comparison result. A mixing amount tells us how much a vector contributes to the sum.** Keeping those two stages separate makes the calculation easier to follow. We will first demonstrate simple division by the score sum, then replace it with softmax.
+
+The result is still a vector of the same width in this example. It now contains contributions from positions in the sequence. We have calculated **one new representation**, not predicted the next token or updated the stored embedding table. The calculation for another query position produces that position's own scores, weights, and context vector.
+
+This already counts as **self-attention**: the query and the vectors it consults belong to the same sequence. “Self” does not restrict attention to the query's own position.
+
+#### Why is this version simplified?
+
+**We use the input vectors themselves to decide how to mix the input vectors themselves.** They do two jobs: provide the numbers being compared, and provide the information being mixed. No learned query/key/value projections separate those jobs yet.
+
+If you followed the [character-log experiment](../preparation/training-comparison.md), we previously explored attention inside a complete transformer block, alongside normalization, residual additions, and a feedforward network. Here we are zooming into the attention component and temporarily removing some machinery so we can see its core calculation.
+
+| Job | This simplified version | Version with learned projections |
+| --- | --- | --- |
+| Ask for information at a position | That position's input vector | A query vector produced using W<sub>Q</sub> |
+| Supply vectors to compare against | The input vectors | Key vectors produced using W<sub>K</sub> |
+| Supply information to mix | The input vectors | Value vectors produced using W<sub>V</sub> |
+
+The learned version retains **compare → normalize → mix**, but learns how to prepare the vectors for those jobs. We will introduce those projections in section 3.4; causal masking follows in 3.5. For now, all positions in the example are accessible. The attention output still needs the rest of the model before it becomes vocabulary scores for predicting a token.
+
+With that purpose in mind, we can follow the symbols and arithmetic below. Section 3.3.1 works through **one query position**; section 3.3.2 extends the calculation to **every position**.
+
+#### Follow one position through the calculation
+
 Keep these symbols separate:
 
 | Symbol | Meaning | Small example |
