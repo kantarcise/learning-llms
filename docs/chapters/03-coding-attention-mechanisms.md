@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the single-position self-attention walkthrough in 3.3.1. The all-position calculation in 3.3.2 and sections 3.4–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Sections 3.4–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -432,6 +432,130 @@ Those are **three numbers: 0.4419, 0.6515, and 0.5683**. Six input vectors of wi
 The same weighted sum can be expressed compactly as `book_weights_softmax @ book_inputs`: shape `[6] @ [6, 3]` gives `[3]`. The loop exposes each contribution; the matrix operation combines them in one expression.
 
 We have calculated the context vector for **one position**. Section **3.3.2** extends the calculation to all input positions simultaneously.
+
+### 3.3.2 Computing attention weights for all input tokens
+
+**The calculation has not changed; the query position now changes.** In 3.3.1, we used “journey” at position 2 as the query and calculated one set of mixing weights and one context vector. Now each of the six positions takes a turn as the query. Every query still consults all six original input vectors, including itself.
+
+We do not feed the first context vector into the calculation of the second. All output rows are computed from the **same input matrix**. This is why we can calculate them together.
+
+#### Read the rows and columns before the code
+
+For our six-position example, both the score matrix and weight matrix have shape `[6, 6]`:
+
+- **Row i:** the query position whose context we want to compute.
+- **Column j:** the input position being compared or contributing information.
+- **ω<sub>ij</sub>:** the dot-product score for that pair.
+- **α<sub>ij</sub>:** the mixing amount for input j when constructing context vector z<sup>(i)</sup>.
+
+For example, α<sub>23</sub> sits in the second row and third column: how much “starts” contributes to the context vector for “journey.” In Python, that cell is `all_weights[1, 2]`, because indexing starts at zero.
+
+<figure markdown="1">
+
+[![A six-by-six attention-weight table with query positions as rows, contributing positions as columns, and the previously calculated journey row highlighted.](../assets/chapter-03/all-position-weights.svg)](../assets/chapter-03/all-position-weights.svg)
+
+<figcaption markdown="span">Original companion layout inspired by Figure 3.11 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Values are computed from the book's six input vectors and rounded to four decimal places for display. Each full-precision row sums to approximately one; displayed rounding can change the last digit of its sum. The highlighted row is the single-query calculation from 3.3.1.</figcaption>
+</figure>
+
+**Each row of attention weights sums to one because softmax distributes that query's mixture across its available input positions.** Raw score rows need not sum to one. Columns of the weight matrix need not sum to one either. The whole weight matrix sums to approximately six: six separate mixtures, each with a total weight of one. The book truncates its displayed values, so adding those shortened numbers may give a total below one.
+
+#### Step 1: compute all pairwise scores
+
+The following code adapts the [official Chapter 3 notebook, section 3.3.2](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb). Continue with `book_inputs` from the six-token example above: shape `[6, 3]`, meaning six positions and three coordinates per vector. These are already floating-point vectors, not token IDs.
+
+```python
+# T is the number of token positions in this one sequence, here 6.
+num_positions = book_inputs.shape[0]
+all_scores_loop = torch.empty(num_positions, num_positions)
+
+# The outer loop selects the query: one complete output row at a time.
+for query_index, query_vector in enumerate(book_inputs):
+    # The inner loop compares that query with every input position.
+    for input_index, input_vector in enumerate(book_inputs):
+        all_scores_loop[query_index, input_index] = torch.dot(
+            query_vector, input_vector
+        )
+
+print(all_scores_loop)
+```
+
+```text
+tensor([[0.9995, 0.9544, 0.9422, 0.4753, 0.4576, 0.6310],
+         [0.9544, 1.4950, 1.4754, 0.8434, 0.7070, 1.0865],
+         [0.9422, 1.4754, 1.4570, 0.8296, 0.7154, 1.0605],
+         [0.4753, 0.8434, 0.8296, 0.4937, 0.3474, 0.6565],
+         [0.4576, 0.7070, 0.7154, 0.3474, 0.6654, 0.2935],
+         [0.6310, 1.0865, 1.0605, 0.6565, 0.2935, 0.9450]])
+```
+
+There are **36 scalar scores**, not 36 context vectors. Row 2 contains the six scores we already computed for “journey.” Each row is another instance of the same calculation.
+
+We can replace both loops with one matrix multiplication:
+
+```python
+# [6, 3] @ [3, 6] -> [6, 6]: query positions × compared positions.
+all_scores = book_inputs @ book_inputs.T
+print(torch.allclose(all_scores, all_scores_loop))  # True
+```
+
+Why transpose? Each input vector starts as a **row**. Matrix multiplication computes the dot product of a row on the left with a column on the right. `.T` places each input vector in a column, so output cell `[i, j]` is exactly the dot product of input rows i and j. For these two-dimensional inputs, `.T` swaps the two axes; it does not change the coordinate values or introduce any learned weights. `@` means matrix multiplication, whereas `*` would mean element-wise multiplication.
+
+This is the bridge to [NumPy and PyTorch](https://github.com/kantarcise/numpyandpytorch): the mathematical operation is explicit, and the framework executes it using optimized numerical routines instead of making Python dispatch every individual dot product. The work still exists—here, 36 comparisons—but it can be organized efficiently and run in parallel where the hardware supports it. It is not a different attention algorithm, and a tiny example is not a meaningful performance benchmark.
+
+#### Step 2: normalize each query's row independently
+
+```python
+# all_scores: [6, 6], axes are [query position, compared position].
+# dim=-1 selects the LAST axis: the six columns within each row.
+all_weights = torch.softmax(all_scores, dim=-1)
+print(all_weights[1])  # The previously calculated weights for query 2.
+print(all_weights.sum(dim=-1))  # One sum per query row: shape [6].
+```
+
+```text
+tensor([0.1385, 0.2379, 0.2333, 0.1240, 0.1082, 0.1581])
+tensor([1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000])
+```
+
+For this two-dimensional matrix, `dim=-1` and `dim=1` select the same column axis. Softmax takes six scores from **one row**, computes six weights for that row, and repeats independently for the other rows. `dim=0` would normalize down the query rows within each column, which is not the mixture we want. `all_weights.sum()` without a dimension would collapse the whole matrix into one scalar instead of checking individual rows.
+
+In 3.3.1 our scores were a one-dimensional vector `[6]`, so `dim=0` was its only axis. **The dimension argument follows the tensor's shape, not a permanent rule that attention always uses axis 0 or axis 1.**
+
+#### Step 3: mix the original input vectors for every query
+
+```python
+# [6, 6] @ [6, 3] -> [6, 3]: one three-coordinate vector per query.
+all_context_vectors = all_weights @ book_inputs
+print(all_context_vectors)
+
+# Python row 1 is position 2. Compare with the prior single-query result.
+print(torch.allclose(all_context_vectors[1], book_context_2))  # True
+```
+
+```text
+tensor([[0.4421, 0.5931, 0.5790],
+         [0.4419, 0.6515, 0.5683],
+         [0.4431, 0.6496, 0.5671],
+         [0.4304, 0.6298, 0.5510],
+         [0.4671, 0.5910, 0.5266],
+         [0.4177, 0.6503, 0.5645]])
+True
+```
+
+This multiplication does the weighted sum for every row. For example, the second output row is still:
+
+z<sup>(2)</sup> = α<sub>21</sub>x<sup>(1)</sup> + α<sub>22</sub>x<sup>(2)</sup> + … + α<sub>26</sub>x<sup>(6)</sup>.
+
+For a particular output coordinate, matrix multiplication multiplies the six weights in that query's row by that coordinate from each of the six input vectors, then adds the products. It repeats this for all three coordinates and all six queries. **Each output row is a vector with three coordinates—not a location in physical three-dimensional space and not a vocabulary prediction.**
+
+<figure markdown="1">
+
+[![Shape trace: six-by-three input vectors produce six-by-six scores, row-wise softmax produces six-by-six weights, and multiplying by the original inputs produces six-by-three context vectors.](../assets/chapter-03/all-position-flow.svg)](../assets/chapter-03/all-position-flow.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.12, with explicit shapes and the second query highlighted. The same original input matrix supplies both comparisons and information to mix. This is the simplified attention calculation: no learned Q/K/V projections or causal mask have been introduced.</figcaption>
+</figure>
+
+All six contexts are now available, but the core operation is unchanged: **compare → normalize → mix**. Section 3.4 introduces learned transformations for the vectors performing these jobs.
 
 ## 3.4 Implementing self-attention with trainable weights
 
