@@ -1020,6 +1020,62 @@ tensor([[-0.0739,  0.0713],
 
     `SelfAttention_v1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttention_v1` drew values uniformly from $[0, 1)$ with `torch.rand`, while PyTorch's `nn.Linear` uses an optimized Kaiming uniform initialization scheme designed to stabilize variance and gradient flow across layers. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
 
+#### Exercise 3.1: Comparing `SelfAttention_v1` and `SelfAttention_v2`
+
+To confirm that the output difference comes purely from weight initialization rather than a flaw in the attention logic, the book asks us to transfer the weights from an instance of `SelfAttention_v2` into `SelfAttention_v1` so that both produce identical context vectors.
+
+The key observation is how each class stores its projection weights:
+
+1. In `SelfAttention_v1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width $d_{in} = 3$ and output width $d_{out} = 2$, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
+2. In `SelfAttention_v2`, `nn.Linear(d_in, d_out, bias=False)` stores its underlying weight matrix as `layer.weight` with shape `[d_out, d_in]` (`[2, 3]`), because `nn.Linear` evaluates $x W^T$.
+
+To assign the weights from `sa_v2` to `sa_v1`, we transpose (`.T`) each weight matrix before wrapping it in `nn.Parameter`:
+
+```python
+# Create an instance of v1 and transfer transposed weights from v2
+sa_v1 = SelfAttention_v1(d_in=3, d_out=2)
+
+sa_v1.W_query = torch.nn.Parameter(sa_v2.W_query.weight.T)
+sa_v1.W_key = torch.nn.Parameter(sa_v2.W_key.weight.T)
+sa_v1.W_value = torch.nn.Parameter(sa_v2.W_value.weight.T)
+
+# Compare the context vectors from both modules
+out_v1 = sa_v1(book_inputs)
+out_v2 = sa_v2(book_inputs)
+
+print("v1 output:\n", out_v1)
+print("v2 output:\n", out_v2)
+print("torch.allclose:", torch.allclose(out_v1, out_v2))
+```
+
+```text
+v1 output:
+ tensor([[-0.0739,  0.0713],
+        [-0.0748,  0.0703],
+        [-0.0749,  0.0702],
+        [-0.0760,  0.0685],
+        [-0.0763,  0.0679],
+        [-0.0754,  0.0693]], grad_fn=<MmBackward0>)
+v2 output:
+ tensor([[-0.0739,  0.0713],
+        [-0.0748,  0.0703],
+        [-0.0749,  0.0702],
+        [-0.0760,  0.0685],
+        [-0.0763,  0.0679],
+        [-0.0754,  0.0693]], grad_fn=<MmBackward0>)
+torch.allclose: True
+```
+
+!!! note "Understanding `torch.allclose`"
+
+    Why use `torch.allclose` instead of `==`? In 32-bit floating-point arithmetic, tiny rounding errors can appear at the 6th or 7th decimal digit depending on hardware execution order. Strict equality (`out_v1 == out_v2`) requires every single bit to match and can return `False` over an insignificant difference like `0.07130001` vs `0.07130000`.
+
+    `torch.allclose(a, b)` checks whether all values fall within a narrow numerical tolerance:
+    
+    $$|a - b| \le (\text{atol} + \text{rtol} \times |b|)$$
+    
+    with PyTorch defaults $\text{rtol} = 10^{-5}$ and $\text{atol} = 10^{-8}$. Returning `True` guarantees that both implementations calculate the exact same mathematical outputs across all positions and dimensions.
+
 ## 3.5 Hiding future words with causal attention
 
 Notes to come as we read this section.
