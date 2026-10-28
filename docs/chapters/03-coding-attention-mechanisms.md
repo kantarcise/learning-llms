@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the initial query/key/value projections; subsequent calculations and sections 3.5–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers query/key/value projections and unscaled scores for query 2; subsequent calculations and sections 3.5–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -665,7 +665,77 @@ For training these matrices, the sequence would be:
 
 Random initialization provides starting values when training from scratch; it is not a rule that every parameter in every architecture must be random. Normalization scales and biases can start from constants, and loading a trained checkpoint supplies existing learned values. The seed makes this example reproducible; it does not train the matrices.
 
-At this point we have projected vectors, **not attention scores or a context vector yet**. We stop at the query result `[0.4306, 1.4551]`; the next calculation will use queries and keys rather than compare the original input vectors directly.
+#### Two meanings of “weights”
+
+!!! note "Stored parameters versus computed attention weights"
+
+    **Weight parameters** are the entries in W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub>. Training adjusts these stored coefficients; during an ordinary inference forward pass, they stay fixed.
+
+    **Attention weights**, α<sub>ij</sub>, are computed from the current queries and keys. They tell us how much each value vector contributes to a particular query's context vector. Different inputs or query positions can produce different attention weights while using exactly the same stored parameter matrices.
+
+The word *weight* is used for both, but their roles differ. The matrices define the learned transformations; the attention weights define the current mixture. We have not calculated attention weights for the projected vectors yet: the next outputs are still raw **scores**, ω<sub>ij</sub>.
+
+#### One query still needs keys and values from all positions
+
+We want the context vector for position 2, “journey.” That means we need its query q<sup>(2)</sup>, but information can come from any of the six available positions. We therefore prepare a key and a value for every input position:
+
+```python
+# Reuse book_inputs and W_key/W_value from the preceding code.
+# [6, 3] @ [3, 2] -> [6, 2] for each projection.
+keys = book_inputs @ W_key
+values = book_inputs @ W_value
+print("keys.shape:", keys.shape)
+print("values.shape:", values.shape)
+```
+
+```text
+keys.shape: torch.Size([6, 2])
+values.shape: torch.Size([6, 2])
+```
+
+There are still **six token positions**, now with two coordinates in each key or value vector. The same W<sub>K</sub> is applied to every input row, and likewise for W<sub>V</sub>.
+
+Keep the roles separate: **keys participate in the score calculation; values will supply the information to mix later**. Values do not enter the query–key dot products. Computing them now prepares the later weighted sum.
+
+#### Calculate one score, then all scores for query 2
+
+ω<sub>22</sub> compares the query for position 2 with the key for position 2. Those vectors come from the same input position but different parameter matrices, so this is not generally a vector dotted with itself.
+
+```python
+keys_2 = keys[1]  # Python index 1 is position 2; shape [2].
+attn_score_22 = query_2.dot(keys_2)  # [2] dot [2] -> scalar.
+print(attn_score_22)
+# tensor(1.8524)
+```
+
+The query is approximately `[0.4306, 1.4551]` and this key is approximately `[0.4433, 1.1419]`. Multiply corresponding coordinates and add them. The code uses the stored values, not these rounded display values.
+
+<figure markdown="1">
+
+[![The second input is projected to query two; every input is projected to a key and a value. Query two dotted with each key produces six unscaled attention scores, with score two two highlighted. Values are reserved for the later mixture.](../assets/chapter-03/projected-attention-scores.svg)](../assets/chapter-03/projected-attention-scores.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.15 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Uses the seeded six-token example from the preceding code, with scores rounded to four decimal places. The diagram separates key-based comparisons from values reserved for the later context-vector calculation. No scaling, softmax, or causal mask has been applied at this point.</figcaption>
+</figure>
+
+Now perform all six comparisons in one matrix multiplication:
+
+```python
+# query_2: [2]; keys: [6, 2]; keys.T: [2, 6].
+# Each column of keys.T holds one key vector.
+# [2] @ [2, 6] -> [6]: one score per key, all for the same query.
+attn_scores_2 = query_2 @ keys.T
+print(attn_scores_2)
+print(torch.allclose(attn_scores_2[1], attn_score_22))
+```
+
+```text
+tensor([1.2705, 1.8524, 1.8111, 1.0795, 0.5577, 1.5440])
+True
+```
+
+The entries are ω<sub>21</sub>, ω<sub>22</sub>, …, ω<sub>26</sub>, in input-position order. The **first index stays 2** because the query has not changed. “All scores” here means all six scores **for query 2**, not a six-by-six score matrix for all queries. The second entry matches the individually computed ω<sub>22</sub>, confirming that the matrix operation carries out the same dot products.
+
+This is the bridge from the simplified calculation: we still compare vectors with dot products, but those vectors are now **queries and keys produced by learned transformations**. The scores are unscaled and unnormalized; they need not sum to one. Scaling and softmax come next.
 
 ## 3.5 Hiding future words with causal attention
 
