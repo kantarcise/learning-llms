@@ -565,6 +565,18 @@ Figure 3.13 in the book revisits the roadmap: we are still at **step 2, Attentio
 
 <figure markdown="1">
 
+[![The author's overall roadmap: data preparation, attention, and architecture lead to pretraining and fine-tuning. We remain at Attention mechanism in Stage 1.](https://sebastianraschka.com/images/LLMs-from-scratch-images/mental-model.jpg)](https://sebastianraschka.com/images/LLMs-from-scratch-images/mental-model.jpg)
+
+<figcaption markdown="span">Sebastian Raschka's [book roadmap](https://sebastianraschka.com/llms-from-scratch/), embedded from his website and repeated here to keep our location visible. We are at step 2, “Attention mechanism,” within Stage 1. This is the overall map; the chapter progression below shows the attention variant we are implementing now.</figcaption>
+</figure>
+
+!!! note "You are here: self-attention with trainable weights"
+
+    We have worked through simplified self-attention. **Now we extend it with learned query, key, and value projections.** Causal masking and multiple heads come next; assembling the full LLM architecture remains a later step on the overall map.
+
+
+<figure markdown="1">
+
 [![Four attention variations: simplified attention, trainable projections, causal masking, and multiple heads. Section 3.4 focuses on the second step.](../assets/chapter-03/attention-progression.svg)](../assets/chapter-03/attention-progression.svg)
 
 <figcaption markdown="span">Our chapter progression figure, reused to mark the transition highlighted in Figure 3.13 of [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The focus is now the second card: introducing learned query, key, and value projections. See the [overall book roadmap](#where-we-are-in-the-books-roadmap) for the larger architecture and training stages.</figcaption>
