@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1120" viewBox="0 0 1000 1120" role="img" aria-labelledby="title desc">
+<title id="title">Trainable self-attention for all six positions</title><desc id="desc">Inputs X project through three learned matrices to Q, K, V. Q times transposed K gives scores. Scaling and row-wise softmax give weights A. A times V gives contexts Z. The second context is [0.3061, 0.8210].</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#52657d"/></marker></defs>
+<rect width="1000" height="1120" fill="#f5f7fb"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="40" y="50" font-size="30">One class, the same calculation for every position</text>
+<rect x="180" y="85" width="640" height="105" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="205" y="122" font-size="26">INPUTS X [6, 3]</text>
+<text x="205" y="160" font-size="22">Your · journey · starts · with · one · step</text>
+<path d="M500,190 V212 H180 V240" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="40" y="240" width="280" height="165" rx="12" fill="#dce9ff" stroke="#aebed1"/>
+<text x="62" y="276" font-size="24">QUERIES Q [6, 2]</text>
+<text x="62" y="319" font-size="23">Q = X @ W<tspan baseline-shift="sub" font-size="16">Q</tspan></text>
+<text x="62" y="361" font-size="22">[6, 3] @ [3, 2]</text>
+<text x="62" y="388" font-size="18">W: learned parameters</text>
+<path d="M500,190 V212 H500 V240" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="360" y="240" width="280" height="165" rx="12" fill="#dce9ff" stroke="#aebed1"/>
+<text x="382" y="276" font-size="24">KEYS K [6, 2]</text>
+<text x="382" y="319" font-size="23">K = X @ W<tspan baseline-shift="sub" font-size="16">K</tspan></text>
+<text x="382" y="361" font-size="22">[6, 3] @ [3, 2]</text>
+<text x="382" y="388" font-size="18">W: learned parameters</text>
+<path d="M500,190 V212 H820 V240" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="680" y="240" width="280" height="165" rx="12" fill="#dce9ff" stroke="#aebed1"/>
+<text x="702" y="276" font-size="24">VALUES V [6, 2]</text>
+<text x="702" y="319" font-size="23">V = X @ W<tspan baseline-shift="sub" font-size="16">V</tspan></text>
+<text x="702" y="361" font-size="22">[6, 3] @ [3, 2]</text>
+<text x="702" y="388" font-size="18">W: learned parameters</text>
+<path d="M180,405 V440 H320 V480" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M500,405 V440 H390 V480" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="40" y="480" width="600" height="120" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="65" y="518" font-size="26">COMPARE: Ω = Q @ K.T</text>
+<text x="65" y="555" font-size="23">[6, 2] @ [2, 6] → scores [6, 6]</text>
+<text x="65" y="583" font-size="21">ω<tspan baseline-shift="sub" font-size="16">ij</tspan>: query i dotted with key j</text>
+<path d="M340,600 V650" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<rect x="40" y="650" width="600" height="140" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="65" y="690" font-size="26">SCALE, THEN NORMALIZE</text>
+<text x="65" y="730" font-size="24">A = softmax(Ω / √2, dim=-1)</text>
+<text x="65" y="768" font-size="21">α<tspan baseline-shift="sub" font-size="16">ij</tspan>: mixing amounts; each row sums to ≈ 1</text>
+<path d="M340,790 V850" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M820,405 V430 H960 V915 H640" stroke="#52657d" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<text x="710" y="565" font-size="21">Values bypass</text>
+<text x="710" y="595" font-size="21">score calculation.</text>
+<text x="710" y="630" font-size="21">They supply the</text>
+<text x="710" y="660" font-size="21">information to mix.</text>
+<rect x="40" y="850" width="600" height="125" rx="12" fill="#dce9ff" stroke="#aebed1"/>
+<text x="65" y="890" font-size="26">MIX: Z = A @ V</text>
+<text x="65" y="928" font-size="23">[6, 6] @ [6, 2] → contexts [6, 2]</text>
+<text x="65" y="958" font-size="21">Each row combines all six value vectors.</text>
+<rect x="40" y="1000" width="920" height="75" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="65" y="1032" font-size="25">Row 2: z<tspan baseline-shift="super" font-size="16">(2)</tspan> ≈ [0.3061, 0.8210]</text>
+<text x="65" y="1061" font-size="20">Same result as the single-query walkthrough; now there are six context rows.</text>
+<text x="40" y="1104" font-size="20">One sequence · No causal mask · No optimizer update during this forward pass</text>
+</g></svg>
