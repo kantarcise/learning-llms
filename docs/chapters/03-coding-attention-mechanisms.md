@@ -1076,6 +1076,15 @@ torch.allclose: True
     
     with PyTorch defaults $\text{rtol} = 10^{-5}$ and $\text{atol} = 10^{-8}$. Returning `True` guarantees that both implementations calculate the exact same mathematical outputs across all positions and dimensions.
 
+#### Looking ahead: causal masking and multiple heads
+
+With trainable projections packaged into a clean PyTorch module, the author outlines two remaining enhancements needed before plugging attention into a full GPT architecture:
+
+1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position $t$ cannot peek at token $t+1$. We observed this exact requirement in our [character-log experiment](../preparation/training-comparison.md): without a lower-triangular causal mask, a model trivially learns to copy subsequent tokens instead of learning true linguistic structure.
+2. **Multi-head attention (Section 3.6)**: Rather than relying on a single set of query, key, and value projections, multi-head attention splits the projection dimension across multiple independent "heads." Each head projects the representations into a different subspace, enabling the model to simultaneously focus on syntactic agreement, semantic relationships, or positional patterns in parallel.
+
+With these two goals in view, Section 3.5 tackles causal masking first.
+
 ## 3.5 Hiding future words with causal attention
 
 Notes to come as we read this section.
