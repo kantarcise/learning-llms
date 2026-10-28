@@ -965,7 +965,60 @@ Our [Character Logs model](../preparation/training-comparison.md) already packag
 
 The book next replaces explicitly created parameter matrices with **`nn.Linear` layers**, not nonlinear layers. With `bias=False`, `nn.Linear` performs `x @ layer.weight.T`. It stores the matrix in `[d_out, d_in]` order, whereas our explicit matrices above are `[d_in, d_out]`. This is a storage convention, not a different attention calculation.
 
-`nn.Linear` creates and registers its parameters and supplies its own initialization scheme. Its default is `bias=True`, so a bias-free projection must request `False` explicitly. Changing the initialization can change the numerical outputs even with the same seed. No GELU or ReLU is being added here; those are nonlinear activation functions from the feedforward part we studied earlier. We will walk through the second class as the reading continues.
+`nn.Linear` creates and registers its parameters and supplies its own initialization scheme. Its default is `bias=True`, so a bias-free projection must request `False` explicitly. Changing the initialization can change the numerical outputs even with the same seed. No GELU or ReLU is being added here; those are nonlinear activation functions from the feedforward part we studied earlier.
+
+#### Implementing `SelfAttention_v2` with `nn.Linear`
+
+Listing 3.2 packages the projections using `nn.Linear`:
+
+```python
+import torch
+import torch.nn as nn
+
+
+class SelfAttention_v2(nn.Module):
+    def __init__(self, d_in: int, d_out: int, qkv_bias: bool = False) -> None:
+        super().__init__()
+        self.d_out = d_out
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Project inputs [T, d_in] to contexts [T, d_out] via scaled dot-product attention."""
+        keys = self.W_key(x)        # [6, 3] @ [3, 2] -> [6, 2]
+        queries = self.W_query(x)    # [6, 2]
+        values = self.W_value(x)     # [6, 2]
+
+        attn_scores = queries @ keys.T  # [6, 2] @ [2, 6] -> [6, 6]
+        attn_weights = torch.softmax(
+            attn_scores / keys.shape[-1] ** 0.5, dim=-1
+        )  # [6, 6]
+
+        context_vec = attn_weights @ values  # [6, 6] @ [6, 2] -> [6, 2]
+        return context_vec
+```
+
+We instantiate `SelfAttention_v2` using the book's seed `789` and test it with our 6-position `book_inputs`:
+
+```python
+torch.manual_seed(789)
+sa_v2 = SelfAttention_v2(d_in=3, d_out=2)
+print(sa_v2(book_inputs))
+```
+
+```text
+tensor([[-0.0739,  0.0713],
+        [-0.0748,  0.0703],
+        [-0.0749,  0.0702],
+        [-0.0760,  0.0685],
+        [-0.0763,  0.0679],
+        [-0.0754,  0.0693]], grad_fn=<MmBackward0>)
+```
+
+!!! note "Why do the outputs differ from SelfAttention_v1?"
+
+    `SelfAttention_v1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttention_v1` drew values uniformly from $[0, 1)$ with `torch.rand`, while PyTorch's `nn.Linear` uses an optimized Kaiming uniform initialization scheme designed to stabilize variance and gradient flow across layers. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
 
 ## 3.5 Hiding future words with causal attention
 
