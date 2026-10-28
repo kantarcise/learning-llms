@@ -810,6 +810,42 @@ The resulting two coordinates match the **value-vector width**. We still have ju
 
 The complete calculation for this position is now: **project inputs → compare query with keys → scale → softmax → combine values**. Section 3.4.2 packages the calculation in a reusable class and computes context vectors for all positions.
 
+#### Why the names query, key, and value?
+
+The book borrows these names from information retrieval and databases. Think of looking something up: you have a request, something to match the request against, and information you want to receive.
+
+| Name | Plain-language role | In our attention calculation |
+| --- | --- | --- |
+| **Query** | What am I looking for? | q<sup>(2)</sup> represents the request from position 2. |
+| **Key** | What can this item be matched on? | Each k<sup>(j)</sup> is compared with the query to calculate a score. |
+| **Value** | What information does this item contribute? | Each v<sup>(j)</sup> supplies the vector that will be weighted and added. |
+
+These are descriptions of the vectors' roles, not literal questions, labels, or database records stored inside them. The model learns the transformations that create these numerical representations.
+
+A database analogy helps separate **matching** from **receiving information**. Imagine searching a collection of documents: the features used to decide which documents match your request need not be the same representation you return from those documents. In attention, keys perform the matching role, while values supply the information for the result.
+
+```text
+Query from position 2
+    │
+    ├── compare with key 1 → score → attention weight 1 → weight value 1
+    ├── compare with key 2 → score → attention weight 2 → weight value 2
+    └── compare with key j → score → attention weight j → weight value j
+                                                              │
+                                                add the weighted values
+                                                              ↓
+                                                context for position 2
+```
+
+Scaling and softmax turn the scores into weights together, across the available positions. Each branch above is not normalized independently.
+
+**The key decides how strongly its paired value contributes. The value supplies the information that contributes.** Their pairing comes from their input position: k<sup>(3)</sup> and v<sup>(3)</sup> both come from x<sup>(3)</sup>, through different learned matrices. A key is not required to be unique, and the lookup is not an exact equality check like accessing a Python dictionary.
+
+In our example, q<sup>(2)</sup> comes from “journey.” It is compared with all six keys. The score for the key at “starts” becomes α<sub>23</sub> ≈ `0.2199` after scaling and softmax. That weight then multiplies **the value at “starts,” v<sup>(3)</sup>**, before we add its contribution to the other weighted values. We do not add the key itself to the result.
+
+The result is usually a **blend of information from several positions**, not one retrieved record. With a causal mask later, only permitted positions can contribute. And a token can both ask and supply information: in self-attention, its input vector produces its query, key, and value. The matrices give those three roles different learned representations.
+
+For now we have used just one query, q<sup>(2)</sup>. Using the other queries will give each position its own mixture and context vector. That is the next step in 3.4.2.
+
 ## 3.5 Hiding future words with causal attention
 
 Notes to come as we read this section.
