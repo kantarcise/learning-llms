@@ -155,7 +155,7 @@ Before calculating attention, locate it in the complete model. Chapter 2 prepare
 
 ## 3.3 Attending to different parts of the input with self-attention
 
-!!! note "What does the self in self-attention mean?"
+!!! note "The self in self-attention"
 
     **Self means that the positions being related belong to the same sequence.** It does not mean a token attends only to itself. A token can incorporate information from other positions as well as its own.
 
@@ -290,7 +290,11 @@ The raised parenthesized number is a **position label, not a power**: x<sup>(2)<
 - **α (alpha)** denotes a normalized attention weight: α<sub>23</sub> is how much position 3 contributes to the context vector for position 2.
 - The first subscript identifies the query position; the second identifies the contributing position. These figures use omega and alpha, not theta.
 
-A dot product multiplies matching coordinates and sums the products. It measures alignment **and depends on vector magnitudes**. If we double a vector without changing its direction, its dot product with the query doubles. So a higher score is not automatically evidence of a closer semantic relationship. In this example, larger positive scores will receive larger mixing weights after normalization.
+!!! note "Understanding dot products"
+
+    A dot product multiplies matching coordinates and sums the products. It measures alignment **and depends on vector magnitudes**. If we double a vector without changing its direction, its dot product with the query doubles. So a higher score is not automatically evidence of a closer semantic relationship. In this example, larger positive scores will receive larger mixing weights after normalization.
+
+    For example, `[1, 2] · [3, 4] = 1×3 + 2×4 = 11`. Two vectors go in; one scalar score comes out.
 
 #### From scores to weights that sum to one
 
@@ -665,9 +669,7 @@ For training these matrices, the sequence would be:
 
 Random initialization provides starting values when training from scratch; it is not a rule that every parameter in every architecture must be random. Normalization scales and biases can start from constants, and loading a trained checkpoint supplies existing learned values. The seed makes this example reproducible; it does not train the matrices.
 
-#### Two meanings of “weights”
-
-!!! note "Stored parameters versus computed attention weights"
+!!! note "Weight parameters versus attention weights"
 
     **Weight parameters** are the entries in W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub>. Training adjusts these stored coefficients; during an ordinary inference forward pass, they stay fixed.
 
@@ -766,7 +768,7 @@ This is one set of six weights for query 2: α<sub>21</sub> through α<sub>26</s
 <figcaption markdown="span">Original companion illustration inspired by Figure 3.16 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Values are computed from our seeded book example and rounded to four decimals for display. Scaling and softmax are shown as separate operations; division by √2 alone does not make the scores sum to one.</figcaption>
 </figure>
 
-!!! tip "Why divide by the square root of the key width?"
+!!! tip "The rationale behind scaled dot-product attention"
 
     A dot product adds one product per query/key coordinate. Under the usual simplifying assumption of independent, zero-mean, unit-variance coordinates, its variance grows with d<sub>k</sub>, so its standard deviation grows with √d<sub>k</sub>. Dividing by √d<sub>k</sub> counteracts that growth in scale.
 
