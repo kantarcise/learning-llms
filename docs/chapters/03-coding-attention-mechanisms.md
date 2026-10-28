@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Sections 3.4–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 and sections 3.5–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -155,7 +155,7 @@ Before calculating attention, locate it in the complete model. Chapter 2 prepare
 
 ## 3.3 Attending to different parts of the input with self-attention
 
-!!! note "What does the self in self-attention mean?"
+!!! note "The self in self-attention"
 
     **Self means that the positions being related belong to the same sequence.** It does not mean a token attends only to itself. A token can incorporate information from other positions as well as its own.
 
@@ -290,7 +290,11 @@ The raised parenthesized number is a **position label, not a power**: x<sup>(2)<
 - **α (alpha)** denotes a normalized attention weight: α<sub>23</sub> is how much position 3 contributes to the context vector for position 2.
 - The first subscript identifies the query position; the second identifies the contributing position. These figures use omega and alpha, not theta.
 
-A dot product multiplies matching coordinates and sums the products. It measures alignment **and depends on vector magnitudes**. If we double a vector without changing its direction, its dot product with the query doubles. So a higher score is not automatically evidence of a closer semantic relationship. In this example, larger positive scores will receive larger mixing weights after normalization.
+!!! note "Understanding dot products"
+
+    A dot product multiplies matching coordinates and sums the products. It measures alignment **and depends on vector magnitudes**. If we double a vector without changing its direction, its dot product with the query doubles. So a higher score is not automatically evidence of a closer semantic relationship. In this example, larger positive scores will receive larger mixing weights after normalization.
+
+    For example, `[1, 2] · [3, 4] = 1×3 + 2×4 = 11`. Two vectors go in; one scalar score comes out.
 
 #### From scores to weights that sum to one
 
@@ -559,7 +563,290 @@ All six contexts are now available, but the core operation is unchanged: **compa
 
 ## 3.4 Implementing self-attention with trainable weights
 
-Notes to come as we read this section.
+The next mechanism is **scaled dot-product attention**, the attention calculation introduced in the original Transformer. We now add trainable projections to the calculation we have been studying; this section develops the single-head building block before causal masking and multiple heads.
+
+Figure 3.13 in the book revisits the roadmap: we are still at **step 2, Attention mechanism, within Stage 1**. Within this chapter, we move from simplified self-attention to self-attention with trainable weights. The complete model architecture and training loop are separate steps.
+
+<figure markdown="1">
+
+[![The author's overall roadmap: data preparation, attention, and architecture lead to pretraining and fine-tuning. We remain at Attention mechanism in Stage 1.](https://sebastianraschka.com/images/LLMs-from-scratch-images/mental-model.jpg)](https://sebastianraschka.com/images/LLMs-from-scratch-images/mental-model.jpg)
+
+<figcaption markdown="span">Sebastian Raschka's [book roadmap](https://sebastianraschka.com/llms-from-scratch/), embedded from his website and repeated here to keep our location visible. We are at step 2, “Attention mechanism,” within Stage 1. This is the overall map; the chapter progression below shows the attention variant we are implementing now.</figcaption>
+</figure>
+
+!!! note "You are here: self-attention with trainable weights"
+
+    We have worked through simplified self-attention. **Now we extend it with learned query, key, and value projections.** Causal masking and multiple heads come next; assembling the full LLM architecture remains a later step on the overall map.
+
+
+<figure markdown="1">
+
+[![Four attention variations: simplified attention, trainable projections, causal masking, and multiple heads. Section 3.4 focuses on the second step.](../assets/chapter-03/attention-progression.svg)](../assets/chapter-03/attention-progression.svg)
+
+<figcaption markdown="span">Our chapter progression figure, reused to mark the transition highlighted in Figure 3.13 of [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The focus is now the second card: introducing learned query, key, and value projections. See the [overall book roadmap](#where-we-are-in-the-books-roadmap) for the larger architecture and training stages.</figcaption>
+</figure>
+
+The goal stays familiar: **produce a context vector for each query position by combining information from available input positions**. The important change is that the model can learn how to prepare that information. Stored matrices W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub> transform inputs into query, key, and value vectors. The weighted sum will combine the **value vectors**, which are transformed inputs, rather than the original input vectors directly.
+
+These matrices are model parameters updated during training. They are different from the **attention weights** calculated from the current queries and keys on each forward pass. Training learns the transformations; each forward pass uses them to calculate input-dependent scores and mixtures.
+
+The word **scaled** refers to dividing query–key dot-product scores by the square root of the key-vector width before softmax. We will work through that calculation and its reason in 3.4.1. Scaling and softmax are separate operations; scaling alone does not make the scores sum to one.
+
+#### From individual calculations to a reusable component
+
+The section has two parts: first implement the calculations step by step, then collect them into a compact Python class that the LLM architecture can use. This matches the approach in our [character-log experiment](../preparation/training-comparison.md).
+
+In [`experiments/character-logs/model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py), the composition is:
+
+```text
+TinyTransformer
+    └── TransformerBlock
+            ├── Normalization and residual connections
+            ├── CausalAttention
+            └── Feedforward network
+```
+
+`TinyTransformer` creates a `TransformerBlock`; that block creates a `CausalAttention` instance and calls it on normalized input vectors. [`experiments/character-logs/train.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/train.py) creates the complete `TinyTransformer` and runs training through it. The attention class owns its learned projections and implements its forward calculation; the training script handles the loss, backpropagation, and optimizer steps.
+
+Our existing `CausalAttention` already includes future-position masking and an output projection. The book's section 3.4 class is an earlier component in that progression, so we should not expect it to match our implementation line for line. Packaging a calculation in a class makes it reusable; it does not change the mathematics.
+
+### 3.4.1 Computing the attention weights step by step
+
+#### First project the inputs into queries, keys, and values
+
+We begin with three separate stored weight matrices: W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub>. Multiplying an input vector by each matrix produces three different vectors with different roles. The same matrices are shared across token positions; we do not create a separate set of parameters for every token.
+
+For continuity with the preceding runnable example, use the book's six-position sentence and `book_inputs` tensor from 3.3.1. Its second row, “journey,” is `[0.55, 0.87, 0.66]`. The following adapts the [official Chapter 3 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb), with comments explaining the shapes:
+
+```python
+# book_inputs: [6, 3], six positions with three coordinates each.
+x_2 = book_inputs[1]  # Position 2, Python index 1; shape [3].
+d_in = book_inputs.shape[1]  # Input-vector width: 3.
+d_out = 2  # Projection output width: 2, chosen for this demonstration.
+
+torch.manual_seed(123)
+# Each parameter matrix is [3, 2]. Three independent random draws.
+# Gradient tracking is off for this arithmetic-only demonstration.
+W_query = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+W_key = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+W_value = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+
+# Each multiplication: [3] @ [3, 2] -> [2].
+query_2 = x_2 @ W_query
+key_2 = x_2 @ W_key
+value_2 = x_2 @ W_value
+print(query_2)
+# tensor([0.4306, 1.4551])
+```
+
+The two output coordinates come from dot products with the matrix's **two columns**. The first combines all three input coordinates using the first column's coefficients; the second uses the second column. We do not simply discard the third input coordinate.
+
+<figure markdown="1">
+
+[![The same three-coordinate input vector at position two is multiplied separately by query, key, and value parameter matrices of shape three by two, producing three two-coordinate vectors.](../assets/chapter-03/trainable-projections.svg)](../assets/chapter-03/trainable-projections.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.14 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/), focusing on the second input so the three projections are explicit. Values come from the seeded book calculation and are rounded for display. The same key/value matrices will also be applied to the other input positions when calculating context for this query.</figcaption>
+</figure>
+
+**Input width and projection output width do not have to be equal.** Here the change from three coordinates to two makes it visible that a transformation happened. These are vector widths, not sequence lengths or vocabulary sizes. In many GPT implementations the full projected width matches the model width, while individual attention heads use smaller widths. The vectors used in a query–key dot product must have matching widths. We will stay with the book's `3 → 2` example here.
+
+#### What does `requires_grad=False` mean?
+
+`requires_grad` asks PyTorch whether it should track the calculations needed to obtain gradients for a tensor during backpropagation. It **does not** turn matrix multiplication on or off. We get the same numerical query vector either way.
+
+For this example, the inputs and all three matrices have gradient tracking disabled. PyTorch can calculate the outputs without constructing a backward graph, so the printed result has no extra `grad_fn` information. That is what the book means by reducing output clutter; it changes gradient bookkeeping, not just print formatting.
+
+For training these matrices, the sequence would be:
+
+1. Create the parameters with `requires_grad=True` (the default for `nn.Parameter`).
+2. Run the model forward and calculate a loss.
+3. Call `loss.backward()` to calculate gradients for parameters that contribute to the loss.
+4. Call the optimizer's `step()` to update the parameters included in that optimizer.
+
+**`True` allows gradients to be calculated; the optimizer performs the update.** Merely declaring a parameter or doing a forward pass does not train it. Conversely, `False` disables gradient accumulation for that parameter; it does not make its values immutable. Freezing some parameters is also useful when only part of a model should be trained. If other operands require gradients, an operation involving a frozen parameter can still be tracked for those operands.
+
+`nn.Parameter` is a tensor subclass used for model parameters. When assigned as an attribute of an `nn.Module`, it is registered so `model.parameters()` can find it. Here the matrices are standalone variables for the walkthrough; the later class will own them. Our tiny model's `nn.Linear` layers already create and register their weight parameters for us.
+
+Random initialization provides starting values when training from scratch; it is not a rule that every parameter in every architecture must be random. Normalization scales and biases can start from constants, and loading a trained checkpoint supplies existing learned values. The seed makes this example reproducible; it does not train the matrices.
+
+!!! note "Weight parameters versus attention weights"
+
+    **Weight parameters** are the entries in W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub>. Training adjusts these stored coefficients; during an ordinary inference forward pass, they stay fixed.
+
+    **Attention weights**, α<sub>ij</sub>, are computed from the current queries and keys. They tell us how much each value vector contributes to a particular query's context vector. Different inputs or query positions can produce different attention weights while using exactly the same stored parameter matrices.
+
+The word *weight* is used for both, but their roles differ. The matrices define the learned transformations; the attention weights define the current mixture. We have not calculated attention weights for the projected vectors yet: the next outputs are still raw **scores**, ω<sub>ij</sub>.
+
+#### One query still needs keys and values from all positions
+
+We want the context vector for position 2, “journey.” That means we need its query q<sup>(2)</sup>, but information can come from any of the six available positions. We therefore prepare a key and a value for every input position:
+
+```python
+# Reuse book_inputs and W_key/W_value from the preceding code.
+# [6, 3] @ [3, 2] -> [6, 2] for each projection.
+keys = book_inputs @ W_key
+values = book_inputs @ W_value
+print("keys.shape:", keys.shape)
+print("values.shape:", values.shape)
+```
+
+```text
+keys.shape: torch.Size([6, 2])
+values.shape: torch.Size([6, 2])
+```
+
+There are still **six token positions**, now with two coordinates in each key or value vector. The same W<sub>K</sub> is applied to every input row, and likewise for W<sub>V</sub>.
+
+Keep the roles separate: **keys participate in the score calculation; values will supply the information to mix later**. Values do not enter the query–key dot products. Computing them now prepares the later weighted sum.
+
+#### Calculate one score, then all scores for query 2
+
+ω<sub>22</sub> compares the query for position 2 with the key for position 2. Those vectors come from the same input position but different parameter matrices, so this is not generally a vector dotted with itself.
+
+```python
+keys_2 = keys[1]  # Python index 1 is position 2; shape [2].
+attn_score_22 = query_2.dot(keys_2)  # [2] dot [2] -> scalar.
+print(attn_score_22)
+# tensor(1.8524)
+```
+
+The query is approximately `[0.4306, 1.4551]` and this key is approximately `[0.4433, 1.1419]`. Multiply corresponding coordinates and add them. The code uses the stored values, not these rounded display values.
+
+<figure markdown="1">
+
+[![The second input is projected to query two; every input is projected to a key and a value. Query two dotted with each key produces six unscaled attention scores, with score two two highlighted. Values are reserved for the later mixture.](../assets/chapter-03/projected-attention-scores.svg)](../assets/chapter-03/projected-attention-scores.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.15 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Uses the seeded six-token example from the preceding code, with scores rounded to four decimal places. The diagram separates key-based comparisons from values reserved for the later context-vector calculation. No scaling, softmax, or causal mask has been applied at this point.</figcaption>
+</figure>
+
+Now perform all six comparisons in one matrix multiplication:
+
+```python
+# query_2: [2]; keys: [6, 2]; keys.T: [2, 6].
+# Each column of keys.T holds one key vector.
+# [2] @ [2, 6] -> [6]: one score per key, all for the same query.
+attn_scores_2 = query_2 @ keys.T
+print(attn_scores_2)
+print(torch.allclose(attn_scores_2[1], attn_score_22))
+```
+
+```text
+tensor([1.2705, 1.8524, 1.8111, 1.0795, 0.5577, 1.5440])
+True
+```
+
+The entries are ω<sub>21</sub>, ω<sub>22</sub>, …, ω<sub>26</sub>, in input-position order. The **first index stays 2** because the query has not changed. “All scores” here means all six scores **for query 2**, not a six-by-six score matrix for all queries. The second entry matches the individually computed ω<sub>22</sub>, confirming that the matrix operation carries out the same dot products.
+
+This is the bridge from the simplified calculation: we still compare vectors with dot products, but those vectors are now **queries and keys produced by learned transformations**. The scores are unscaled and unnormalized; they need not sum to one. Scaling and softmax turn these scores into the weights used below.
+
+#### Scale the scores, then apply softmax
+
+We now have six scores for query q<sup>(2)</sup>. To turn them into attention weights, first divide by the square root of the **key-vector width**, then apply softmax:
+
+```python
+# keys: [6, 2]. Last axis is the number of coordinates in each key.
+d_k = keys.shape[-1]  # 2, NOT the six positions or original input width 3.
+scaled_scores_2 = attn_scores_2 / d_k**0.5
+attn_weights_2 = torch.softmax(scaled_scores_2, dim=-1)
+print(attn_weights_2)
+print(attn_weights_2.shape)
+print(torch.allclose(attn_weights_2.sum(), torch.tensor(1.0)))
+```
+
+```text
+tensor([0.1500, 0.2264, 0.2199, 0.1311, 0.0906, 0.1820])
+torch.Size([6])
+True
+```
+
+This is one set of six weights for query 2: α<sub>21</sub> through α<sub>26</sub>. Although the output prints on one line, its actual shape is **`[6]`, a one-dimensional tensor**, not `[1, 6]`. Scaling preserves the score ordering but changes their separation; softmax turns the scaled scores into mixing amounts that sum to approximately one.
+
+<figure markdown="1">
+
+[![Six raw scores omega for query two are divided by square root of two, then softmax produces six alpha weights summing to one.](../assets/chapter-03/scaled-attention-weights.svg)](../assets/chapter-03/scaled-attention-weights.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.16 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Values are computed from our seeded book example and rounded to four decimals for display. Scaling and softmax are shown as separate operations; division by √2 alone does not make the scores sum to one.</figcaption>
+</figure>
+
+!!! tip "The rationale behind scaled dot-product attention"
+
+    A dot product adds one product per query/key coordinate. Under the usual simplifying assumption of independent, zero-mean, unit-variance coordinates, its variance grows with d<sub>k</sub>, so its standard deviation grows with √d<sub>k</sub>. Dividing by √d<sub>k</sub> counteracts that growth in scale.
+
+    When score **differences** become large, softmax can put almost all its weight on one position. In that saturated region, many derivatives through softmax become very small, making learning through the attention scores harder. Scaling helps keep scores in a more useful range; it does not guarantee that gradients will always be large or training stable.
+
+    Absolute score size alone is not the issue: adding the same constant to every score leaves softmax unchanged. This scaling also has a different purpose from subtracting the maximum inside numerically stable softmax, which prevents exponential overflow while preserving the mathematical probabilities.
+
+The relevant width is the query/key width used in the dot product. In multi-head attention, that is **the width per head**, which may be much smaller than the model's overall embedding width. Here it is simply `2`, so the divisor is √2 ≈ `1.4142`. This score scaling gives **scaled dot-product attention** its name. It is not LayerNorm and not the earlier demonstration of division by the sum of scores.
+
+#### Finish the context vector by combining values
+
+The final step now uses **value vectors**, not the original input vectors. Each scalar α<sub>2j</sub> multiplies the corresponding v<sup>(j)</sup>, and we add the weighted vectors:
+
+z<sup>(2)</sup> = α<sub>21</sub>v<sup>(1)</sup> + α<sub>22</sub>v<sup>(2)</sup> + … + α<sub>26</sub>v<sup>(6)</sup>.
+
+```python
+# Six scalar weights @ six value vectors with two coordinates each.
+# [6] @ [6, 2] -> [2]: one context vector for query position 2.
+context_vec_2 = attn_weights_2 @ values
+print(context_vec_2)
+# tensor([0.3061, 0.8210])
+```
+
+To make the meaning of `@` explicit, this loop calculates the same weighted sum:
+
+```python
+context_vec_2_loop = torch.zeros_like(values[0])  # Two zeros.
+for position_index, value_vector in enumerate(values):
+    context_vec_2_loop += attn_weights_2[position_index] * value_vector
+print(torch.allclose(context_vec_2, context_vec_2_loop))  # True
+```
+
+<figure markdown="1">
+
+[![Each of six two-coordinate value vectors is multiplied by its attention weight for query two. Summing the contributions produces context vector zero point three zero six one, zero point eight two one zero.](../assets/chapter-03/projected-context-vector.svg)](../assets/chapter-03/projected-context-vector.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.17, using all six positions from the seeded example. Weighted contributions and final coordinates are computed at full precision and rounded independently for display. Queries and keys determined the weights; the value vectors supply the information in the final mixture.</figcaption>
+</figure>
+
+The resulting two coordinates match the **value-vector width**. We still have just one context vector, because only q<sup>(2)</sup> supplied the scores. This is the attention output before any later output projection or residual addition, not a next-token prediction. None of these forward calculations trained the parameter matrices.
+
+The complete calculation for this position is now: **project inputs → compare query with keys → scale → softmax → combine values**. Section 3.4.2 packages the calculation in a reusable class and computes context vectors for all positions.
+
+!!! note "Why query, key, and value?"
+
+    The book borrows these names from information retrieval and databases. Think of looking something up: you have a request, something to match the request against, and information you want to receive.
+
+    | Name | Plain-language role | In our attention calculation |
+    | --- | --- | --- |
+    | **Query** | What am I looking for? | q<sup>(2)</sup> represents the request from position 2. |
+    | **Key** | What can this item be matched on? | Each k<sup>(j)</sup> is compared with the query to calculate a score. |
+    | **Value** | What information does this item contribute? | Each v<sup>(j)</sup> supplies the vector that will be weighted and added. |
+
+    These are descriptions of the vectors' roles, not literal questions, labels, or database records stored inside them. The model learns the transformations that create these numerical representations.
+
+    A database analogy helps separate **matching** from **receiving information**. Imagine searching a collection of documents: the features used to decide which documents match your request need not be the same representation you return from those documents. In attention, keys perform the matching role, while values supply the information for the result.
+
+    ```text
+    Query from position 2
+        │
+        ├── compare with key 1 → score → attention weight 1 → weight value 1
+        ├── compare with key 2 → score → attention weight 2 → weight value 2
+        └── compare with key j → score → attention weight j → weight value j
+                                                                  │
+                                                    add the weighted values
+                                                                  ↓
+                                                    context for position 2
+    ```
+
+    Scaling and softmax turn the scores into weights together, across the available positions. Each branch above is not normalized independently.
+
+    **The key decides how strongly its paired value contributes. The value supplies the information that contributes.** Their pairing comes from their input position: k<sup>(3)</sup> and v<sup>(3)</sup> both come from x<sup>(3)</sup>, through different learned matrices. A key is not required to be unique, and the lookup is not an exact equality check like accessing a Python dictionary.
+
+    In our example, q<sup>(2)</sup> comes from “journey.” It is compared with all six keys. The score for the key at “starts” becomes α<sub>23</sub> ≈ `0.2199` after scaling and softmax. That weight then multiplies **the value at “starts,” v<sup>(3)</sup>**, before we add its contribution to the other weighted values. We do not add the key itself to the result.
+
+    The result is usually a **blend of information from several positions**, not one retrieved record. With a causal mask later, only permitted positions can contribute. And a token can both ask and supply information: in self-attention, its input vector produces its query, key, and value. The matrices give those three roles different learned representations.
+
+    For now we have used just one query, q<sup>(2)</sup>. Using the other queries will give each position its own mixture and context vector. That is the next step in 3.4.2.
 
 ## 3.5 Hiding future words with causal attention
 
