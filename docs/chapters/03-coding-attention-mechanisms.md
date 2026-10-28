@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class walkthrough and sections 3.5–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. The detailed causal-attention implementation and section 3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -971,7 +971,7 @@ The book next replaces explicitly created parameter matrices with **`nn.Linear` 
 
 Listing 3.2 packages the projections using `nn.Linear`:
 
-```python
+```python title="SelfAttention_v2 — projections managed by nn.Linear"
 import torch
 import torch.nn as nn
 
@@ -979,13 +979,20 @@ import torch.nn as nn
 class SelfAttention_v2(nn.Module):
     def __init__(self, d_in: int, d_out: int, qkv_bias: bool = False) -> None:
         super().__init__()
-        self.d_out = d_out
         self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Project inputs [T, d_in] to contexts [T, d_out] via scaled dot-product attention."""
+        """Map floating-point vectors [T, d_in] to contexts [T, d_out].
+
+        T is the number of positions in one sequence (6 here); d_in is the
+        input width (3), and d_out is the query/key/value width (2).
+        There is no batch axis or causal mask. These are vectors, not IDs.
+        A forward pass computes outputs without updating stored parameters.
+        """
+        # With bias=False: self.W_key(x) equals x @ self.W_key.weight.T.
+        # With bias=True: the layer also adds its learned bias vector.
         keys = self.W_key(x)        # [6, 3] @ [3, 2] -> [6, 2]
         queries = self.W_query(x)    # [6, 2]
         values = self.W_value(x)     # [6, 2]
@@ -1016,28 +1023,29 @@ tensor([[-0.0739,  0.0713],
         [-0.0754,  0.0693]], grad_fn=<MmBackward0>)
 ```
 
-!!! note "Why do the outputs differ from SelfAttention_v1?"
+!!! note "Why do the outputs differ from SelfAttentionV1?"
 
-    `SelfAttention_v1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttention_v1` drew values uniformly from $[0, 1)$ with `torch.rand`, while PyTorch's `nn.Linear` uses an optimized Kaiming uniform initialization scheme designed to stabilize variance and gradient flow across layers. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
+    `SelfAttentionV1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttentionV1` drew values uniformly from $[0, 1)$ with `torch.rand`, while `nn.Linear` initializes weights uniformly between −1/√d_in and +1/√d_in. PyTorch implements that default through `kaiming_uniform_` with a particular parameter choice; it is not a guarantee of stable training. These examples also use different seeds. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
 
-#### Exercise 3.1: Comparing `SelfAttention_v1` and `SelfAttention_v2`
+#### Exercise 3.1: Comparing `SelfAttentionV1` and `SelfAttention_v2`
 
-To confirm that the output difference comes purely from weight initialization rather than a flaw in the attention logic, the book asks us to transfer the weights from an instance of `SelfAttention_v2` into `SelfAttention_v1` so that both produce identical context vectors.
+To confirm that the output difference comes purely from weight initialization rather than a flaw in the attention logic, the book asks us to transfer the weights from an instance of `SelfAttention_v2` into `SelfAttentionV1` so that both produce identical context vectors.
 
 The key observation is how each class stores its projection weights:
 
-1. In `SelfAttention_v1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width $d_{in} = 3$ and output width $d_{out} = 2$, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
+1. In `SelfAttentionV1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width $d_{in} = 3$ and output width $d_{out} = 2$, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
 2. In `SelfAttention_v2`, `nn.Linear(d_in, d_out, bias=False)` stores its underlying weight matrix as `layer.weight` with shape `[d_out, d_in]` (`[2, 3]`), because `nn.Linear` evaluates $x W^T$.
 
-To assign the weights from `sa_v2` to `sa_v1`, we transpose (`.T`) each weight matrix before wrapping it in `nn.Parameter`:
+To transfer the weights, transpose each V2 matrix and copy its values into the existing V1 parameter. Use `torch.no_grad()` because this setup operation is not part of the forward computation. The two modules keep independent parameter storage. This comparison uses `qkv_bias=False`, matching the bias-free V1 class:
 
 ```python
 # Create an instance of v1 and transfer transposed weights from v2
-sa_v1 = SelfAttention_v1(d_in=3, d_out=2)
+sa_v1 = SelfAttentionV1(d_in=3, d_out=2)
 
-sa_v1.W_query = torch.nn.Parameter(sa_v2.W_query.weight.T)
-sa_v1.W_key = torch.nn.Parameter(sa_v2.W_key.weight.T)
-sa_v1.W_value = torch.nn.Parameter(sa_v2.W_value.weight.T)
+with torch.no_grad():
+    sa_v1.W_query.copy_(sa_v2.W_query.weight.T)
+    sa_v1.W_key.copy_(sa_v2.W_key.weight.T)
+    sa_v1.W_value.copy_(sa_v2.W_value.weight.T)
 
 # Compare the context vectors from both modules
 out_v1 = sa_v1(book_inputs)
@@ -1068,26 +1076,67 @@ torch.allclose: True
 
 !!! note "Understanding `torch.allclose`"
 
-    Why use `torch.allclose` instead of `==`? In 32-bit floating-point arithmetic, tiny rounding errors can appear at the 6th or 7th decimal digit depending on hardware execution order. Strict equality (`out_v1 == out_v2`) requires every single bit to match and can return `False` over an insignificant difference like `0.07130001` vs `0.07130000`.
+    Why use `torch.allclose` instead of `==`? Floating-point rounding can differ with the operation order and hardware. `out_v1 == out_v2` returns an element-wise Boolean tensor using exact numerical equality; small differences such as `0.07130001` versus `0.07130000` can produce `False`. It is not a bitwise comparison, and the size of rounding differences depends on the values and computation.
 
     `torch.allclose(a, b)` checks whether all values fall within a narrow numerical tolerance:
     
     $$|a - b| \le (\text{atol} + \text{rtol} \times |b|)$$
     
-    with PyTorch defaults $\text{rtol} = 10^{-5}$ and $\text{atol} = 10^{-8}$. Returning `True` guarantees that both implementations calculate the exact same mathematical outputs across all positions and dimensions.
+    with PyTorch defaults $\text{rtol} = 10^{-5}$ and $\text{atol} = 10^{-8}$. Returning `True` means all corresponding values in these tested outputs agree within that tolerance. It does not prove that two implementations are mathematically equivalent for every possible input. Here, the matching formulas and copied parameters explain why we expect agreement.
 
 #### Looking ahead: causal masking and multiple heads
 
 With trainable projections packaged into a clean PyTorch module, the author outlines two remaining enhancements needed before plugging attention into a full GPT architecture:
 
-1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position $t$ cannot peek at token $t+1$. We observed this exact requirement in our [character-log experiment](../preparation/training-comparison.md): without a lower-triangular causal mask, a model trivially learns to copy subsequent tokens instead of learning true linguistic structure.
-2. **Multi-head attention (Section 3.6)**: Rather than relying on a single set of query, key, and value projections, multi-head attention splits the projection dimension across multiple independent "heads." Each head projects the representations into a different subspace, enabling the model to simultaneously focus on syntactic agreement, semantic relationships, or positional patterns in parallel.
+1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position $t$ cannot peek at token $t+1$. Our [character-log experiment](../preparation/training-comparison.md) enforces this restriction. Without it, training predictions could access their target tokens, allowing information leakage and misleadingly low loss.
+2. **Multi-head attention (Section 3.6)**: Rather than relying on a single set of query, key, and value projections, multi-head attention splits the projection dimension across multiple independent "heads." Each head projects the representations into a different subspace, allowing different learned mixtures in parallel. We do not assign heads fixed jobs such as syntax or semantics, and distinct useful specializations are not guaranteed.
 
 With these two goals in view, Section 3.5 tackles causal masking first.
 
 ## 3.5 Hiding future words with causal attention
 
-Notes to come as we read this section.
+Causal attention restricts each query position to **previous positions and itself**. “Masked attention” is a broader term: a causal mask is the particular mask that hides future positions. We keep the same learned query/key/value projections; we change which positions may contribute to each context vector.
+
+#### The current input is allowed; the next token is the target
+
+For our example sequence `Your journey starts with one step`, query position 2 corresponds to “journey.” Its context may use “Your” and “journey,” but not “starts” or anything later. In next-token training, the output at position 2 is used to predict **“starts,” the token at position 3**. Attending to the current input is therefore allowed; attending to the next input would reveal the answer.
+
+Training provides whole input windows so many next-token predictions can be calculated together. The mask gives every position its own permitted prefix, without removing future positions from the tensor altogether. Those later positions still need to make their own predictions.
+
+#### Read the mask by rows and columns
+
+- **Row i** identifies the query position whose context we are calculating.
+- **Column j** identifies the key/value position that could contribute.
+- Keep entries where **j ≤ i**, including the diagonal; set weights where **j > i** to zero.
+
+This leaves a lower triangle of permitted contributions. For the first position, only its own value can contribute. For the last position in this window, all six inputs are permitted.
+
+<figure markdown="1">
+
+[![Six-by-six attention weights before and after causal masking. Entries above the diagonal become zero; the remaining entries are renormalized within each row. Row two can use only positions one and two.](../assets/chapter-03/causal-attention-mask.svg)](../assets/chapter-03/causal-attention-mask.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.19 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Values are computed from the seed-789 `SelfAttention_v2` example above, rather than copied from the book's illustrative matrix. Coordinates are rounded to three decimals, so displayed row sums can differ slightly from one. Grey cells have exactly zero weight after masking.</figcaption>
+</figure>
+
+#### Why normalize again?
+
+Before masking, each row sums to approximately one. If we simply remove its future-position contributions, the retained weights usually sum to less than one. Divide the retained weights by their row sum to redistribute the full mixture over the allowed values.
+
+For a small arithmetic example, suppose a row contains `[0.2, 0.3, 0.5]`. At position 2, only the first two entries are allowed:
+
+```text
+Original weights:       [0.2, 0.3, 0.5]  sum = 1.0
+Zero future entries:    [0.2, 0.3, 0.0]  sum = 0.5
+Divide by retained sum: [0.4, 0.6, 0.0]  sum = 1.0
+```
+
+The final context is `0.4 * value_1 + 0.6 * value_2`. The value at position 3 contributes nothing. This normalization acts on **attention weights**, not embedding coordinates; it is not LayerNorm.
+
+!!! note "Bridge to the masking in our experiment"
+
+    The book first explains masking by zeroing future **weights after softmax** and renormalizing. Our Character Logs implementation instead replaces future **scores before softmax** with negative infinity. Softmax then gives those positions zero weight and normalizes over the permitted positions in one operation. Setting a score to zero would not exclude it: exp(0) is 1.
+
+    These approaches express the same causal restriction in exact arithmetic. Masking before softmax avoids problems such as all retained weights underflowing to zero after an unmasked softmax. We will follow the book's implementation step by step next.
 
 ## 3.6 Extending single-head attention to multi-head attention
 

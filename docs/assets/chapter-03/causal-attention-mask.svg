@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="770" viewBox="0 0 1200 770" role="img" aria-labelledby="title desc"><title id="title">Causal attention keeps the current position and its past</title><desc id="desc">Rows are query positions and columns are key/value positions. Two grids show weights from SelfAttention_v2 before and after masking and row normalization. Future positions have zero contribution.</desc><rect width="1200" height="770" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="35" y="45" font-size="29">Same queries, keys, and values. Only the permitted contributions change.</text>
+<text x="35" y="85" font-size="23">Rows: query positions i     Columns: key/value positions j     Keep j ≤ i</text>
+<rect x="30" y="120" width="540" height="490" rx="14" fill="white" stroke="#aebed1"/>
+<text x="50" y="160" font-size="25">1. Unmasked attention weights</text>
+<text x="169" y="205" font-size="20">1</text>
+<text x="231" y="205" font-size="20">2</text>
+<text x="293" y="205" font-size="20">3</text>
+<text x="355" y="205" font-size="20">4</text>
+<text x="417" y="205" font-size="20">5</text>
+<text x="479" y="205" font-size="20">6</text>
+<text x="45" y="254" font-size="18">1 Your</text>
+<rect x="143" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="148" y="251" font-size="17">0.192</text>
+<rect x="205" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="210" y="251" font-size="17">0.165</text>
+<rect x="267" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="272" y="251" font-size="17">0.165</text>
+<rect x="329" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="334" y="251" font-size="17">0.155</text>
+<rect x="391" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="396" y="251" font-size="17">0.172</text>
+<rect x="453" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="458" y="251" font-size="17">0.151</text>
+<text x="45" y="306" font-size="18">2 journey</text>
+<rect x="143" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="148" y="303" font-size="17">0.204</text>
+<rect x="205" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="210" y="303" font-size="17">0.166</text>
+<rect x="267" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="272" y="303" font-size="17">0.166</text>
+<rect x="329" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="334" y="303" font-size="17">0.150</text>
+<rect x="391" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="396" y="303" font-size="17">0.166</text>
+<rect x="453" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="458" y="303" font-size="17">0.148</text>
+<text x="45" y="358" font-size="18">3 starts</text>
+<rect x="143" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="148" y="355" font-size="17">0.204</text>
+<rect x="205" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="210" y="355" font-size="17">0.166</text>
+<rect x="267" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="272" y="355" font-size="17">0.166</text>
+<rect x="329" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="334" y="355" font-size="17">0.150</text>
+<rect x="391" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="396" y="355" font-size="17">0.166</text>
+<rect x="453" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="458" y="355" font-size="17">0.148</text>
+<text x="45" y="410" font-size="18">4 with</text>
+<rect x="143" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="148" y="407" font-size="17">0.187</text>
+<rect x="205" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="210" y="407" font-size="17">0.167</text>
+<rect x="267" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="272" y="407" font-size="17">0.167</text>
+<rect x="329" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="334" y="407" font-size="17">0.157</text>
+<rect x="391" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="396" y="407" font-size="17">0.166</text>
+<rect x="453" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="458" y="407" font-size="17">0.156</text>
+<text x="45" y="462" font-size="18">5 one</text>
+<rect x="143" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="148" y="459" font-size="17">0.183</text>
+<rect x="205" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="210" y="459" font-size="17">0.167</text>
+<rect x="267" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="272" y="459" font-size="17">0.167</text>
+<rect x="329" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="334" y="459" font-size="17">0.159</text>
+<rect x="391" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="396" y="459" font-size="17">0.166</text>
+<rect x="453" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="458" y="459" font-size="17">0.158</text>
+<text x="45" y="514" font-size="18">6 step</text>
+<rect x="143" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="148" y="511" font-size="17">0.193</text>
+<rect x="205" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="210" y="511" font-size="17">0.166</text>
+<rect x="267" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="272" y="511" font-size="17">0.167</text>
+<rect x="329" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="334" y="511" font-size="17">0.154</text>
+<rect x="391" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="396" y="511" font-size="17">0.167</text>
+<rect x="453" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="458" y="511" font-size="17">0.153</text>
+<text x="50" y="574" font-size="20">Each row is one position’s set of mixing amounts.</text>
+<rect x="630" y="120" width="540" height="490" rx="14" fill="white" stroke="#aebed1"/>
+<text x="650" y="160" font-size="25">2. Causal weights, renormalized</text>
+<text x="769" y="205" font-size="20">1</text>
+<text x="831" y="205" font-size="20">2</text>
+<text x="893" y="205" font-size="20">3</text>
+<text x="955" y="205" font-size="20">4</text>
+<text x="1017" y="205" font-size="20">5</text>
+<text x="1079" y="205" font-size="20">6</text>
+<text x="645" y="254" font-size="18">1 Your</text>
+<rect x="743" y="222" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="748" y="251" font-size="17">1.000</text>
+<rect x="805" y="222" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="810" y="251" font-size="17">0.000</text>
+<rect x="867" y="222" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="872" y="251" font-size="17">0.000</text>
+<rect x="929" y="222" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="934" y="251" font-size="17">0.000</text>
+<rect x="991" y="222" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="996" y="251" font-size="17">0.000</text>
+<rect x="1053" y="222" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="1058" y="251" font-size="17">0.000</text>
+<text x="645" y="306" font-size="18">2 journey</text>
+<rect x="743" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="748" y="303" font-size="17">0.552</text>
+<rect x="805" y="274" width="59" height="46" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="810" y="303" font-size="17">0.448</text>
+<rect x="867" y="274" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="872" y="303" font-size="17">0.000</text>
+<rect x="929" y="274" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="934" y="303" font-size="17">0.000</text>
+<rect x="991" y="274" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="996" y="303" font-size="17">0.000</text>
+<rect x="1053" y="274" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="1058" y="303" font-size="17">0.000</text>
+<text x="645" y="358" font-size="18">3 starts</text>
+<rect x="743" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="748" y="355" font-size="17">0.380</text>
+<rect x="805" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="810" y="355" font-size="17">0.310</text>
+<rect x="867" y="326" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="872" y="355" font-size="17">0.310</text>
+<rect x="929" y="326" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="934" y="355" font-size="17">0.000</text>
+<rect x="991" y="326" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="996" y="355" font-size="17">0.000</text>
+<rect x="1053" y="326" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="1058" y="355" font-size="17">0.000</text>
+<text x="645" y="410" font-size="18">4 with</text>
+<rect x="743" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="748" y="407" font-size="17">0.276</text>
+<rect x="805" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="810" y="407" font-size="17">0.246</text>
+<rect x="867" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="872" y="407" font-size="17">0.246</text>
+<rect x="929" y="378" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="934" y="407" font-size="17">0.232</text>
+<rect x="991" y="378" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="996" y="407" font-size="17">0.000</text>
+<rect x="1053" y="378" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="1058" y="407" font-size="17">0.000</text>
+<text x="645" y="462" font-size="18">5 one</text>
+<rect x="743" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="748" y="459" font-size="17">0.218</text>
+<rect x="805" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="810" y="459" font-size="17">0.198</text>
+<rect x="867" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="872" y="459" font-size="17">0.198</text>
+<rect x="929" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="934" y="459" font-size="17">0.189</text>
+<rect x="991" y="430" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="996" y="459" font-size="17">0.197</text>
+<rect x="1053" y="430" width="59" height="46" rx="5" fill="#e2e8f0" stroke="#aebed1"/>
+<text x="1058" y="459" font-size="17">0.000</text>
+<text x="645" y="514" font-size="18">6 step</text>
+<rect x="743" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="748" y="511" font-size="17">0.193</text>
+<rect x="805" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="810" y="511" font-size="17">0.166</text>
+<rect x="867" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="872" y="511" font-size="17">0.167</text>
+<rect x="929" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="934" y="511" font-size="17">0.154</text>
+<rect x="991" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="996" y="511" font-size="17">0.167</text>
+<rect x="1053" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="1058" y="511" font-size="17">0.153</text>
+<text x="650" y="574" font-size="20">Each row is one position’s set of mixing amounts.</text>
+<text x="582" y="367" font-size="29">→</text>
+<text x="35" y="653" font-size="25">Row 2: “Your journey” is available. The next-token target is “starts”.</text>
+<text x="35" y="695" font-size="23">Future weights become zero; allowed weights are divided by their remaining row sum.</text>
+<text x="35" y="739" font-size="20">Seed 789 · Computed from the V2 example · Display rounded to 3 decimals · No training step</text>
+</g></svg>
