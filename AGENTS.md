@@ -28,6 +28,7 @@ Their pattern is Material for MkDocs, book-aligned navigation, detailed section 
 - Preserve recorded model outputs and deliberately faulty benchmark fixtures verbatim; apply the typing standard to maintained source, not historical experiment evidence. Existing unrelated source can migrate incrementally. The character-log experiment enforces annotation presence with Ruff in CI; this is not full static type checking.
 - Ask before adding new production dependencies. Use Ruff for Python linting and formatting.
 - Ask one targeted question when intent is materially ambiguous; otherwise complete authorized work.
+- Before merging any PR to main, run every command in DEPLOYMENT.md under "Required local checks before merging" on this machine against the final branch content. Fix failures before merging; do not treat absent PR checks as success. Rerun after further edits or incorporating changes from main, and record the tested commit and results in the PR. Local checks are mandatory even for documentation-only changes.
 - Before declaring completion, verify the requested behavior and summarize changes and checks, including any unverified parts.
 
 ## Repository map
@@ -51,7 +52,7 @@ As of 2026-10-03:
 - Cloudflare is the user's chosen hosting provider. Do not substitute Sites hosting.
 - User confirmed working Cloudflare build command: mkdocs build. Output directory: site. Production branch: main. Python version: 3.12.10.
 - Python project management uses uv. pyproject.toml declares dependencies, uv.lock locks them, and builds run uv run --locked python -m mkdocs build --strict directly.
-- GitHub Actions configuration checks documentation builds on pushes to main and pull requests.
+- Current policy: GitHub Actions runs documentation and experiment checks only on pushes to main; the full local suite is required before merging (see DEPLOYMENT.md).
 - Local Markdown links and navigation targets were checked. No build wrapper script is needed.
 - Strict documentation build passed using uv, Python 3.12.10, and pinned Material 9.6.14. GitHub Actions also checks the build.
 - GitHub CLI authentication was refreshed and verified for kantarcise on 2026-10-03.
