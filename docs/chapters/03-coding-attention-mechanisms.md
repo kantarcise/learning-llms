@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. The introduction to 3.4 is covered; its step-by-step implementation and sections 3.5–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the initial query/key/value projections; subsequent calculations and sections 3.5–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -605,6 +605,67 @@ TinyTransformer
 `TinyTransformer` creates a `TransformerBlock`; that block creates a `CausalAttention` instance and calls it on normalized input vectors. [`experiments/character-logs/train.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/train.py) creates the complete `TinyTransformer` and runs training through it. The attention class owns its learned projections and implements its forward calculation; the training script handles the loss, backpropagation, and optimizer steps.
 
 Our existing `CausalAttention` already includes future-position masking and an output projection. The book's section 3.4 class is an earlier component in that progression, so we should not expect it to match our implementation line for line. Packaging a calculation in a class makes it reusable; it does not change the mathematics.
+
+### 3.4.1 Computing the attention weights step by step
+
+#### First project the inputs into queries, keys, and values
+
+We begin with three separate stored weight matrices: W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub>. Multiplying an input vector by each matrix produces three different vectors with different roles. The same matrices are shared across token positions; we do not create a separate set of parameters for every token.
+
+For continuity with the preceding runnable example, use the book's six-position sentence and `book_inputs` tensor from 3.3.1. Its second row, “journey,” is `[0.55, 0.87, 0.66]`. The following adapts the [official Chapter 3 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb), with comments explaining the shapes:
+
+```python
+# book_inputs: [6, 3], six positions with three coordinates each.
+x_2 = book_inputs[1]  # Position 2, Python index 1; shape [3].
+d_in = book_inputs.shape[1]  # Input-vector width: 3.
+d_out = 2  # Projection output width: 2, chosen for this demonstration.
+
+torch.manual_seed(123)
+# Each parameter matrix is [3, 2]. Three independent random draws.
+# Gradient tracking is off for this arithmetic-only demonstration.
+W_query = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+W_key = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+W_value = torch.nn.Parameter(torch.rand(d_in, d_out), requires_grad=False)
+
+# Each multiplication: [3] @ [3, 2] -> [2].
+query_2 = x_2 @ W_query
+key_2 = x_2 @ W_key
+value_2 = x_2 @ W_value
+print(query_2)
+# tensor([0.4306, 1.4551])
+```
+
+The two output coordinates come from dot products with the matrix's **two columns**. The first combines all three input coordinates using the first column's coefficients; the second uses the second column. We do not simply discard the third input coordinate.
+
+<figure markdown="1">
+
+[![The same three-coordinate input vector at position two is multiplied separately by query, key, and value parameter matrices of shape three by two, producing three two-coordinate vectors.](../assets/chapter-03/trainable-projections.svg)](../assets/chapter-03/trainable-projections.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.14 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/), focusing on the second input so the three projections are explicit. Values come from the seeded book calculation and are rounded for display. The same key/value matrices will also be applied to the other input positions when calculating context for this query.</figcaption>
+</figure>
+
+**Input width and projection output width do not have to be equal.** Here the change from three coordinates to two makes it visible that a transformation happened. These are vector widths, not sequence lengths or vocabulary sizes. In many GPT implementations the full projected width matches the model width, while individual attention heads use smaller widths. The vectors used in a query–key dot product must have matching widths. We will stay with the book's `3 → 2` example here.
+
+#### What does `requires_grad=False` mean?
+
+`requires_grad` asks PyTorch whether it should track the calculations needed to obtain gradients for a tensor during backpropagation. It **does not** turn matrix multiplication on or off. We get the same numerical query vector either way.
+
+For this example, the inputs and all three matrices have gradient tracking disabled. PyTorch can calculate the outputs without constructing a backward graph, so the printed result has no extra `grad_fn` information. That is what the book means by reducing output clutter; it changes gradient bookkeeping, not just print formatting.
+
+For training these matrices, the sequence would be:
+
+1. Create the parameters with `requires_grad=True` (the default for `nn.Parameter`).
+2. Run the model forward and calculate a loss.
+3. Call `loss.backward()` to calculate gradients for parameters that contribute to the loss.
+4. Call the optimizer's `step()` to update the parameters included in that optimizer.
+
+**`True` allows gradients to be calculated; the optimizer performs the update.** Merely declaring a parameter or doing a forward pass does not train it. Conversely, `False` disables gradient accumulation for that parameter; it does not make its values immutable. Freezing some parameters is also useful when only part of a model should be trained. If other operands require gradients, an operation involving a frozen parameter can still be tracked for those operands.
+
+`nn.Parameter` is a tensor subclass used for model parameters. When assigned as an attribute of an `nn.Module`, it is registered so `model.parameters()` can find it. Here the matrices are standalone variables for the walkthrough; the later class will own them. Our tiny model's `nn.Linear` layers already create and register their weight parameters for us.
+
+Random initialization provides starting values when training from scratch; it is not a rule that every parameter in every architecture must be random. Normalization scales and biases can start from constants, and loading a trained checkpoint supplies existing learned values. The seed makes this example reproducible; it does not train the matrices.
+
+At this point we have projected vectors, **not attention scores or a context vector yet**. We stop at the query result `[0.4306, 1.4551]`; the next calculation will use queries and keys rather than compare the original input vectors directly.
 
 ## 3.5 Hiding future words with causal attention
 
