@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Sections 3.4–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. The introduction to 3.4 is covered; its step-by-step implementation and sections 3.5–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -559,7 +559,40 @@ All six contexts are now available, but the core operation is unchanged: **compa
 
 ## 3.4 Implementing self-attention with trainable weights
 
-Notes to come as we read this section.
+The next mechanism is **scaled dot-product attention**, the attention calculation introduced in the original Transformer. We now add trainable projections to the calculation we have been studying; this section develops the single-head building block before causal masking and multiple heads.
+
+Figure 3.13 in the book revisits the roadmap: we are still at **step 2, Attention mechanism, within Stage 1**. Within this chapter, we move from simplified self-attention to self-attention with trainable weights. The complete model architecture and training loop are separate steps.
+
+<figure markdown="1">
+
+[![Four attention variations: simplified attention, trainable projections, causal masking, and multiple heads. Section 3.4 focuses on the second step.](../assets/chapter-03/attention-progression.svg)](../assets/chapter-03/attention-progression.svg)
+
+<figcaption markdown="span">Our chapter progression figure, reused to mark the transition highlighted in Figure 3.13 of [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The focus is now the second card: introducing learned query, key, and value projections. See the [overall book roadmap](#where-we-are-in-the-books-roadmap) for the larger architecture and training stages.</figcaption>
+</figure>
+
+The goal stays familiar: **produce a context vector for each query position by combining information from available input positions**. The important change is that the model can learn how to prepare that information. Stored matrices W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub> transform inputs into query, key, and value vectors. The weighted sum will combine the **value vectors**, which are transformed inputs, rather than the original input vectors directly.
+
+These matrices are model parameters updated during training. They are different from the **attention weights** calculated from the current queries and keys on each forward pass. Training learns the transformations; each forward pass uses them to calculate input-dependent scores and mixtures.
+
+The word **scaled** refers to dividing query–key dot-product scores by the square root of the key-vector width before softmax. We will work through that calculation and its reason in 3.4.1. Scaling and softmax are separate operations; scaling alone does not make the scores sum to one.
+
+#### From individual calculations to a reusable component
+
+The section has two parts: first implement the calculations step by step, then collect them into a compact Python class that the LLM architecture can use. This matches the approach in our [character-log experiment](../preparation/training-comparison.md).
+
+In [`experiments/character-logs/model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py), the composition is:
+
+```text
+TinyTransformer
+    └── TransformerBlock
+            ├── Normalization and residual connections
+            ├── CausalAttention
+            └── Feedforward network
+```
+
+`TinyTransformer` creates a `TransformerBlock`; that block creates a `CausalAttention` instance and calls it on normalized input vectors. [`experiments/character-logs/train.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/train.py) creates the complete `TinyTransformer` and runs training through it. The attention class owns its learned projections and implements its forward calculation; the training script handles the loss, backpropagation, and optimizer steps.
+
+Our existing `CausalAttention` already includes future-position masking and an output projection. The book's section 3.4 class is an earlier component in that progression, so we should not expect it to match our implementation line for line. Packaging a calculation in a class makes it reusable; it does not change the mathematics.
 
 ## 3.5 Hiding future words with causal attention
 
