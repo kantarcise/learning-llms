@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 and sections 3.5–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class walkthrough and sections 3.5–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -847,6 +847,125 @@ The complete calculation for this position is now: **project inputs → compare 
     The result is usually a **blend of information from several positions**, not one retrieved record. With a causal mask later, only permitted positions can contribute. And a token can both ask and supply information: in self-attention, its input vector produces its query, key, and value. The matrices give those three roles different learned representations.
 
     For now we have used just one query, q<sup>(2)</sup>. Using the other queries will give each position its own mixture and context vector. That is the next step in 3.4.2.
+
+### 3.4.2 Implementing a compact self-attention Python class
+
+The class packages the calculation we already know and applies it to **every query position at once**. It does not introduce another attention mechanism. In 3.4.1 we asked for the context of “journey”; now each of the six positions gets its own context vector.
+
+#### Put the parameters and calculation together
+
+`__init__` creates the three parameter matrices once when we instantiate the layer. `forward` uses those same matrices each time we supply input vectors. It computes new queries, keys, values, attention weights, and context vectors; it does not reinitialize or update the parameters.
+
+The following adapts Listing 3.1 from the [official Chapter 3 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb). The book names the class `SelfAttention_v1`; we use `SelfAttentionV1` here, with type hints and explicit shape comments.
+
+```python title="SelfAttentionV1 — one sequence, all query positions"
+import torch
+from torch import nn
+
+
+class SelfAttentionV1(nn.Module):
+    """Single-head self-attention with trainable projections and no causal mask."""
+
+    def __init__(self, d_in: int, d_out: int) -> None:
+        """Set input-vector width d_in and query/key/value width d_out."""
+        super().__init__()
+        # Registered parameters: the optimizer can find them via .parameters().
+        # Each matrix is [d_in, d_out], shared across all token positions.
+        # requires_grad=True by default; training can calculate their gradients.
+        self.W_query = nn.Parameter(torch.rand(d_in, d_out))
+        self.W_key = nn.Parameter(torch.rand(d_in, d_out))
+        self.W_value = nn.Parameter(torch.rand(d_in, d_out))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating-point input vectors [T, d_in] to contexts [T, d_out].
+
+        T is the number of token positions in one sequence (6 in our example).
+        d_in is the input width (3); d_out is each projected vector's width (2).
+        There is no batch axis here. x contains vectors, not integer token IDs.
+        Each output row mixes value vectors from all T positions, including
+        later positions. Calling this method does not update model parameters.
+        """
+        # [6, 3] @ [3, 2] -> [6, 2]: one vector per position for each role.
+        queries = x @ self.W_query
+        keys = x @ self.W_key
+        values = x @ self.W_value
+
+        # keys.T puts each key in a column: [6, 2] @ [2, 6] -> [6, 6].
+        # Entry [i, j] is query i dotted with key j: raw score omega_ij.
+        scores = queries @ keys.T
+        key_width = keys.shape[-1]  # 2 coordinates, not 6 token positions.
+        scaled_scores = scores / key_width**0.5
+
+        # Normalize across keys (columns) separately for each query (row).
+        # [6, 6] -> [6, 6]; each row of alpha weights sums to approximately 1.
+        attention_weights = torch.softmax(scaled_scores, dim=-1)
+
+        # [6, 6] @ [6, 2] -> [6, 2]. Row i is sum_j(alpha_ij * value_j).
+        context_vectors = attention_weights @ values
+        return context_vectors
+```
+
+`nn.Module` lets PyTorch manage registered parameters, nested layers, device moves, and state saving/loading. Calling `attention(book_inputs)` goes through the module's call machinery to `forward`; we normally use this rather than calling `forward` directly. The class structure is useful organization, not a mathematical requirement of attention.
+
+#### Check that the single-query calculation is still inside it
+
+Reuse the `book_inputs` tensor from 3.3.1 and the `context_vec_2` result from 3.4.1:
+
+```python
+# Same seed, shapes, and parameter creation order as the manual example.
+torch.manual_seed(123)
+attention = SelfAttentionV1(d_in=3, d_out=2)
+context_vectors = attention(book_inputs)
+print(context_vectors)
+print(torch.allclose(context_vectors[1], context_vec_2))
+```
+
+```text
+tensor([[0.2996, 0.8053],
+        [0.3061, 0.8210],
+        [0.3058, 0.8203],
+        [0.2948, 0.7939],
+        [0.2927, 0.7891],
+        [0.2990, 0.8040]], grad_fn=<MmBackward0>)
+True
+```
+
+There are **six rows because there are six input positions**, and **two coordinates per row because the value width is two**. The second row, z<sup>(2)</sup>, matches the earlier result. This agreement relies on using the same inputs and parameter values: the same seed alone would not guarantee a match if we changed the random draws or initialization scheme.
+
+`grad_fn` shows that PyTorch tracked this calculation for backpropagation, because the parameters now require gradients. It does not mean a backward pass or optimizer update has happened. The exact printed backward-function label can vary with PyTorch versions.
+
+#### Read Figure 3.18 as a map of the calculation
+
+The book's figure puts inputs, three projections, attention weights, and output contexts on one page. Read it in two stages: **queries and keys determine the mixing amounts; values supply the information to mix**. In our original companion diagram, scaling and softmax have their own box so raw scores and normalized weights stay distinct.
+
+<figure markdown="1">
+
+[![All-position trainable self-attention: six three-coordinate inputs produce queries, keys, and values of shape six by two. Query-key dot products produce six by six scores. Scaling and row-wise softmax produce attention weights, which mix values into six two-coordinate context vectors.](../assets/chapter-03/compact-self-attention.svg)](../assets/chapter-03/compact-self-attention.svg)
+
+<figcaption markdown="span">Original companion diagram for Figure 3.18 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). One sequence, six positions; no batch axis or causal mask. The highlighted second output row matches the seeded calculation above. Arrows show dependencies, not a sequence of optimizer updates.</figcaption>
+</figure>
+
+| Object | Shape in this example | What one row means |
+| --- | --- | --- |
+| Inputs X | `[6, 3]` | The input vector at one position. |
+| Queries Q, keys K, values V | Each `[6, 2]` | A projected vector for that position's particular role. |
+| Scores Ω = QKᵀ | `[6, 6]` | One query's dot products with all six keys. |
+| Attention weights A, entries α<sub>ij</sub> | `[6, 6]` | One query's six mixing amounts, summing to approximately one. |
+| Contexts Z = AV | `[6, 2]` | One weighted combination of all six value vectors. |
+
+Follow row 2 through the diagram: x<sup>(2)</sup> produces q<sup>(2)</sup>; that query produces score row 2 and then attention-weight row 2; that weight row mixes **all value rows** to produce z<sup>(2)</sup>. The other five queries do the same calculation independently. We do not feed the completed z<sup>(1)</sup> into the calculation of z<sup>(2)</sup>.
+
+!!! note "The numbers in the book's overview figure are illustrative"
+
+    Figure 3.18's caption explicitly says its attention-matrix entries are not the actual attention weights from this calculation. Use the runnable code for numerical checks. Our diagram shows the shapes and the verified second context row instead of copying that illustrative matrix. Also distinguish raw **scores** ω from normalized **weights** α: the matrix used to mix values contains weights.
+
+#### Bridge to our tiny transformer, and to `nn.Linear`
+
+Our [Character Logs model](../preparation/training-comparison.md) already packages attention in a class, [`CausalAttention` in `model.py`](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py). Its query, key, and value projections play the same roles. It additionally handles batches, masks future positions, and applies an output projection. Normalization, residual connections, and the feedforward network belong to the surrounding transformer block; they are not missing lines from this small self-attention class.
+
+The book next replaces explicitly created parameter matrices with **`nn.Linear` layers**, not nonlinear layers. With `bias=False`, `nn.Linear` performs `x @ layer.weight.T`. It stores the matrix in `[d_out, d_in]` order, whereas our explicit matrices above are `[d_in, d_out]`. This is a storage convention, not a different attention calculation.
+
+`nn.Linear` creates and registers its parameters and supplies its own initialization scheme. Its default is `bias=True`, so a bias-free projection must request `False` explicitly. Changing the initialization can change the numerical outputs even with the same seed. No GELU or ReLU is being added here; those are nonlinear activation functions from the feedforward part we studied earlier. We will walk through the second class as the reading continues.
 
 ## 3.5 Hiding future words with causal attention
 
