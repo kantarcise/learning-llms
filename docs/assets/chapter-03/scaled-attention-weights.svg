@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">Scale scores, then normalize with softmax</title><desc id="desc">For query two, six dot products are divided by square root of key width two. Softmax across the six scaled scores gives attention weights summing to one.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
+<text x="40" y="55" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">From scores ω to attention weights α</text>
+<rect x="40" y="95" width="920" height="100" rx="12" fill="#dce9ff" stroke="#aebed1"/>
+<text x="65" y="135" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">Key width d<tspan baseline-shift="sub" font-size="70%">k</tspan> = 2 → divide each score by √2 ≈ 1.4142</text>
+<text x="65" y="175" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Then apply softmax across all six scaled scores for query 2.</text>
+<text x="55" y="260" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Input position</text>
+<text x="290" y="260" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Raw ω<tspan baseline-shift="sub" font-size="70%">2j</tspan></text>
+<text x="500" y="260" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Scaled score</text>
+<text x="755" y="260" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Weight α<tspan baseline-shift="sub" font-size="70%">2j</tspan></text>
+<rect x="40" y="285" width="920" height="64" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="55" y="325" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1. Your</text>
+<text x="290" y="325" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.2705</text>
+<text x="500" y="325" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.8984</text>
+<text x="755" y="325" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.1500</text>
+<rect x="40" y="358" width="920" height="64" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="55" y="398" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">2. journey</text>
+<text x="290" y="398" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.8524</text>
+<text x="500" y="398" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.3098</text>
+<text x="755" y="398" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.2264</text>
+<rect x="40" y="431" width="920" height="64" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="55" y="471" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">3. starts</text>
+<text x="290" y="471" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.8111</text>
+<text x="500" y="471" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.2806</text>
+<text x="755" y="471" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.2199</text>
+<rect x="40" y="504" width="920" height="64" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="55" y="544" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">4. with</text>
+<text x="290" y="544" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.0795</text>
+<text x="500" y="544" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.7633</text>
+<text x="755" y="544" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.1311</text>
+<rect x="40" y="577" width="920" height="64" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="55" y="617" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">5. one</text>
+<text x="290" y="617" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.5577</text>
+<text x="500" y="617" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.3944</text>
+<text x="755" y="617" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.0906</text>
+<rect x="40" y="650" width="920" height="64" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="55" y="690" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">6. step</text>
+<text x="290" y="690" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.5440</text>
+<text x="500" y="690" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1.0918</text>
+<text x="755" y="690" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">0.1820</text>
+<text x="40" y="780" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Scaling keeps the ordering; softmax converts scores to mixing amounts.</text>
+<text x="40" y="825" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">21</tspan> + α<tspan baseline-shift="sub" font-size="70%">22</tspan> + … + α<tspan baseline-shift="sub" font-size="70%">26</tspan> ≈ 1</text>
+<text x="40" y="875" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Shape [6] → [6] → [6]: still one set of weights for one query.</text>
+<text x="40" y="925" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Softmax uses the whole score vector, not each entry in isolation.</text>
+<text x="40" y="975" font-family="Arial,Helvetica,sans-serif" font-size="21" fill="#26364c">Seeded book example; independently rounded display values.</text>
+</svg>

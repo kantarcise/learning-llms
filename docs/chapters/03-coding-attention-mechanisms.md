@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers query/key/value projections and unscaled scores for query 2; subsequent calculations and sections 3.5–3.6 are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 and sections 3.5–3.6 are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -735,7 +735,80 @@ True
 
 The entries are ω<sub>21</sub>, ω<sub>22</sub>, …, ω<sub>26</sub>, in input-position order. The **first index stays 2** because the query has not changed. “All scores” here means all six scores **for query 2**, not a six-by-six score matrix for all queries. The second entry matches the individually computed ω<sub>22</sub>, confirming that the matrix operation carries out the same dot products.
 
-This is the bridge from the simplified calculation: we still compare vectors with dot products, but those vectors are now **queries and keys produced by learned transformations**. The scores are unscaled and unnormalized; they need not sum to one. Scaling and softmax come next.
+This is the bridge from the simplified calculation: we still compare vectors with dot products, but those vectors are now **queries and keys produced by learned transformations**. The scores are unscaled and unnormalized; they need not sum to one. Scaling and softmax turn these scores into the weights used below.
+
+#### Scale the scores, then apply softmax
+
+We now have six scores for query q<sup>(2)</sup>. To turn them into attention weights, first divide by the square root of the **key-vector width**, then apply softmax:
+
+```python
+# keys: [6, 2]. Last axis is the number of coordinates in each key.
+d_k = keys.shape[-1]  # 2, NOT the six positions or original input width 3.
+scaled_scores_2 = attn_scores_2 / d_k**0.5
+attn_weights_2 = torch.softmax(scaled_scores_2, dim=-1)
+print(attn_weights_2)
+print(attn_weights_2.shape)
+print(torch.allclose(attn_weights_2.sum(), torch.tensor(1.0)))
+```
+
+```text
+tensor([0.1500, 0.2264, 0.2199, 0.1311, 0.0906, 0.1820])
+torch.Size([6])
+True
+```
+
+This is one set of six weights for query 2: α<sub>21</sub> through α<sub>26</sub>. Although the output prints on one line, its actual shape is **`[6]`, a one-dimensional tensor**, not `[1, 6]`. Scaling preserves the score ordering but changes their separation; softmax turns the scaled scores into mixing amounts that sum to approximately one.
+
+<figure markdown="1">
+
+[![Six raw scores omega for query two are divided by square root of two, then softmax produces six alpha weights summing to one.](../assets/chapter-03/scaled-attention-weights.svg)](../assets/chapter-03/scaled-attention-weights.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.16 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Values are computed from our seeded book example and rounded to four decimals for display. Scaling and softmax are shown as separate operations; division by √2 alone does not make the scores sum to one.</figcaption>
+</figure>
+
+!!! tip "Why divide by the square root of the key width?"
+
+    A dot product adds one product per query/key coordinate. Under the usual simplifying assumption of independent, zero-mean, unit-variance coordinates, its variance grows with d<sub>k</sub>, so its standard deviation grows with √d<sub>k</sub>. Dividing by √d<sub>k</sub> counteracts that growth in scale.
+
+    When score **differences** become large, softmax can put almost all its weight on one position. In that saturated region, many derivatives through softmax become very small, making learning through the attention scores harder. Scaling helps keep scores in a more useful range; it does not guarantee that gradients will always be large or training stable.
+
+    Absolute score size alone is not the issue: adding the same constant to every score leaves softmax unchanged. This scaling also has a different purpose from subtracting the maximum inside numerically stable softmax, which prevents exponential overflow while preserving the mathematical probabilities.
+
+The relevant width is the query/key width used in the dot product. In multi-head attention, that is **the width per head**, which may be much smaller than the model's overall embedding width. Here it is simply `2`, so the divisor is √2 ≈ `1.4142`. This score scaling gives **scaled dot-product attention** its name. It is not LayerNorm and not the earlier demonstration of division by the sum of scores.
+
+#### Finish the context vector by combining values
+
+The final step now uses **value vectors**, not the original input vectors. Each scalar α<sub>2j</sub> multiplies the corresponding v<sup>(j)</sup>, and we add the weighted vectors:
+
+z<sup>(2)</sup> = α<sub>21</sub>v<sup>(1)</sup> + α<sub>22</sub>v<sup>(2)</sup> + … + α<sub>26</sub>v<sup>(6)</sup>.
+
+```python
+# Six scalar weights @ six value vectors with two coordinates each.
+# [6] @ [6, 2] -> [2]: one context vector for query position 2.
+context_vec_2 = attn_weights_2 @ values
+print(context_vec_2)
+# tensor([0.3061, 0.8210])
+```
+
+To make the meaning of `@` explicit, this loop calculates the same weighted sum:
+
+```python
+context_vec_2_loop = torch.zeros_like(values[0])  # Two zeros.
+for position_index, value_vector in enumerate(values):
+    context_vec_2_loop += attn_weights_2[position_index] * value_vector
+print(torch.allclose(context_vec_2, context_vec_2_loop))  # True
+```
+
+<figure markdown="1">
+
+[![Each of six two-coordinate value vectors is multiplied by its attention weight for query two. Summing the contributions produces context vector zero point three zero six one, zero point eight two one zero.](../assets/chapter-03/projected-context-vector.svg)](../assets/chapter-03/projected-context-vector.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.17, using all six positions from the seeded example. Weighted contributions and final coordinates are computed at full precision and rounded independently for display. Queries and keys determined the weights; the value vectors supply the information in the final mixture.</figcaption>
+</figure>
+
+The resulting two coordinates match the **value-vector width**. We still have just one context vector, because only q<sup>(2)</sup> supplied the scores. This is the attention output before any later output projection or residual addition, not a next-token prediction. None of these forward calculations trained the parameter matrices.
+
+The complete calculation for this position is now: **project inputs → compare query with keys → scale → softmax → combine values**. Section 3.4.2 packages the calculation in a reusable class and computes context vectors for all positions.
 
 ## 3.5 Hiding future words with causal attention
 
