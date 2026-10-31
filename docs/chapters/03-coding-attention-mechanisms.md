@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers the first mask-and-renormalize implementation; score masking and the remaining sections are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Dropout and the remaining sections are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1251,6 +1251,87 @@ The first row becomes `[1, 0, 0, 0, 0, 0]`. The last row stays mathematically un
     For position 1, `(2 / 10) / (5 / 10) = 2 / 5 = 0.4`. Excluding the future position from the start also gives `[2 / 5, 3 / 5] = [0.4, 0.6]`. **The future score's contribution to the denominator cancels; its value receives zero weight.** This equivalence holds in exact arithmetic, assuming the allowed query/key/value vectors have not already absorbed future information elsewhere.
 
 The displayed numbers are rounded; calculations use full precision. Printed `grad_fn` labels can vary by PyTorch version. This post-softmax demonstration also inherits the numerical limitation described above: extreme scores can leave a retained row sum of zero through underflow. The next approach will mask scores before softmax.
+
+#### Mask scores before softmax: the shorter route
+
+Figure 3.21 combines exclusion and normalization in a simpler order: **replace future scores with negative infinity → scale and apply softmax**. Softmax exponentiates each score; exp(−∞) is zero, so those positions contribute nothing to either the numerator or denominator. The permitted positions receive a normalized distribution immediately.
+
+<figure markdown="1">
+
+[![Future score entries are replaced with negative infinity, then scaling and row-wise softmax produce causal weights with zeros at future positions. No second normalization is needed.](../assets/chapter-03/causal-score-mask.svg)](../assets/chapter-03/causal-score-mask.svg)
+
+<figcaption markdown="span">Original companion diagram inspired by Figure 3.21 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows row 2 of the same seeded V2 example, rounded for display. The mask marks positions; `masked_fill` changes the scores at those positions.</figcaption>
+</figure>
+
+##### Mark the future with `torch.triu`
+
+`triu` means **upper triangle**. This time, one means “exclude this position,” whereas one in our earlier lower-triangular mask meant “keep this position.” The meaning follows from how we use the mask.
+
+```python
+# Reuse attn_scores [6, 6] from the preceding calculation.
+# diagonal=1 starts one diagonal ABOVE the main diagonal: self stays allowed.
+future_mask = torch.triu(torch.ones_like(attn_scores), diagonal=1).bool()
+print(future_mask)
+```
+
+```text
+tensor([[False,  True,  True,  True,  True,  True],
+        [False, False,  True,  True,  True,  True],
+        [False, False, False,  True,  True,  True],
+        [False, False, False, False,  True,  True],
+        [False, False, False, False, False,  True],
+        [False, False, False, False, False, False]])
+```
+
+`.bool()` converts the zeros and ones into `False` and `True`. `masked_fill` replaces each score where the mask is `True` and leaves the other scores alone:
+
+```python
+# -torch.inf is negative infinity; float("-inf") expresses the same value.
+# This returns a new tensor; attn_scores and future_mask remain unchanged.
+masked_scores = attn_scores.masked_fill(future_mask, -torch.inf)
+print(masked_scores[1])
+```
+
+```text
+tensor([0.4656, 0.1723,   -inf,   -inf,   -inf,   -inf],
+       grad_fn=<SelectBackward0>)
+```
+
+We are replacing **scores**, not turning the mask itself into the attention weights. Nor are we multiplying scores by negative infinity.
+
+##### One softmax now does the normalization
+
+```python
+# Query/key width = 2. Dividing -inf by this positive scale leaves -inf.
+masked_attn_weights = torch.softmax(
+    masked_scores / keys.shape[-1] ** 0.5, dim=-1
+)
+print(masked_attn_weights[1])
+print(torch.allclose(masked_attn_weights.sum(dim=-1), torch.ones_like(row_sums[:, 0])))
+print(torch.allclose(masked_attn_weights, causal_weights))
+```
+
+```text
+tensor([0.5517, 0.4483, 0.0000, 0.0000, 0.0000, 0.0000],
+       grad_fn=<SelectBackward0>)
+True
+True
+```
+
+The first check verifies that every row sums to approximately one. The second compares against our earlier mask-and-renormalize result. **The permitted mixture is the same; the separate row-sum division is gone.** These are attention probabilities over input positions, not next-token probabilities over the vocabulary.
+
+!!! tip "Why negative infinity, not zero?"
+
+    A zero score still contributes exp(0) = 1 to softmax. Negative infinity contributes zero, so the masked position receives exactly zero weight. Each row must still have at least one finite allowed score: a row consisting entirely of `-inf` is not a valid softmax distribution and can produce NaNs. Keeping the diagonal permits at least the current position in this causal mask, assuming its score is finite.
+
+We can now form contexts using the same value projection as before:
+
+```python
+values = sa_v2.W_value(book_inputs)             # [6, 2]
+causal_contexts = masked_attn_weights @ values  # [6, 6] @ [6, 2] -> [6, 2]
+```
+
+Every output row mixes only past and current values. No extra normalization follows softmax, and no parameter update has occurred. This is the score-masking approach used in our Character Logs attention implementation. Section 3.5.1 is now covered; the next subsection introduces dropout as a training regularizer to help reduce overfitting.
 
 ## 3.6 Extending single-head attention to multi-head attention
 
