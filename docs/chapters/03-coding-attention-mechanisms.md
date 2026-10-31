@@ -1234,6 +1234,22 @@ tensor([1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000],
 
 The first row becomes `[1, 0, 0, 0, 0, 0]`. The last row stays mathematically unchanged because it had no future positions to remove. Only the permitted values will contribute when we later multiply `causal_weights @ values`.
 
+!!! note "Does the first softmax leak future information?"
+
+    Future scores initially affect the softmax denominator, but renormalizing cancels that shared denominator. For query position 2, suppose the **exponentiated scores** are 2, 3, and 5:
+
+    ```text
+                              Position 1   Position 2   Position 3
+                              (allowed)    (allowed)    (future)
+                              ----------   ----------   ----------
+    Exponentiated scores          2            3            5
+    Softmax: divide by 10          0.2          0.3          0.5
+    Apply mask                    0.2          0.3          0
+    Renormalize: divide by 0.5     0.4          0.6          0
+    ```
+
+    For position 1, `(2 / 10) / (5 / 10) = 2 / 5 = 0.4`. Excluding the future position from the start also gives `[2 / 5, 3 / 5] = [0.4, 0.6]`. **The future score's contribution to the denominator cancels; its value receives zero weight.** This equivalence holds in exact arithmetic, assuming the allowed query/key/value vectors have not already absorbed future information elsewhere.
+
 The displayed numbers are rounded; calculations use full precision. Printed `grad_fn` labels can vary by PyTorch version. This post-softmax demonstration also inherits the numerical limitation described above: extreme scores can leave a retained row sum of zero through underflow. The next approach will mask scores before softmax.
 
 ## 3.6 Extending single-head attention to multi-head attention
