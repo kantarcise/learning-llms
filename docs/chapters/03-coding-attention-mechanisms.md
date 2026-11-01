@@ -1025,7 +1025,7 @@ tensor([[-0.0739,  0.0713],
 
 !!! note "Why do the outputs differ from SelfAttentionV1?"
 
-    `SelfAttentionV1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttentionV1` drew values uniformly from $[0, 1)$ with `torch.rand`, while `nn.Linear` initializes weights uniformly between −1/√d_in and +1/√d_in. PyTorch implements that default through `kaiming_uniform_` with a particular parameter choice; it is not a guarantee of stable training. These examples also use different seeds. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
+    `SelfAttentionV1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttentionV1` drew values uniformly from [0, 1) with `torch.rand`, while `nn.Linear` initializes weights uniformly between −1/√<i>d</i><sub>in</sub> and +1/√<i>d</i><sub>in</sub>. PyTorch implements that default through `kaiming_uniform_` with a particular parameter choice; it is not a guarantee of stable training. These examples also use different seeds. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
 
 #### Exercise 3.1: Comparing `SelfAttentionV1` and `SelfAttention_v2`
 
@@ -1033,8 +1033,8 @@ To confirm that the output difference comes purely from weight initialization ra
 
 The key observation is how each class stores its projection weights:
 
-1. In `SelfAttentionV1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width $d_{in} = 3$ and output width $d_{out} = 2$, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
-2. In `SelfAttention_v2`, `nn.Linear(d_in, d_out, bias=False)` stores its underlying weight matrix as `layer.weight` with shape `[d_out, d_in]` (`[2, 3]`), because `nn.Linear` evaluates $x W^T$.
+1. In `SelfAttentionV1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width <i>d</i><sub>in</sub> = 3 and output width <i>d</i><sub>out</sub> = 2, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
+2. In `SelfAttention_v2`, `nn.Linear(d_in, d_out, bias=False)` stores its underlying weight matrix as `layer.weight` with shape `[d_out, d_in]` (`[2, 3]`), because `nn.Linear` evaluates <i>xW</i><sup>T</sup>.
 
 To transfer the weights, transpose each V2 matrix and copy its values into the existing V1 parameter. Use `torch.no_grad()` because this setup operation is not part of the forward computation. The two modules keep independent parameter storage. This comparison uses `qkv_bias=False`, matching the bias-free V1 class:
 
@@ -1080,15 +1080,15 @@ torch.allclose: True
 
     `torch.allclose(a, b)` checks whether all values fall within a narrow numerical tolerance:
     
-    $$|a - b| \le (\text{atol} + \text{rtol} \times |b|)$$
+    <p>|<i>a</i> − <i>b</i>| ≤ (atol + rtol × |<i>b</i>|)</p>
     
-    with PyTorch defaults $\text{rtol} = 10^{-5}$ and $\text{atol} = 10^{-8}$. Returning `True` means all corresponding values in these tested outputs agree within that tolerance. It does not prove that two implementations are mathematically equivalent for every possible input. Here, the matching formulas and copied parameters explain why we expect agreement.
+    with PyTorch defaults rtol = 10<sup>−5</sup> and atol = 10<sup>−8</sup>. Returning `True` means all corresponding values in these tested outputs agree within that tolerance. It does not prove that two implementations are mathematically equivalent for every possible input. Here, the matching formulas and copied parameters explain why we expect agreement.
 
 #### Looking ahead: causal masking and multiple heads
 
 With trainable projections packaged into a clean PyTorch module, the author outlines two remaining enhancements needed before plugging attention into a full GPT architecture:
 
-1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position $t$ cannot peek at token $t+1$. Our [character-log experiment](../preparation/training-comparison.md) enforces this restriction. Without it, training predictions could access their target tokens, allowing information leakage and misleadingly low loss.
+1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position <i>t</i> cannot peek at token <i>t</i> + 1. Our [character-log experiment](../preparation/training-comparison.md) enforces this restriction. Without it, training predictions could access their target tokens, allowing information leakage and misleadingly low loss.
 2. **Multi-head attention (Section 3.6)**: Rather than relying on a single set of query, key, and value projections, multi-head attention splits the projection dimension across multiple independent "heads." Each head projects the representations into a different subspace, allowing different learned mixtures in parallel. We do not assign heads fixed jobs such as syntax or semantics, and distinct useful specializations are not guaranteed.
 
 With these two goals in view, Section 3.5 tackles causal masking first.
@@ -1787,9 +1787,7 @@ The book asks us to adjust the `MultiHeadAttentionWrapper` call so that each tok
 
 The key is that this wrapper's `d_out` argument controls **each head's output width**, not the combined width:
 
-$$
-\text{combined width} = \text{num\_heads} \times d_{\text{out}}
-$$
+<p>Combined width = number of heads × <i>d</i><sub>out</sub></p>
 
 1. The preceding example uses two heads with `d_out=2`, giving `2 × 2 = 4` coordinates per token.
 2. To obtain two coordinates while keeping two heads, set **`d_out=1`**, giving `2 × 1 = 2`.
@@ -2021,12 +2019,8 @@ The general idea is exactly this: **pack the separate heads' projection weights 
 
 In mathematical notation, placing the two weight blocks side by side gives:
 
-$$
-W_Q = \left[ W_{Q1} \mid W_{Q2} \right]
-\qquad\Longrightarrow\qquad
-XW_Q = \left[ XW_{Q1} \mid XW_{Q2} \right]
-     = \left[ Q_1 \mid Q_2 \right].
-$$
+<p><i>W</i><sub><i>Q</i></sub> = [<i>W</i><sub><i>Q</i>1</sub> | <i>W</i><sub><i>Q</i>2</sub>]<br>
+⇒ <i>XW</i><sub><i>Q</i></sub> = [<i>XW</i><sub><i>Q</i>1</sub> | <i>XW</i><sub><i>Q</i>2</sub>] = [<i>Q</i><sub>1</sub> | <i>Q</i><sub>2</sub>]</p>
 
 The vertical bars mark column boundaries, not an operation that mixes the heads. If the parameter blocks have the same values as the separate matrices, the projected queries match, up to floating-point rounding. Reshaping then exposes those column groups as a head axis. A newly initialized larger layer is not guaranteed to match two independently initialized smaller layers merely because the seed is the same.
 
@@ -2178,9 +2172,7 @@ The last dimension is **combined feature width**, `d_out = H * D`, not the token
 
 For one token, PyTorch evaluates:
 
-$$
-z_{\text{out}} = z_{\text{joined}} W_{\text{out}}^T + b_{\text{out}}.
-$$
+<p><i>z</i><sub>out</sub> = <i>z</i><sub>joined</sub> <i>W</i><sub>out</sub><sup>T</sup> + <i>b</i><sub>out</sub></p>
 
 Here `W_out` denotes the layer's stored `[d_out, d_out]` weight table, following `nn.Linear` storage order. This projection changes values while keeping the same vector width. It mixes **features within a position**; the attention calculation before it is what mixed information across permitted token positions.
 
@@ -2271,9 +2263,7 @@ The book asks us to initialize one `MultiHeadAttention` module with the smallest
 
 The total width divides evenly across the heads:
 
-$$
-\text{head\_dim} = \frac{768}{12} = 64.
-$$
+<p>Coordinates per head = 768 ÷ 12 = 64</p>
 
 Use those values in the existing constructor; the class implementation needs no change:
 
