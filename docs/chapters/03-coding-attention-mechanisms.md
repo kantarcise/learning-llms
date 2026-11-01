@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 now compares separate query projections with one larger projection; the batched-multiplication example explains independent per-head score matrices, followed by joining head contexts and the output projection.
+Status: Chapter 3 reading is complete through Section 3.6.2, Exercises 3.1–3.3, and the chapter summary. The next reading step is Chapter 4: assembling the GPT architecture.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -2215,8 +2215,114 @@ The four calculations are `1 + 10`, `2 + 20`, `1 - 10`, and `2 - 20`. We still h
 
 Neither concatenation nor this per-position linear projection introduces future-token access: they combine features already produced for that same position. Both our Character Logs and Cosmopedia attention implementations also include an output projection, as their source code shows.
 
-We pause here before the author's next class-instantiation example.
+#### Run the integrated class on our two-sentence batch
+
+We can instantiate `MultiHeadAttention` and call it just like the earlier attention modules. The class defined here applies causal masking; the familiar call pattern does not turn it into unmasked attention.
+
+The book returns to a tiny **total output width of two**, so the printed values remain readable. With two heads, each head has one query/key/value coordinate:
+
+```python
+torch.manual_seed(123)
+batch_size, context_length, d_in = batch.shape
+d_out = 2
+mha = MultiHeadAttention(
+    d_in, d_out, context_length, dropout=0.0, num_heads=2
+)
+context_vecs = mha(batch)
+print(context_vecs)
+print("context_vecs.shape:", context_vecs.shape)
+```
+
+```text
+tensor([[[0.3190, 0.4858],
+         [0.2943, 0.3897],
+         [0.2856, 0.3593],
+         [0.2693, 0.3873],
+         [0.2639, 0.3928],
+         [0.2575, 0.4028]],
+
+        [[0.3190, 0.4858],
+         [0.2943, 0.3897],
+         [0.2856, 0.3593],
+         [0.2693, 0.3873],
+         [0.2639, 0.3928],
+         [0.2575, 0.4028]]], grad_fn=<ViewBackward0>)
+context_vecs.shape: torch.Size([2, 6, 2])
+```
+
+The input shape is `[2, 6, 3]` and the output is `[2, 6, 2]`. Both sentence examples receive identical outputs here because the inputs are duplicated, the parameters are shared, and dropout is zero. Unlike the wrapper, this class's `d_out` directly specifies the final width. Its output projection is included in the values above. Printed backward-function labels can differ between PyTorch versions.
+
+The author calls the integrated implementation more efficient because it expresses the head projections as **one larger multiplication per role**, rather than one per role **per head** in a Python loop. Grouping also lets the attention products operate over the batch/head axes together. This is an implementation advantage, not a speed measurement from our companion examples.
+
+#### From readable toy widths to GPT-2-sized attention
+
+The small widths let us inspect complete tensors; the same class can use larger dimensions. The book contrasts two GPT-2 configurations:
+
+| Configuration | Heads | Total representation width | Coordinates per head |
+| --- | --- | --- | --- |
+| Smallest GPT-2 | 12 | 768 | `768 / 12 = 64` |
+| Largest GPT-2 | 25 | 1,600 | `1600 / 25 = 64` |
+
+In these GPT-2 configurations, the input and output representation widths match: `d_in = d_out`. This lets attention fit into the surrounding transformer architecture without changing the width at every block. Our tiny teaching examples used unequal input/output widths to make the roles visible. The smallest configuration's 768-coordinate width, 12 heads, and 1,024-token context are also recorded in [OpenAI's original GPT-2 defaults](https://github.com/openai/gpt-2/blob/master/src/model.py#L5-L10).
+
+#### Exercise 3.3: Initializing GPT-2 size attention modules
+
+The book asks us to initialize one `MultiHeadAttention` module with the smallest GPT-2 model's **12 heads**, **768-coordinate inputs and outputs**, and **maximum context length of 1,024 tokens**.
+
+The total width divides evenly across the heads:
+
+$$
+\text{head\_dim} = \frac{768}{12} = 64.
+$$
+
+Use those values in the existing constructor; the class implementation needs no change:
+
+```python
+torch.manual_seed(123)
+gpt2_attention = MultiHeadAttention(
+    d_in=768,
+    d_out=768,
+    context_length=1024,
+    dropout=0.0,
+    num_heads=12,
+)
+
+print("num_heads:", gpt2_attention.num_heads)
+print("head_dim:", gpt2_attention.head_dim)
+print("query weight shape:", gpt2_attention.W_query.weight.shape)
+print("mask shape:", gpt2_attention.mask.shape)
+```
+
+```text
+num_heads: 12
+head_dim: 64
+query weight shape: torch.Size([768, 768])
+mask shape: torch.Size([1024, 1024])
+```
+
+Each Q/K/V layer maps 768 input coordinates to 768 projected coordinates. Reshaping groups those projected coordinates into 12 heads of width 64. After attention, the heads join back into 768 coordinates and pass through the 768-to-768 output projection.
+
+!!! note "A maximum context length is not a required batch length"
+
+    `context_length=1024` allocates the causal-mask capacity. A call can use a shorter sequence, with the mask sliced to its actual token count T. The expected input/output shapes are `[B, T, 768]` for `1 <= T <= 1024`. The constructor does not create a 1,024-token input batch by itself.
+
+This initializes **one attention module with random parameters**, using the requested head count, widths, and context capacity. Dropout is set to zero for the exercise, and Q/K/V bias follows our class's default. Matching these dimensions does not load pretrained weights or construct the complete GPT-2 model. The full architecture also needs the surrounding embeddings, transformer blocks, and output layers.
+
 
 ## End of chapter
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Chapter 3 reading is complete. The book's summary brings the attention mechanisms together; our companion now traces the progression from a single dot product to the causal multi-head module that the next chapter will place inside GPT.
+
+The main distinctions to carry forward:
+
+- **Attention produces context vectors by mixing information from accessible positions.** In the simplified example, the input vectors supply both the comparisons and the information being mixed. In trainable attention, learned projections separate those roles into queries, keys, and values.
+- **Scores, attention weights, and model parameters are different objects.** A query–key dot product produces a raw score. Scaling by the square root of the key width and applying softmax produces attention weights. Those weights mix the values; the stored projection matrices are the parameters training can update.
+- **Matrix multiplication packages many dot products and weighted sums.** It replaces explicit loops with grouped operations. In `[B, H, T, D]` tensors, the last two axes participate in each matrix product, while the leading axes identify independent example/head calculations.
+- **Causal masking restricts information flow.** Each position may use itself and earlier positions. Replacing future scores with negative infinity before softmax gives those positions zero weight; ordinary full-sequence training can still compute all query positions together.
+- **Dropout is a training-time regularizer with a different purpose from causal masking.** It randomly zeros attention-weight entries and scales survivors, preserving their expected values rather than renormalizing each realized row. Evaluation disables it in our `nn.Dropout` layers.
+- **Multiple heads give separate learned projections and mixtures for the same input.** Concatenating head outputs joins their coordinates; the output projection learns how to mix those features. Heads within a block are different from transformer blocks applied one after another.
+- **The wrapper and weight-split class express the same per-head attention idea in different arrangements.** Larger projection layers pack the head parameters together; `view` and `transpose` arrange the projected activations. The integrated class also includes the output projection, and its `d_out` means total width across heads.
+
+The exercises check three concrete details: [transfer transposed projection weights between implementations](#exercise-31-comparing-selfattentionv1-and-selfattention_v2), [choose per-head width for a desired combined output](#exercise-32-returning-two-dimensional-embedding-vectors), and [initialize a GPT-2-sized attention module](#exercise-33-initializing-gpt-2-size-attention-modules). The companion examples verify these calculations; they do not claim a new training run or benchmark.
+
+Chapter 2 gave us embedded inputs. Chapter 3 supplied the attention building block. [Chapter 4](04-implementing-a-gpt-model.md) will assemble the surrounding GPT architecture, including normalization, shortcut connections, and feedforward layers. Our pre-book experiments already contain those pieces; the reading will unpack their design in the same step-by-step way.
