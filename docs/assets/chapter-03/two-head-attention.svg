@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1320" viewBox="0 0 1000 1320" role="img" aria-labelledby="title desc">
+<title id="title">Two heads attend to the same input</title>
+<desc id="desc">One input X of shape 6 by 3 branches into two independent causal heads. Each has three learned projection matrices and computes Q, K, V of shape 6 by 2, scores and weights 6 by 6, and contexts 6 by 2. Contexts concatenate along features into 6 by 4. Illustrative fifth-row vectors 0.20, 0.80 and minus 0.40, 0.60 join into four coordinates.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#476582"/></marker></defs>
+<rect width="1000" height="1320" fill="#f5f7fb"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="35" y="48" font-size="30">Two heads, one shared input, two attention mixtures</text>
+<text x="35" y="85" font-size="21">One sequence · 6 tokens · input width 3 · output width 2 per head</text>
+<rect x="220" y="115" width="560" height="100" rx="12" fill="#fff" stroke="#aebed1"/>
+<text x="500" y="153" font-size="26" text-anchor="middle">Same input X [6, 3]</text>
+<text x="500" y="189" font-size="21" text-anchor="middle">Every token goes to both heads.</text>
+<path d="M500 215 V245 H255 V280" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/><path d="M500 245 H745 V280" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="290" width="440" height="680" rx="14" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="255" y="332" font-size="27" text-anchor="middle">Head 1</text>
+<rect x="50" y="355" width="410" height="100" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="255" y="389" font-size="23" text-anchor="middle">Own learned W_Q1, W_K1, W_V1</text>
+<text x="255" y="423" font-size="21" text-anchor="middle">Each [3, 2] in X @ W notation</text>
+<path d="M255 458 V483" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="50" y="490" width="410" height="90" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="255" y="524" font-size="23" text-anchor="middle">Q1, K1, V1: each [6, 2]</text>
+<text x="255" y="558" font-size="21" text-anchor="middle">Computed from X by this head</text>
+<path d="M255 583 V608" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="50" y="615" width="410" height="170" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="255" y="649" font-size="23" text-anchor="middle">Scores Q1 @ K1ᵀ: [6, 6]</text>
+<text x="255" y="683" font-size="21" text-anchor="middle">Causal mask → scale → softmax</text>
+<text x="255" y="717" font-size="21" text-anchor="middle">Dropout when training (if p > 0)</text>
+<text x="255" y="751" font-size="21" text-anchor="middle">Weights [6, 6] mix this head’s V</text>
+<path d="M255 788 V813" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="50" y="820" width="410" height="120" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="255" y="854" font-size="23" text-anchor="middle">Contexts Z1 [6, 2]</text>
+<text x="255" y="888" font-size="21" text-anchor="middle">Illustrative row 5: [0.20, 0.80]</text>
+<rect x="525" y="290" width="440" height="680" rx="14" fill="#e6e2f5" stroke="#aebed1"/>
+<text x="745" y="332" font-size="27" text-anchor="middle">Head 2</text>
+<rect x="540" y="355" width="410" height="100" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="745" y="389" font-size="23" text-anchor="middle">Own learned W_Q2, W_K2, W_V2</text>
+<text x="745" y="423" font-size="21" text-anchor="middle">Each [3, 2] in X @ W notation</text>
+<path d="M745 458 V483" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="540" y="490" width="410" height="90" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="745" y="524" font-size="23" text-anchor="middle">Q2, K2, V2: each [6, 2]</text>
+<text x="745" y="558" font-size="21" text-anchor="middle">Computed from X by this head</text>
+<path d="M745 583 V608" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="540" y="615" width="410" height="170" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="745" y="649" font-size="23" text-anchor="middle">Scores Q2 @ K2ᵀ: [6, 6]</text>
+<text x="745" y="683" font-size="21" text-anchor="middle">Causal mask → scale → softmax</text>
+<text x="745" y="717" font-size="21" text-anchor="middle">Dropout when training (if p > 0)</text>
+<text x="745" y="751" font-size="21" text-anchor="middle">Weights [6, 6] mix this head’s V</text>
+<path d="M745 788 V813" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="540" y="820" width="410" height="120" rx="8" fill="#ffffff" stroke="#aebed1"/>
+<text x="745" y="854" font-size="23" text-anchor="middle">Contexts Z2 [6, 2]</text>
+<text x="745" y="888" font-size="21" text-anchor="middle">Illustrative row 5: [−0.40, 0.60]</text>
+<path d="M255 970 V1010 H500 M745 970 V1010 H500" fill="none" stroke="#476582" stroke-width="2"/><path d="M500 1010 V1035" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="100" y="1050" width="800" height="165" rx="12" fill="#fff1cf" stroke="#aebed1"/>
+<text x="500" y="1092" font-size="26" text-anchor="middle">Concatenate along features → Z [6, 4]</text>
+<text x="500" y="1135" font-size="24" text-anchor="middle">Row 5: [0.20, 0.80, −0.40, 0.60]</text>
+<text x="500" y="1178" font-size="21" text-anchor="middle">Join matching token rows side by side. No addition or averaging.</text>
+<text x="35" y="1260" font-size="21">Same causal rule; separate projections and computed mixtures.</text>
+<text x="35" y="1294" font-size="21">Row values illustrate concatenation; they are not measured model outputs.</text>
+</g></svg>

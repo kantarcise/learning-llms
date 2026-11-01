@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Multi-head attention in Section 3.6 is next.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6 and the opening of 3.6.1 now introduce multiple heads through Figure 3.24; the wrapper implementation is next.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1595,11 +1595,62 @@ Cosmopedia's [recorded 1,000-step run configuration](https://github.com/kantarci
 
 ## 3.6 Extending single-head attention to multi-head attention
 
-Notes to come as we read this section.
+We have one causal attention head. The next step is to apply **several heads to the same input and combine their outputs**. Each head has its own learned query, key, and value projections, giving it a different way to compare positions and prepare the information it mixes.
 
-## Questions to bring to the chapter
+The book develops this in two stages: first an intuitive wrapper containing several instances of `CausalAttention`, then an implementation that groups the head computations more efficiently. We will follow that order as we read.
 
-- How do multiple heads differ from multiple transformer blocks in the code? Revisit this in section 3.6, after the single-head calculation is clear.
+!!! note "Single head does not mean a sequential loop through tokens"
+
+    Our single-head class already calculates the scores for all query positions together. Causal masking restricts which positions each query can use; it does not require computing one context vector after another during this full-sequence forward pass. “Multiple heads” means multiple sets of projections and attention mixtures, not a change from sequential token processing to parallel token processing.
+
+### 3.6.1 Stacking multiple single-head attention layers
+
+#### Read Figure 3.24 as two branches from the same input
+
+The figure shows **two attention calculations**, not two different input sequences. Both heads receive the same input matrix X. We do not divide the sentence so that head 1 gets some tokens and head 2 gets the rest, and the attention operation does not overwrite the input embeddings.
+
+<figure markdown="1">
+
+[![The same six-by-three input branches into two causal attention heads. Each owns three learned projection matrices, computes its own queries, keys, values, scores and weights, and produces six-by-two context vectors. Joining the outputs along the feature axis gives six-by-four contexts.](../assets/chapter-03/two-head-attention.svg)](../assets/chapter-03/two-head-attention.svg)
+
+<figcaption markdown="span">Original companion diagram inspired by Figure 3.24 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows one sequence; a batch adds the same leading B axis to the computed tensors. The example output coordinates are deliberately illustrative, not results computed from specified projection matrices. Shapes and the concatenation are exact for two heads of width two.</figcaption>
+</figure>
+
+Follow the two branches:
+
+| Object | Head 1 | Head 2 |
+| --- | --- | --- |
+| Input | The same X `[6, 3]` | The same X `[6, 3]` |
+| Learned projections | W<sub>Q1</sub>, W<sub>K1</sub>, W<sub>V1</sub> | Separate W<sub>Q2</sub>, W<sub>K2</sub>, W<sub>V2</sub> |
+| Computed queries, keys, values | Q₁, K₁, V₁: each `[6, 2]` | Q₂, K₂, V₂: each `[6, 2]` |
+| Computed scores and attention weights | Each `[6, 6]` | Each `[6, 6]` |
+| Output context vectors | Z₁ `[6, 2]` | Z₂ `[6, 2]` |
+
+There are **six learned projection matrices in total**: three per head. In the mathematical `X @ W` convention, each is `[3, 2]`; an `nn.Linear(3, 2)` stores its weight as `[2, 3]` and handles the transpose. These stored parameters are distinct from Q₁/Q₂ and the other projected activations, and from the attention-weight matrices computed for this input.
+
+Each head uses its own Q and K to compute scores, then applies the **same causal rule**, scaling, and softmax. If dropout is enabled during training, its random mask is sampled for each head's calculation and can differ between heads. The resulting weights mix that head's own V into its context matrix Z. The heads can therefore produce different contexts for the same token; independence does not guarantee that they learn different roles or assign them predefined jobs.
+
+#### Combine the contexts for the same position
+
+The fifth row in the book is one highlighted example, not the only row being processed. Each head produces a context for **every** token position. To combine them, join the corresponding rows along the feature axis:
+
+```text
+Illustrative position 5:
+Head 1 context:  [ 0.20, 0.80]
+Head 2 context:  [-0.40, 0.60]
+Combined:       [ 0.20, 0.80, -0.40, 0.60]
+
+All positions:  Z₁ [6, 2] and Z₂ [6, 2] → concatenate → Z [6, 4]
+With a batch:   [B, 6, 2] and [B, 6, 2] → [B, 6, 4]
+```
+
+Here “combine” means **concatenate**, not elementwise addition or averaging. The number of token positions stays six; each output vector becomes wider. In this example each head contributes two coordinates, so two heads contribute four coordinates altogether. Our original diagram uses its own illustrative numbers to make that joining step explicit.
+
+!!! tip "Stacked heads are not successive transformer blocks"
+
+    The figure draws heads stacked on top of one another, but they are parallel branches of the same attention operation. Head 2 receives X, not Z₁. Transformer blocks instead run in sequence, as in our four-block Cosmopedia model. The simple wrapper may call heads one after another in Python; that execution order does not make one head depend on another head's output.
+
+The next reading step is the wrapper code that puts these branches together. We have not implemented that wrapper in these notes yet.
 
 ## End of chapter
 
