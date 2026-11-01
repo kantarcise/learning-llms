@@ -1368,7 +1368,7 @@ causally masked scores [6, 6]
 
 With `p=0.5`, **each entry independently has a 50% probability of being zeroed**. A particular matrix need not lose exactly half its entries; a short row can lose every allowed contribution. Future entries were already zero because of causal masking, so the visible fraction of additional zeros is not necessarily 50% either.
 
-PyTorch scales each surviving entry by `1 / (1 - p)` during training. At `p=0.5`, that is `2`. For one possible mask:
+For `0 <= p < 1`, PyTorch scales each surviving entry by `1 / (1 - p)` during training. At `p=0.5`, the scale factor is `2`. (The special case `p=1` drops every entry instead.) For one possible mask:
 
 ```text
 Attention weights:       [0.20, 0.30, 0.50, 0.00]  sum = 1.00
@@ -1577,7 +1577,7 @@ The book uses `dropout=0.0` here, so no entries are randomly dropped even though
 
 [![Four-stage attention roadmap. Simplified attention uses input vectors directly; trainable self-attention introduces learned query, key, and value projections; the current causal head adds batches, a causal mask, and dropout; multi-head attention is the next reading step.](../assets/chapter-03/attention-building-blocks.svg)](../assets/chapter-03/attention-building-blocks.svg)
 
-<figcaption markdown="span">Original companion roadmap inspired by Figure 3.23 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The highlighted stage is our current single causal head. The final stage is a preview of the next reading section, not a claim that we have implemented it in these chapter notes.</figcaption>
+<figcaption markdown="span">Original companion roadmap inspired by Figure 3.23 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The highlighted stage is our current single causal head. The final stage previews Section 3.6 below, where we implement both the wrapper and grouped multi-head versions.</figcaption>
 </figure>
 
 #### Did our earlier experiments already use multiple heads?
@@ -1648,7 +1648,7 @@ Here “combine” means **concatenate**, not elementwise addition or averaging.
 
 !!! tip "Stacked heads are not successive transformer blocks"
 
-    The figure draws heads stacked on top of one another, but they are parallel branches of the same attention operation. Head 2 receives X, not Z₁. Transformer blocks instead run in sequence, as in our four-block Cosmopedia model. The simple wrapper may call heads one after another in Python; that execution order does not make one head depend on another head's output.
+    The book draws heads stacked on top of one another; our companion figure places them side by side. In both layouts, they are parallel branches of the same attention operation. Head 2 receives X, not Z₁. Transformer blocks instead run in sequence, as in our four-block Cosmopedia model. The simple wrapper may call heads one after another in Python; that execution order does not make one head depend on another head's output.
 
 #### Implement the wrapper with `nn.ModuleList`
 
@@ -2156,7 +2156,7 @@ Head 2 matches: True
 
 #### Join the head contexts, then learn how to mix their features
 
-After the attention-weight/value multiplication, each head has produced contexts with shape `[B, H, T, D]`. The return transpose changes that to `[B, T, H, D]`, putting all of one token's head vectors together. The final reshape joins its head/coordinate axes:
+After the attention-weight/value multiplication, the contexts from all heads are stored together with shape `[B, H, T, D]`. Selecting one head gives `[B, T, D]`. The return transpose changes that to `[B, T, H, D]`, putting all of one token's head vectors together. The final reshape joins its head/coordinate axes:
 
 ```text
 Head contexts:      [B, H, T, D]

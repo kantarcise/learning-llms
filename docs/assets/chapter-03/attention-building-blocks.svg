@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="940" viewBox="0 0 1000 940" role="img" aria-labelledby="title desc">
+<style>
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style>
 <title id="title">Building attention one step at a time</title>
 <desc id="desc">A four-stage roadmap: simplified attention, learned query/key/value projections, our current batched causal head with dropout, and multi-head attention as the next reading step.</desc>
 <rect width="1000" height="940" fill="#f5f7fb"/>
@@ -8,17 +13,17 @@
 <rect x="35" y="120" width="930" height="150" rx="12" fill="#ffffff" stroke="#aebed1"/>
 <text x="60" y="162" font-size="26">1. Simplified self-attention</text>
 <text x="60" y="205" font-size="22">Use input vectors to compare positions and mix information.</text>
-<text x="60" y="241" font-size="21">No learned Q/K/V projections yet.</text>
+<text x="60" y="241" font-size="21">No learned <tspan class="math">Q</tspan>/<tspan class="math">K</tspan>/<tspan class="math">V</tspan> projections yet.</text>
 <text x="480" y="303" font-size="30">↓</text>
 <rect x="35" y="315" width="930" height="150" rx="12" fill="#ffffff" stroke="#aebed1"/>
 <text x="60" y="357" font-size="26">2. Self-attention with trainable projections</text>
-<text x="60" y="400" font-size="22">Learn W_Q, W_K, W_V; compute scores, weights, and contexts.</text>
+<text x="60" y="400" font-size="22">Learn <tspan class="math">W<tspan baseline-shift="sub" font-size="70%">Q</tspan></tspan>, <tspan class="math">W<tspan baseline-shift="sub" font-size="70%">K</tspan></tspan>, <tspan class="math">W<tspan baseline-shift="sub" font-size="70%">V</tspan></tspan>; compute scores, weights, and contexts.</text>
 <text x="60" y="436" font-size="21">One set of projections is shared across input positions.</text>
 <text x="480" y="498" font-size="30">↓</text>
 <rect x="35" y="510" width="930" height="150" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
 <text x="60" y="552" font-size="26">3. Batched causal attention · current section</text>
 <text x="60" y="595" font-size="22">Add the causal mask and attention-weight dropout.</text>
-<text x="60" y="631" font-size="21">Input [B, T, d_in] → contexts [B, T, d_out]; still one head.</text>
+<text x="60" y="631" font-size="21">Input <tspan class="code">[B, T, d_in]</tspan> → contexts <tspan class="code">[B, T, d_out]</tspan>; still one head.</text>
 <text x="480" y="693" font-size="30">↓</text>
 <rect x="35" y="705" width="930" height="150" rx="12" fill="#fff1cf" stroke="#aebed1"/>
 <text x="60" y="747" font-size="26">4. Multi-head attention · next section</text>
