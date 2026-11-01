@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 now compares separate query projections with one larger projection; the following batched-multiplication example now explains independent per-head score matrices.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 now compares separate query projections with one larger projection; the batched-multiplication example explains independent per-head score matrices, followed by joining head contexts and the output projection.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -2160,7 +2160,62 @@ Head 2 matches: True
 
     The example multiplies `a` by its own transpose to make the mechanics visible. In the attention class, the corresponding line is `queries @ keys.transpose(2, 3)`: Q and K have compatible shapes but generally different values. The example's matrices are dot-product results, not normalized attention weights or context vectors. Scaling, causal masking, softmax, dropout, and the value mixture are separate steps. These self-dot-product matrices are symmetric; real query–key score matrices need not be.
 
-We pause here after the per-head comparison, before continuing the author's explanation.
+#### Join the head contexts, then learn how to mix their features
+
+After the attention-weight/value multiplication, each head has produced contexts with shape `[B, H, T, D]`. The return transpose changes that to `[B, T, H, D]`, putting all of one token's head vectors together. The final reshape joins its head/coordinate axes:
+
+```text
+Head contexts:      [B, H, T, D]
+Transpose back:    [B, T, H, D]
+Join head features: [B, T, H * D] = [B, T, d_out]
+Output projection:  [B, T, d_out]
+```
+
+The last dimension is **combined feature width**, `d_out = H * D`, not the token count T. Joining preserves the batch size and token positions. The distinction between joining and projecting is the new point here:
+
+- **Concatenation** places the head outputs side by side. In our two-head, width-two example, `[a, b]` and `[c, d]` become `[a, b, c, d]`. It introduces no learned parameters.
+- **The output projection**, `self.out_proj = nn.Linear(d_out, d_out)`, applies a learned transformation to that combined vector. Each output coordinate can use coordinates from all heads. Its parameter matrix and bias are shared across batch examples and token positions.
+
+For one token, PyTorch evaluates:
+
+$$
+z_{\text{out}} = z_{\text{joined}} W_{\text{out}}^T + b_{\text{out}}.
+$$
+
+Here `W_out` denotes the layer's stored `[d_out, d_out]` weight table, following `nn.Linear` storage order. This projection changes values while keeping the same vector width. It mixes **features within a position**; the attention calculation before it is what mixed information across permitted token positions.
+
+A small numerical illustration uses two head outputs `[1, 2]` and `[10, 20]`. Choose an output matrix that takes sums and differences across their corresponding coordinates, and a zero bias:
+
+```python
+# Deliberately chosen demonstration weights, not trained model parameters.
+joined = torch.tensor([1.0, 2.0, 10.0, 20.0])
+projection = nn.Linear(4, 4)
+with torch.no_grad():
+    projection.weight.copy_(torch.tensor([
+        [1.0, 0.0,  1.0,  0.0],
+        [0.0, 1.0,  0.0,  1.0],
+        [1.0, 0.0, -1.0,  0.0],
+        [0.0, 1.0,  0.0, -1.0],
+    ]))
+    projection.bias.zero_()
+
+projected = projection(joined)
+print(projected.detach())
+```
+
+```text
+tensor([ 11.,  22.,  -9., -18.])
+```
+
+The four calculations are `1 + 10`, `2 + 20`, `1 - 10`, and `2 - 20`. We still have four coordinates, but their values combine information from both heads. In the model, training determines the projection's weights and bias; these hand-picked sums and differences only illustrate what a linear projection can do.
+
+!!! note "What does ‘not strictly necessary’ mean?"
+
+    The attention mechanism already produces usable context vectors after concatenating heads, as our wrapper demonstrated. An output projection is therefore not required just to obtain a valid attention result or join the heads. The author includes it so this class also has the learned output-mixing step commonly used in Transformer attention. ‘For completeness’ means completing that architectural pattern. We have not measured the contribution of this layer in isolation. Appendix B is the author's reference for further discussion.
+
+Neither concatenation nor this per-position linear projection introduces future-token access: they combine features already produced for that same position. Both our Character Logs and Cosmopedia attention implementations also include an output projection, as their source code shows.
+
+We pause here before the author's next class-instantiation example.
 
 ## End of chapter
 
