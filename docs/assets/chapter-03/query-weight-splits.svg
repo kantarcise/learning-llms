@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1170" viewBox="0 0 1000 1170" role="img" aria-labelledby="title desc">
+<title id="title">Separate query projections become one larger projection</title>
+<desc id="desc">Top: the same X, six by three, multiplies W Q1 and W Q2 separately, each three by two, to produce Q1 and Q2, each six by two. Bottom: pack the two weight blocks side by side into W Q, three by four. One multiplication gives Q, six by four, whose first two columns equal Q1 and last two equal Q2 for matching weights. Reshape exposes the head axis without recalculating projections.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#476582"/></marker></defs>
+<rect width="1000" height="1170" fill="#f5f7fb"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="35" y="48" font-size="30" text-anchor="start">One larger projection contains both heads’ queries</text>
+<text x="35" y="85" font-size="21" text-anchor="start">Queries only · one sequence · same parameter blocks in both arrangements</text>
+<rect x="35" y="115" width="930" height="420" rx="10" fill="#fff" stroke="#aebed1"/>
+<text x="60" y="155" font-size="26" text-anchor="start">1. Separate heads: two query matrix multiplications</text>
+<rect x="60" y="280" width="170" height="100" rx="10" fill="#fff1cf" stroke="#aebed1"/>
+<text x="145" y="320" font-size="26" text-anchor="middle">Input <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">X</tspan></text>
+<text x="145" y="356" font-size="23" text-anchor="middle">[6, 3]</text>
+<rect x="330" y="190" width="220" height="100" rx="10" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="440" y="229" font-size="29" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q<tspan font-style="normal">1</tspan></tspan></tspan></text>
+<text x="440" y="266" font-size="23" text-anchor="middle">[3, 2]</text>
+<rect x="710" y="190" width="220" height="100" rx="10" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="820" y="229" font-size="29" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Q<tspan baseline-shift="sub" font-size="70%"><tspan font-style="normal">1</tspan></tspan></tspan></text>
+<text x="820" y="266" font-size="23" text-anchor="middle">[6, 2]</text>
+<path d="M230 330 H280 V240 H320" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M550 240 H700" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="630" y="226" font-size="23" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">X</tspan><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q<tspan font-style="normal">1</tspan></tspan></tspan></text>
+<rect x="330" y="390" width="220" height="100" rx="10" fill="#e6e2f5" stroke="#aebed1"/>
+<text x="440" y="429" font-size="29" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q<tspan font-style="normal">2</tspan></tspan></tspan></text>
+<text x="440" y="466" font-size="23" text-anchor="middle">[3, 2]</text>
+<rect x="710" y="390" width="220" height="100" rx="10" fill="#e6e2f5" stroke="#aebed1"/>
+<text x="820" y="429" font-size="29" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Q<tspan baseline-shift="sub" font-size="70%"><tspan font-style="normal">2</tspan></tspan></tspan></text>
+<text x="820" y="466" font-size="23" text-anchor="middle">[6, 2]</text>
+<path d="M230 330 H280 V440 H320" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M550 440 H700" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="630" y="426" font-size="23" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">X</tspan><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q<tspan font-style="normal">2</tspan></tspan></tspan></text>
+<rect x="35" y="570" width="930" height="470" rx="10" fill="#fff" stroke="#aebed1"/>
+<text x="60" y="610" font-size="26" text-anchor="start">2. Grouped heads: one wider query projection</text>
+<text x="60" y="647" font-size="21" text-anchor="start">Pack the weights by columns; retain each head’s separate parameters.</text>
+<rect x="60" y="715" width="170" height="100" rx="10" fill="#fff1cf" stroke="#aebed1"/>
+<text x="145" y="755" font-size="26" text-anchor="middle">Same <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">X</tspan></text>
+<text x="145" y="791" font-size="23" text-anchor="middle">[6, 3]</text>
+<rect x="315" y="705" width="290" height="120" rx="10" fill="#f5f7fb" stroke="#aebed1"/>
+<rect x="325" y="715" width="135" height="100" rx="6" fill="#d8f1eb"/>
+<rect x="460" y="715" width="135" height="100" rx="6" fill="#e6e2f5"/>
+<text x="392" y="759" font-size="27" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q<tspan font-style="normal">1</tspan></tspan></tspan></text>
+<text x="527" y="759" font-size="27" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q<tspan font-style="normal">2</tspan></tspan></tspan></text>
+<text x="392" y="797" font-size="19" text-anchor="middle">2 columns</text>
+<text x="527" y="797" font-size="19" text-anchor="middle">2 columns</text>
+<text x="460" y="865" font-size="25" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q</tspan></tspan> [3, 4]</text>
+<rect x="690" y="705" width="240" height="120" rx="10" fill="#f5f7fb" stroke="#aebed1"/>
+<rect x="700" y="715" width="105" height="100" rx="6" fill="#d8f1eb"/>
+<rect x="805" y="715" width="115" height="100" rx="6" fill="#e6e2f5"/>
+<text x="752" y="761" font-size="28" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Q<tspan baseline-shift="sub" font-size="70%"><tspan font-style="normal">1</tspan></tspan></tspan></text>
+<text x="862" y="761" font-size="28" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Q<tspan baseline-shift="sub" font-size="70%"><tspan font-style="normal">2</tspan></tspan></tspan></text>
+<text x="752" y="797" font-size="19" text-anchor="middle">[6, 2]</text>
+<text x="862" y="797" font-size="19" text-anchor="middle">[6, 2]</text>
+<text x="810" y="865" font-size="25" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Q</tspan> [6, 4]</text>
+<path d="M230 765 H305" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M605 765 H680" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="645" y="740" font-size="22" text-anchor="middle"><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">X</tspan><tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">W<tspan baseline-shift="sub" font-size="70%">Q</tspan></tspan></text>
+<text x="500" y="932" font-size="23" text-anchor="middle">Reshape the four projected coordinates into two groups of two.</text>
+<text x="500" y="976" font-size="21" text-anchor="middle">Same numerical queries for matching weights; no new projection in the split.</text>
+<text x="35" y="1090" font-size="23" text-anchor="start">Both layouts contain 12 query-weight entries (biases excluded).</text>
+<text x="35" y="1130" font-size="21" text-anchor="start">Weights use mathematical <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">XW</tspan> order; <tspan font-family="DejaVu Sans Mono,Consolas,monospace">nn.Linear</tspan> stores their transposes.</text>
+</g></svg>

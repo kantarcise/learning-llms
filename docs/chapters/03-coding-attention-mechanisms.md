@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 and the following walkthrough are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 now compares separate query projections with one larger projection; the following batched-multiplication walkthrough is still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -2008,7 +2008,68 @@ After `view`, the axes read `[example, token, head, coordinate]`. After `transpo
 
 This is the same grouping idea already used by our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py). Cosmopedia goes one step further by computing all three Q/K/V projections in a combined linear layer and using PyTorch's functional attention operation. Here we keep the three roles and explicit attention steps visible while learning their arrangement. We have not measured a speedup for this book implementation.
 
-We pause here before Figure 3.26 and the book's next batched-multiplication example.
+#### Figure 3.26: one larger projection, then expose the heads
+
+The general idea is exactly this: **pack the separate heads' projection weights into one larger matrix, multiply once, then organize the projected coordinates into heads**. The figure shows queries only; we do the same thing separately for keys and values.
+
+<figure markdown="1">
+
+[![Separate query projections use the same input X with two three-by-two matrices to produce Q1 and Q2, each six by two. The grouped version packs the weights side by side into a three-by-four matrix and multiplies X once to obtain six-by-four Q. Its first two columns are Q1 and last two are Q2. The split rearranges the projected coordinates without further projection arithmetic.](../assets/chapter-03/query-weight-splits.svg)](../assets/chapter-03/query-weight-splits.svg)
+
+<figcaption markdown="span">Original companion diagram inspired by Figure 3.26 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows one sequence with six positions, input width three, and two query coordinates per head. Uses the mathematical XW convention, so weights are `[input width, output width]`; `nn.Linear` stores their transposes. Matching colors identify the same parameter blocks and output coordinates in the two arrangements.</figcaption>
+</figure>
+
+In mathematical notation, placing the two weight blocks side by side gives:
+
+$$
+W_Q = \left[ W_{Q1} \mid W_{Q2} \right]
+\qquad\Longrightarrow\qquad
+XW_Q = \left[ XW_{Q1} \mid XW_{Q2} \right]
+     = \left[ Q_1 \mid Q_2 \right].
+$$
+
+The vertical bars mark column boundaries, not an operation that mixes the heads. If the parameter blocks have the same values as the separate matrices, the projected queries match, up to floating-point rounding. Reshaping then exposes those column groups as a head axis. A newly initialized larger layer is not guaranteed to match two independently initialized smaller layers merely because the seed is the same.
+
+For the six-token example:
+
+| Arrangement | Query projections | Query result |
+| --- | --- | --- |
+| Separate heads | Two products: `[6, 3] @ [3, 2]`, one for each head | Two `[6, 2]` matrices |
+| Grouped heads | One product: `[6, 3] @ [3, 4]` | One `[6, 4]` matrix, containing the two heads' columns |
+
+Each head still has its own learned query parameters. We have **12 query-weight entries either way**: `2 * (3 * 2)` separately, or `3 * 4` together, excluding biases. Grouping does not force the heads to share the same projection or reduce the total feature width.
+
+A small hand-worked example makes the equality tangible. For one invented input vector and two illustrative projection matrices:
+
+```text
+x = [1, 2, 3]
+
+       W_Q1              W_Q2
+       [1, 0]            [ 2, 0]
+       [0, 1]            [ 0, 2]
+       [1, 1]            [-1, 1]
+
+x W_Q1 = [1 + 3, 2 + 3]        = [ 4, 5]
+x W_Q2 = [2 - 3, 4 + 3]        = [-1, 7]
+
+Pack their columns into W_Q:
+       [1, 0 |  2, 0]
+       [0, 1 |  0, 2]
+       [1, 1 | -1, 1]
+
+x W_Q = [4, 5 | -1, 7]
+Split = head 1 [4, 5], head 2 [-1, 7]
+```
+
+Here the code-style names are readable text equivalents of the subscripted mathematical symbols. The numbers illustrate the projection identity; they are not outputs from a trained experiment.
+
+!!! note "A larger multiplication still has a cost"
+
+    The benefit is not that matrix size stops mattering. For these matching shapes, the basic scalar arithmetic is comparable; we express it in fewer, larger operations. That can reduce per-operation overhead and give optimized CPU/GPU matrix routines a larger amount of work to process efficiently. The actual speed depends on dimensions, device, and implementation. We have verified the projection identity, not measured a speedup for this example.
+
+In PyTorch storage order, packing two `nn.Linear(3, 2)` query weights means stacking their `[2, 3]` weight tables along dimension zero to form `[4, 3]`. That is the transpose of placing `[3, 2]` mathematical matrices side by side. This storage convention explains how the single larger `W_query` layer represents both heads; `view` and `transpose` then arrange its output as `[B, H, T, D]` for attention.
+
+We pause here before the book's next batched-multiplication example.
 
 ## End of chapter
 
