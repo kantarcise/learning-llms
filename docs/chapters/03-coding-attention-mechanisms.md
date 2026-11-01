@@ -1422,9 +1422,11 @@ See the [PyTorch `nn.Dropout` documentation](https://docs.pytorch.org/docs/2.9/g
 
 #### Did our earlier experiments use dropout?
 
-**No: neither of our maintained training models applies dropout.** [Character Logs](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/README.md) explicitly omitted it to keep the first model small and understandable. Its learned parameters and computed attention weights are still separate concepts; causal masking alone is not dropout.
+**Our earlier experiments did not use dropout.** Character Logs deliberately omitted it for simplicity; we have not compared training with and without dropout to determine whether it would help either experiment. Its absence from the pre-book introduction was a simplification, not evidence that small datasets do not need dropout.
 
-Our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) calls `F.scaled_dot_product_attention(query, key, value, is_causal=True)` without a dropout argument. That function's default is `dropout_p=0.0`, so it also trains without attention dropout. Neither model adds dropout to the context vectors or feedforward layers. We have not run a comparison demonstrating whether adding dropout would help these experiments.
+The [Character Logs notes](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/README.md) record that choice. Its learned parameters and computed attention weights are still separate concepts; causal masking alone is not dropout.
+
+Our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) calls `F.scaled_dot_product_attention(query, key, value, is_causal=True)` without a dropout argument. That function's default is `dropout_p=0.0`, so it also trains without attention dropout. Neither model adds dropout to the context vectors or feedforward layers.
 
 One API distinction for later: the functional attention call uses its explicit `dropout_p` argument even in evaluation mode. If we add dropout there, we must pass zero during evaluation ourselves; `nn.Dropout` handles its mode switch automatically. See [PyTorch's functional attention documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.functional.scaled_dot_product_attention.html).
 
