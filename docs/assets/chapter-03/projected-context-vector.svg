@@ -1,9 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">Combine value vectors into context for query two</title><desc id="desc">Six scalar attention weights multiply the corresponding two-coordinate value vectors. Sum the six weighted vectors to produce [0.3061,0.8210].</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Combine value vectors into context for query two</title><desc id="desc">Six scalar attention weights multiply the corresponding two-coordinate value vectors. Sum the six weighted vectors to produce [0.3061,0.8210].</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
 <text x="40" y="55" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">Values supply the information we mix</text>
-<text x="40" y="110" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Queries and keys determined α; now apply α to the value vectors.</text>
+<text x="40" y="110" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Queries and keys determined <tspan class="math">α</tspan>; now apply <tspan class="math">α</tspan> to the value vectors.</text>
 <text x="55" y="185" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Position</text>
-<text x="255" y="185" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Weight α<tspan baseline-shift="sub" font-size="70%">2j</tspan></text>
-<text x="445" y="185" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Value v<tspan baseline-shift="super" font-size="70%">(j)</tspan></text>
+<text x="255" y="185" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Weight <tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">2<tspan class="math">j</tspan></tspan></text>
+<text x="445" y="185" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Value <tspan class="math">v</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(<tspan class="math">j</tspan>)</tspan></text>
 <text x="730" y="185" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Contribution</text>
 <rect x="40" y="215" width="920" height="69" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="55" y="258" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">1. Your</text>
@@ -37,8 +44,8 @@
 <text x="710" y="653" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">[0.0586, 0.1431]</text>
 <text x="440" y="740" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">↓ Sum the contributions</text>
 <rect x="130" y="775" width="740" height="100" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="165" y="815" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c">z<tspan baseline-shift="super" font-size="70%">(2)</tspan> ≈ [0.3061, 0.8210]</text>
-<text x="165" y="855" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c">[6] weights @ [6, 2] values → [2] context vector</text>
+<text x="165" y="815" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c"><tspan class="math">z</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> ≈ [0.3061, 0.8210]</text>
+<text x="165" y="855" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c"><tspan class="code" xml:space="preserve">[6]</tspan> weights <tspan class="code" xml:space="preserve">@</tspan> <tspan class="code" xml:space="preserve">[6, 2]</tspan> values → <tspan class="code" xml:space="preserve">[2]</tspan> context vector</text>
 <text x="40" y="925" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Two output coordinates because each value vector has width two.</text>
 <text x="40" y="975" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Full-precision calculation; rounded display. No residual addition here.</text>
 </svg>

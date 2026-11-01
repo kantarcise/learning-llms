@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="770" viewBox="0 0 1200 770" role="img" aria-labelledby="title desc"><title id="title">Causal attention keeps the current position and its past</title><desc id="desc">Rows are query positions and columns are key/value positions. Two grids show weights from SelfAttention_v2 before and after masking and row normalization. Future positions have zero contribution.</desc><rect width="1200" height="770" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="770" viewBox="0 0 1200 770" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Causal attention keeps the current position and its past</title><desc id="desc">Rows are query positions and columns are key/value positions. Two grids show weights from SelfAttention_v2 before and after masking and row normalization. Future positions have zero contribution.</desc><rect width="1200" height="770" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
 <text x="35" y="45" font-size="29">Same queries, keys, and values. Only the permitted contributions change.</text>
-<text x="35" y="85" font-size="23">Rows: query positions i     Columns: key/value positions j     Keep j ≤ i</text>
+<text x="35" y="85" font-size="23">Rows: query positions <tspan class="math">i</tspan> · Columns: key/value positions <tspan class="math">j</tspan> · Keep <tspan class="math">j</tspan> ≤ <tspan class="math">i</tspan></text>
 <rect x="30" y="120" width="540" height="490" rx="14" fill="white" stroke="#aebed1"/>
 <text x="50" y="160" font-size="25">1. Unmasked attention weights</text>
 <text x="169" y="205" font-size="20">1</text>
@@ -87,7 +94,7 @@
 <text x="396" y="511" font-size="17">0.167</text>
 <rect x="453" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
 <text x="458" y="511" font-size="17">0.153</text>
-<text x="50" y="574" font-size="20">Each row is one position’s set of mixing amounts.</text>
+<text x="50" y="574" font-size="20">Each row is one position’<tspan class="math">s</tspan> set of mixing amounts.</text>
 <rect x="630" y="120" width="540" height="490" rx="14" fill="white" stroke="#aebed1"/>
 <text x="650" y="160" font-size="25">2. Causal weights, renormalized</text>
 <text x="769" y="205" font-size="20">1</text>
@@ -174,7 +181,7 @@
 <text x="996" y="511" font-size="17">0.167</text>
 <rect x="1053" y="482" width="59" height="46" rx="5" fill="#fff1cf" stroke="#aebed1"/>
 <text x="1058" y="511" font-size="17">0.153</text>
-<text x="650" y="574" font-size="20">Each row is one position’s set of mixing amounts.</text>
+<text x="650" y="574" font-size="20">Each row is one position’<tspan class="math">s</tspan> set of mixing amounts.</text>
 <text x="582" y="367" font-size="29">→</text>
 <text x="35" y="653" font-size="25">Row 2: “Your journey” is available. The next-token target is “starts”.</text>
 <text x="35" y="695" font-size="23">Future weights become zero; allowed weights are divided by their remaining row sum.</text>

@@ -1,19 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="770" viewBox="0 0 1000 770" role="img" aria-labelledby="title desc"><title id="title">Three steps to causal attention weights</title><desc id="desc">Scaled scores pass through softmax, element-wise multiplication by a lower triangular mask, and division by each retained row sum. The diagonal is retained.</desc><rect width="1000" height="770" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="770" viewBox="0 0 1000 770" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Three steps to causal attention weights</title><desc id="desc">Scaled scores pass through softmax, element-wise multiplication by a lower triangular mask, and division by each retained row sum. The diagonal is retained.</desc><rect width="1000" height="770" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
 <text x="35" y="48" font-size="29">Causal masking: normalize, hide the future, normalize again</text>
 <rect x="35" y="90" width="930" height="115" rx="12" fill="#fff" stroke="#aebed1"/>
-<text x="60" y="132" font-size="26">Scaled query–key scores [6, 6]</text>
-<text x="60" y="173" font-size="22">scores / √key_width · no row-sum constraint</text>
+<text x="60" y="132" font-size="26">Scaled query–key scores <tspan class="code" xml:space="preserve">[6, 6]</tspan></text>
+<text x="60" y="173" font-size="22"><tspan class="math-upright">Ω</tspan> / √(<tspan class="math">d</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">k</tspan></tspan>) · no row-sum constraint</text>
 <text x="480" y="238" font-size="32">↓</text>
 <rect x="35" y="250" width="930" height="115" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="60" y="292" font-size="26">1. Softmax → attention weights [6, 6]</text>
+<text x="60" y="292" font-size="26">1. Softmax → attention weights <tspan class="code" xml:space="preserve">[6, 6]</tspan></text>
 <text x="60" y="333" font-size="22">Each query row sums to ≈ 1, but still includes future positions.</text>
 <text x="480" y="398" font-size="32">↓</text>
 <rect x="35" y="410" width="930" height="115" rx="12" fill="#fff1cf" stroke="#aebed1"/>
-<text x="60" y="452" font-size="26">2. Multiply by mask → retained weights [6, 6]</text>
-<text x="60" y="493" font-size="22">weights * tril(ones) · future entries become zero · diagonal stays</text>
+<text x="60" y="452" font-size="26">2. Multiply by mask → retained weights <tspan class="code" xml:space="preserve">[6, 6]</tspan></text>
+<text x="60" y="493" font-size="22"><tspan class="code" xml:space="preserve">weights * tril(ones)</tspan> · future entries become zero · diagonal stays</text>
 <text x="480" y="558" font-size="32">↓</text>
 <rect x="35" y="570" width="930" height="115" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="60" y="612" font-size="26">3. Divide by row sums → causal weights [6, 6]</text>
+<text x="60" y="612" font-size="26">3. Divide by row sums → causal weights <tspan class="code" xml:space="preserve">[6, 6]</tspan></text>
 <text x="60" y="653" font-size="22">Each query row sums to ≈ 1 again; future contributions stay zero.</text>
-<text x="35" y="735" font-size="21">Masking uses * (cell by cell). Comparing queries and keys uses @ (matrix multiplication).</text>
+<text x="35" y="735" font-size="21">Masking uses <tspan class="code" xml:space="preserve">*</tspan> (cell by cell). Comparing queries and keys uses <tspan class="code" xml:space="preserve">@</tspan> (matrix multiplication).</text>
 </g></svg>

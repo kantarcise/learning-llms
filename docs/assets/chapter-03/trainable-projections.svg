@@ -1,34 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="850" viewBox="0 0 1000 850" role="img" aria-labelledby="title desc"><title id="title">Three learned projections of the same input</title><desc id="desc">Journey at position two has vector [0.55,0.87,0.66]. Three independent three-by-two matrices produce its query, key, and value vectors. These are projections, not attention scores.</desc><rect width="1000" height="850" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="850" viewBox="0 0 1000 850" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Three learned projections of the same input</title><desc id="desc">Journey at position two has vector [0.55,0.87,0.66]. Three independent three-by-two matrices produce its query, key, and value vectors. These are projections, not attention scores.</desc><rect width="1000" height="850" fill="#f5f7fb"/>
 <text x="40" y="55" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">One input, three learned transformations</text>
 <rect x="250" y="100" width="500" height="105" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="280" y="140" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan>: “journey” · shape [3]</text>
+<text x="280" y="140" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan>: “journey” · shape <tspan class="code" xml:space="preserve">[3]</tspan></text>
 <text x="280" y="181" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#26364c">[0.55, 0.87, 0.66]</text>
 <path d="M500 210 L180 285" stroke="#526783" stroke-width="2" fill="none"/>
 <rect x="40" y="290" width="280" height="130" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="70" y="336" font-family="Arial,Helvetica,sans-serif" font-size="29" fill="#26364c">× W<tspan baseline-shift="sub" font-size="70%">Q</tspan></text>
-<text x="70" y="379" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Parameter shape [3, 2]</text>
+<text x="70" y="336" font-family="Arial,Helvetica,sans-serif" font-size="29" fill="#26364c">× <tspan class="math">W</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">Q</tspan></tspan></text>
+<text x="70" y="379" font-family="Arial,Helvetica,sans-serif" font-size="21" fill="#26364c">Parameter shape <tspan class="code" xml:space="preserve">[3, 2]</tspan></text>
 <text x="170" y="465" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="40" y="490" width="280" height="120" rx="12" fill="#fff" stroke="#aebed1"/>
-<text x="60" y="530" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">q<tspan baseline-shift="super" font-size="70%">(2)</tspan> · shape [2]</text>
+<text x="60" y="530" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c"><tspan class="math">q</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · shape <tspan class="code" xml:space="preserve">[2]</tspan></text>
 <text x="60" y="575" font-family="Arial,Helvetica,sans-serif" font-size="25" fill="#26364c">[0.4306, 1.4551]</text>
 <path d="M500 210 L500 285" stroke="#526783" stroke-width="2" fill="none"/>
 <rect x="360" y="290" width="280" height="130" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="390" y="336" font-family="Arial,Helvetica,sans-serif" font-size="29" fill="#26364c">× W<tspan baseline-shift="sub" font-size="70%">K</tspan></text>
-<text x="390" y="379" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Parameter shape [3, 2]</text>
+<text x="390" y="336" font-family="Arial,Helvetica,sans-serif" font-size="29" fill="#26364c">× <tspan class="math">W</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">K</tspan></tspan></text>
+<text x="390" y="379" font-family="Arial,Helvetica,sans-serif" font-size="21" fill="#26364c">Parameter shape <tspan class="code" xml:space="preserve">[3, 2]</tspan></text>
 <text x="490" y="465" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="360" y="490" width="280" height="120" rx="12" fill="#fff" stroke="#aebed1"/>
-<text x="380" y="530" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">k<tspan baseline-shift="super" font-size="70%">(2)</tspan> · shape [2]</text>
+<text x="380" y="530" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c"><tspan class="math">k</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · shape <tspan class="code" xml:space="preserve">[2]</tspan></text>
 <text x="380" y="575" font-family="Arial,Helvetica,sans-serif" font-size="25" fill="#26364c">[0.4433, 1.1419]</text>
 <path d="M500 210 L820 285" stroke="#526783" stroke-width="2" fill="none"/>
 <rect x="680" y="290" width="280" height="130" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="710" y="336" font-family="Arial,Helvetica,sans-serif" font-size="29" fill="#26364c">× W<tspan baseline-shift="sub" font-size="70%">V</tspan></text>
-<text x="710" y="379" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Parameter shape [3, 2]</text>
+<text x="710" y="336" font-family="Arial,Helvetica,sans-serif" font-size="29" fill="#26364c">× <tspan class="math">W</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">V</tspan></tspan></text>
+<text x="710" y="379" font-family="Arial,Helvetica,sans-serif" font-size="21" fill="#26364c">Parameter shape <tspan class="code" xml:space="preserve">[3, 2]</tspan></text>
 <text x="810" y="465" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="680" y="490" width="280" height="120" rx="12" fill="#fff" stroke="#aebed1"/>
-<text x="700" y="530" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">v<tspan baseline-shift="super" font-size="70%">(2)</tspan> · shape [2]</text>
+<text x="700" y="530" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c"><tspan class="math">v</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · shape <tspan class="code" xml:space="preserve">[2]</tspan></text>
 <text x="700" y="575" font-family="Arial,Helvetica,sans-serif" font-size="25" fill="#26364c">[0.3951, 1.0037]</text>
 <text x="40" y="670" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c">Each output coordinate combines all three input coordinates.</text>
-<text x="40" y="715" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c">The same W matrices are reused at every token position.</text>
-<text x="40" y="760" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">These matrices are stored parameters; q, k, v are computed vectors.</text>
+<text x="40" y="715" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c">The same <tspan class="math">W</tspan> matrices are reused at every token position.</text>
+<text x="40" y="760" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">These matrices are stored parameters; <tspan class="math">q</tspan>, <tspan class="math">k</tspan>, <tspan class="math">v</tspan> are computed vectors.</text>
 <text x="40" y="805" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Seeded book example. No attention scores or mixing calculated yet.</text>
 </svg>

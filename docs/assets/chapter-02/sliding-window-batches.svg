@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1020" viewBox="0 0 1100 1020" role="img" aria-labelledby="title desc"><title id="title">Sliding windows: inputs and one-token-shifted targets</title><desc id="desc">Original text Small models learn from text. We train them one batch at a time. GPT-2 encoding yields fifteen IDs. Three windows of length four start at offsets zero, four, and eight. Each target window starts one token after its input window. Dataset items are length-four integer tensors; a batch of three has input and target shapes three by four.</desc><rect width="1100" height="1020" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1020" viewBox="0 0 1100 1020" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Sliding windows: inputs and one-token-shifted targets</title><desc id="desc">Original text Small models learn from text. We train them one batch at a time. GPT-2 encoding yields fifteen IDs. Three windows of length four start at offsets zero, four, and eight. Each target window starts one token after its input window. Dataset items are length-four integer tensors; a batch of three has input and target shapes three by four.</desc><rect width="1100" height="1020" fill="#f5f7fb"/>
 <text x="35" y="47" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c" font-weight="700">One token stream → paired training tensors</text>
 <text x="35" y="82" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#26364c" font-weight="400">GPT-2 encoding · window length 4 · stride 4 · batch size 3 · shuffle off</text>
 <rect x="25" y="105" width="1050" height="225" rx="10" fill="#fff" stroke="#dbe2ed"/>
@@ -23,7 +30,7 @@
 <text x="45" y="261" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Piece</text>
 <text x="45" y="290" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">ID</text>
 <rect x="25" y="355" width="1050" height="245" rx="10" fill="#fff" stroke="#dbe2ed"/>
-<text x="45" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="700">INPUTS x   ·   integer tensor [3, 4]</text>
+<text x="45" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="700">INPUTS <tspan class="math">x</tspan>   ·   integer tensor <tspan class="code" xml:space="preserve">[3, 4]</tspan></text>
 <text x="45" y="420" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Row = one example; column = one prediction position.</text>
 <text x="45" y="465" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 1</text>
 <text x="165" y="465" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 0</text>
@@ -68,7 +75,7 @@
 <text x="855" y="564" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="700">379</text>
 <text x="855" y="585" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">·at</text>
 <rect x="25" y="620" width="1050" height="245" rx="10" fill="#fff" stroke="#dbe2ed"/>
-<text x="45" y="655" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="700">TARGETS y   ·   integer tensor [3, 4]</text>
+<text x="45" y="655" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c" font-weight="700">TARGETS <tspan class="math">y</tspan>   ·   integer tensor <tspan class="code" xml:space="preserve">[3, 4]</tspan></text>
 <text x="45" y="685" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Row = one example; column = one prediction position.</text>
 <text x="45" y="730" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26364c" font-weight="400">Window 1</text>
 <text x="165" y="730" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#26364c" font-weight="400">offset 1</text>

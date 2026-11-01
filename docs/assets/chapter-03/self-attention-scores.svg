@@ -1,43 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="850" viewBox="0 0 1000 850" role="img" aria-labelledby="title desc"><title id="title">Compute scores for the second position</title><desc id="desc">Use the second input vector [0,2,1] as query. Dot products with the four inputs give scores [1,5,2,4]. These are not normalized attention weights.</desc><rect width="1000" height="850" fill="#f5f7fb"/><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 5 L0 10" fill="#526783"/></marker></defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="850" viewBox="0 0 1000 850" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Compute scores for the second position</title><desc id="desc">Use the second input vector [0,2,1] as query. Dot products with the four inputs give scores [1,5,2,4]. These are not normalized attention weights.</desc><rect width="1000" height="850" fill="#f5f7fb"/><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 5 L0 10" fill="#526783"/></marker></defs>
 <text x="40" y="50" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="700" fill="#26364c">First step: compare one input with every input</text>
 <text x="40" y="93" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Same invented vectors; no learned query/key/value projections yet.</text>
 <rect x="40" y="145" width="200" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="55" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">1. Small</text>
-<text x="55" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(1)</tspan></text>
-<text x="55" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[1, 0, 1]</text>
+<text x="55" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(1)</tspan></text>
+<text x="55" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[1, 0, 1]</tspan></text>
 <rect x="280" y="145" width="200" height="125" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
 <text x="295" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">2. models</text>
-<text x="295" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan></text>
-<text x="295" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[0, 2, 1]</text>
+<text x="295" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan></text>
+<text x="295" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[0, 2, 1]</tspan></text>
 <rect x="520" y="145" width="200" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="535" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">3. learn</text>
-<text x="535" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(3)</tspan></text>
-<text x="535" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[1, 1, 0]</text>
+<text x="535" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(3)</tspan></text>
+<text x="535" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[1, 1, 0]</tspan></text>
 <rect x="760" y="145" width="200" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="775" y="178" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="700" fill="#26364c">4. patterns</text>
-<text x="775" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(4)</tspan></text>
-<text x="775" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[0, 1, 2]</text>
+<text x="775" y="215" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(4)</tspan></text>
+<text x="775" y="250" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[0, 1, 2]</tspan></text>
 <rect x="200" y="315" width="600" height="70" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="230" y="359" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#26364c">Query = x<tspan baseline-shift="super" font-size="70%">(2)</tspan> = [0, 2, 1]  (the “models” position)</text>
+<text x="230" y="359" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#26364c">Query = <tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> = <tspan class="code" xml:space="preserve">[0, 2, 1]</tspan>  (the “models” position)</text>
 <path d="M140 400 L140 465" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="40" y="475" width="200" height="105" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="60" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan> · x<tspan baseline-shift="super" font-size="70%">(1)</tspan></text>
-<text x="60" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">21</tspan> = 1</text>
+<text x="60" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · <tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(1)</tspan></text>
+<text x="60" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">21</tspan> = 1</text>
 <path d="M380 400 L380 465" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="280" y="475" width="200" height="105" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="300" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan> · x<tspan baseline-shift="super" font-size="70%">(2)</tspan></text>
-<text x="300" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">22</tspan> = 5</text>
+<text x="300" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · <tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan></text>
+<text x="300" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">22</tspan> = 5</text>
 <path d="M620 400 L620 465" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="520" y="475" width="200" height="105" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="540" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan> · x<tspan baseline-shift="super" font-size="70%">(3)</tspan></text>
-<text x="540" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">23</tspan> = 2</text>
+<text x="540" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · <tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(3)</tspan></text>
+<text x="540" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">23</tspan> = 2</text>
 <path d="M860 400 L860 465" stroke="#526783" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 <rect x="760" y="475" width="200" height="105" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="780" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan> · x<tspan baseline-shift="super" font-size="70%">(4)</tspan></text>
-<text x="780" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">24</tspan> = 4</text>
-<text x="40" y="640" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">For position 3:  [0, 2, 1] · [1, 1, 0]</text>
+<text x="780" y="512" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · <tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(4)</tspan></text>
+<text x="780" y="552" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">24</tspan> = 4</text>
+<text x="40" y="640" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">For position 3:  <tspan class="code" xml:space="preserve">[0, 2, 1]</tspan> · <tspan class="code" xml:space="preserve">[1, 1, 0]</tspan></text>
 <text x="40" y="682" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Multiply matching coordinates, then sum: 0×1 + 2×1 + 1×0 = 2</text>
-<text x="40" y="738" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Scores: [1, 5, 2, 4] → normalization → mixing weights → context vector</text>
+<text x="40" y="738" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Scores: <tspan class="code" xml:space="preserve">[1, 5, 2, 4]</tspan> → normalization → mixing weights → context vector</text>
 <text x="40" y="782" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" fill="#26364c">We are at the score stage. Scores are not probabilities or model parameters.</text>
 <text x="40" y="820" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">All values are exact for this toy example; no display truncation.</text>
 </svg>
