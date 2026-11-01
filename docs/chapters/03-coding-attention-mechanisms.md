@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. The exercise and efficient multi-head implementation are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. The efficient multi-head implementation is still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1781,7 +1781,53 @@ print(context_vecs[1, 0])            # same token in the duplicate sentence
 
 Two different counts happen to equal two here: **batch size is two**, and **head count is also two**. Their equality is coincidental. Concatenation incorporates the head outputs into the feature axis, so there is no separate head axis in the final `[2, 6, 4]` tensor. These are context-vector coordinates, not vocabulary probabilities or a newly stored token embedding table.
 
-We stop here before Exercise 3.2 and the more efficient grouped implementation.
+#### Exercise 3.2: Returning two-dimensional embedding vectors
+
+The book asks us to adjust the `MultiHeadAttentionWrapper` call so that each token's final context vector has **two coordinates instead of four**, while keeping `num_heads=2` and leaving the class implementation unchanged.
+
+The key is that this wrapper's `d_out` argument controls **each head's output width**, not the combined width:
+
+$$
+\text{combined width} = \text{num\_heads} \times d_{\text{out}}
+$$
+
+1. The preceding example uses two heads with `d_out=2`, giving `2 × 2 = 4` coordinates per token.
+2. To obtain two coordinates while keeping two heads, set **`d_out=1`**, giving `2 × 1 = 2`.
+
+Reuse the existing `batch`, whose input shape remains `[2, 6, 3]`:
+
+```python
+# Only the per-head output-width argument changes from the earlier call.
+torch.manual_seed(123)
+mha_two_dim = MultiHeadAttentionWrapper(
+    d_in=3,
+    d_out=1,
+    context_length=batch.shape[1],
+    dropout=0.0,
+    num_heads=2,
+)
+context_vecs_two_dim = mha_two_dim(batch)
+print("context_vecs.shape:", context_vecs_two_dim.shape)
+```
+
+```text
+context_vecs.shape: torch.Size([2, 6, 2])
+```
+
+Each head now produces `[2, 6, 1]`. Concatenating along the last axis gives `[2, 6, 2]`: two sentences, six token positions each, and two coordinates per token.
+
+```text
+For one token:
+Head 1:  [a]
+Head 2:  [b]
+Joined:  [a, b]
+```
+
+!!! note "Input width and output width are different choices"
+
+    `d_in=3` still describes the three coordinates in each input vector. We keep that argument because the input batch has not changed. `d_out=1` changes the learned projection sizes inside each newly created head. The resulting two coordinates are newly computed using those narrower projections; they need not equal the first two coordinates from the earlier four-coordinate result.
+
+The exercise changes only a constructor argument. The existing wrapper already concatenates any compatible per-head output widths; its implementation needs no edit. The more efficient grouped implementation is the next reading step.
 
 ## End of chapter
 
