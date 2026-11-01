@@ -1378,7 +1378,7 @@ After dropout and ×2:    [0.40, 0.00, 1.00, 0.00]  sum = 1.40
 
 !!! note "Scaling is not row renormalization"
 
-    In Section 3.5.1 we divided by the retained row sum to produce a distribution over permitted positions. Dropout instead uses the fixed factor `1 / (1 - p)`. We **do not renormalize afterward**. Rows can sum to more or less than one, and a surviving weight can exceed one. Each entry's expected value is preserved: `0.5 × 0 + 0.5 × (2 × a) = a`. This is an average over random masks, not a promise about each individual output row.
+    In Section 3.5.1 we divided by the retained row sum to produce a distribution over permitted positions. Dropout instead uses the fixed factor `1 / (1 - p)`. We **do not renormalize afterward**. Rows can sum to more or less than one, and a surviving weight can exceed one. Each entry's expected value is preserved: `0.5 × 0 + 0.5 × (2 × a) = a`. For example, a weight of `0.3` becomes either `0` or `0.6`, with equal probability, so its expected value remains `0.3`. For fixed value vectors, this also preserves the expected weighted sum before subsequent nonlinear operations. This is an average over random masks, not a promise about each individual output row or the full model output.
 
 #### Try `nn.Dropout` on ones first
 
@@ -1397,6 +1397,10 @@ print(dropped_example)
 
 Every output entry is either `0` (dropped) or `2` (kept and scaled). The shape stays `[6, 6]`. The seed makes a demonstration repeatable in the same environment; the exact random pattern can differ across PyTorch versions or devices, so compare the behavior rather than requiring the book's precise mask.
 
+!!! note "Is the book's dropout reproducibility issue resolved?"
+
+    As checked on **November 1, 2026**, [PyTorch issue #121595](https://github.com/pytorch/pytorch/issues/121595), opened by Raschka, remains open. The discussion traced the reported CPU discrepancy to different Bernoulli sampling implementations in builds with and without Intel's Math Kernel Library (MKL). Those implementations can produce different masks from the same seed. Operating system alone is therefore not the whole explanation. Maintainers consider this permitted behavior under PyTorch's reproducibility policy: identical seeds do not guarantee identical results across builds, platforms, devices, or releases. A different zero pattern does not by itself mean dropout is incorrect; the drop probability and survivor scaling are the behavior to check.
+
 Applied to the causal weights from Section 3.5.1:
 
 ```python
@@ -1406,7 +1410,7 @@ dropped_weights = dropout(masked_attn_weights)
 training_contexts = dropped_weights @ values  # [6, 2]
 ```
 
-Causal zeros remain zero: neither dropping nor scaling can create a future contribution. Randomly dropped entries remove individual query-to-value contributions on this pass; they do not remove entire tokens from every query.
+The dropout mask is applied to **attention weights after softmax**, even though Figure 3.22 uses “attention scores” in one annotation. These are the computed mixing coefficients, not the raw query–key scores or learned projection matrices. Causal zeros remain zero: neither dropping nor scaling can create a future contribution. Randomly dropped entries remove individual query-to-value contributions on this pass; they do not remove entire tokens from every query.
 
 !!! tip "Training mode and evaluation mode"
 
