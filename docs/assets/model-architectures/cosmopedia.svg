@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style>
 <title id="title">Cosmopedia model architecture</title>
 <desc id="desc">Code-derived decoder-only transformer: learned token and position embeddings, 4 pre-normalized blocks, final LayerNorm, and vocabulary logits. Each block has causal attention and a GELU feedforward network with two residual additions. Width 256, feedforward width 1024, 4 attention heads. Input and output share weights.</desc>
 <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#46566b" stroke-width="1.5"/></marker></defs>
@@ -11,14 +18,14 @@
 <path d="M200,230 l14,-14 v90 l-14,14 Z" fill="#a6b1c0"/>
 <rect x="70" y="230" width="130" height="90" fill="#e4e9ef" stroke="#a6b1c0"/>
 <text x="88" y="265" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="700">Token IDs</text>
-<text x="88" y="296" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#26364c" font-weight="400">[B, T]</text>
+<text x="88" y="296" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#26364c" font-weight="400"><tspan class="code" xml:space="preserve">[B, T]</tspan></text>
 <polyline points="216,273 282,273" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M300,210 l14,-14 h200 l-14,14 Z" fill="#edfaf6" stroke="#80b7a9"/>
 <path d="M500,210 l14,-14 v130 l-14,14 Z" fill="#80b7a9"/>
 <rect x="300" y="210" width="200" height="130" fill="#d8f1eb" stroke="#80b7a9"/>
 <text x="317" y="250" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="700">Token lookup</text>
 <text x="317" y="279" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#26364c" font-weight="400">+ position lookup</text>
-<text x="317" y="313" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#26364c" font-weight="400">[B, T, 256]</text>
+<text x="317" y="313" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#26364c" font-weight="400"><tspan class="code" xml:space="preserve">[B, T, 256]</tspan></text>
 <polyline points="518,273 590,273" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M649,171 l14,-14 h184 l-14,14 Z" fill="#eff4ff" stroke="#8eaee2"/>
 <path d="M833,171 l14,-14 v130 l-14,14 Z" fill="#8eaee2"/>
@@ -34,7 +41,7 @@
 <rect x="610" y="210" width="184" height="130" fill="#dce8ff" stroke="#8eaee2"/>
 <text x="627" y="253" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="700">Transformer</text>
 <text x="627" y="283" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="400">4 blocks</text>
-<text x="627" y="315" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#26364c" font-weight="400">[B, T, 256]</text>
+<text x="627" y="315" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#26364c" font-weight="400"><tspan class="code" xml:space="preserve">[B, T, 256]</tspan></text>
 <polyline points="850,273 915,273" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M935,230 l14,-14 h150 l-14,14 Z" fill="#f7efff" stroke="#b397d1"/>
 <path d="M1085,230 l14,-14 v90 l-14,14 Z" fill="#b397d1"/>
@@ -47,12 +54,12 @@
 <rect x="1190" y="200" width="290" height="155" fill="#ffebcf" stroke="#d7ae73"/>
 <text x="1210" y="239" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="700">Vocabulary projection</text>
 <text x="1210" y="275" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="400">256 → 49,152</text>
-<text x="1210" y="310" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="400">Logits [B, T, 49,152]</text>
+<text x="1210" y="310" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#26364c" font-weight="400">Logits <tspan class="code" xml:space="preserve">[B, T, 49,152]</tspan></text>
 <text x="70" y="399" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#26364c" font-weight="400">Integer IDs become floating-point vectors; transformer blocks keep the same number of positions and the same vector width.</text>
-<text x="70" y="435" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#26364c" font-weight="400">Generation selects from the final position’s logits. Training compares each supervised position with its next-token target.</text>
+<text x="70" y="435" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#26364c" font-weight="400">Generation selects from the final position’<tspan class="math">s</tspan> logits. Training compares each supervised position with its next-token target.</text>
 <rect x="32" y="500" width="1536" height="360" rx="20" fill="white" stroke="#dbe2ed"/>
 <text x="58" y="536" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#65738a" font-weight="700">02   INSIDE ONE BLOCK  /  REPEATED FOUR TIMES WITH DIFFERENT WEIGHTS</text>
-<text x="65" y="620" font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#26364c" font-weight="700">x</text>
+<text x="65" y="620" font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#26364c" font-weight="700"><tspan class="math">x</tspan></text>
 <polyline points="85,615 160,615" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M175,585 l10,-10 h105 l-10,10 Z" fill="#f7efff" stroke="#b397d1"/>
 <path d="M280,585 l10,-10 v65 l-10,10 Z" fill="#b397d1"/>
@@ -67,9 +74,9 @@
 <polyline points="574,615 608,615" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <circle cx="630" cy="615" r="22" fill="#fff" stroke="#46566b" stroke-width="2"/>
 <text x="623" y="622" font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#26364c" font-weight="700">+</text>
-<text x="663" y="623" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="700">y</text>
+<text x="663" y="623" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="700"><tspan class="math">y</tspan></text>
 <polyline points="105,615 105,555 630,555 630,591" fill="none" stroke="#438d79" stroke-width="2.5" marker-end="url(#arrow)"/>
-<text x="285" y="551" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#327763" font-weight="400">shortcut: x</text>
+<text x="285" y="551" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#327763" font-weight="400">shortcut: <tspan class="math">x</tspan></text>
 <polyline points="688,615 740,615" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M755,585 l10,-10 h105 l-10,10 Z" fill="#f7efff" stroke="#b397d1"/>
 <path d="M860,585 l10,-10 v65 l-10,10 Z" fill="#b397d1"/>
@@ -96,11 +103,11 @@
 <circle cx="1340" cy="615" r="22" fill="#fff" stroke="#46566b" stroke-width="2"/>
 <text x="1333" y="622" font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#26364c" font-weight="700">+</text>
 <polyline points="1366,615 1465,615" fill="none" stroke="#46566b" stroke-width="2.5" marker-end="url(#arrow)"/>
-<text x="1480" y="623" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="700">z</text>
+<text x="1480" y="623" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="700"><tspan class="math">z</tspan></text>
 <polyline points="700,615 700,555 1340,555 1340,591" fill="none" stroke="#438d79" stroke-width="2.5" marker-end="url(#arrow)"/>
-<text x="1020" y="551" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#327763" font-weight="400">shortcut: y</text>
-<text x="65" y="748" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="700">y = x + attention(norm1(x))      z = y + feedforward(norm2(y))</text>
-<text x="65" y="788" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">x, y, z: [B, T, 256]     Feedforward intermediate: [B, T, 1024]     Each norm has its own learned scale and shift.</text>
+<text x="1020" y="551" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#327763" font-weight="400">shortcut: <tspan class="math">y</tspan></text>
+<text x="65" y="748" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#26364c" font-weight="700"><tspan class="code" xml:space="preserve">y = x + attention(norm1(x))      z = y + feedforward(norm2(y))</tspan></text>
+<text x="65" y="788" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400"><tspan class="math">x</tspan>, <tspan class="math">y</tspan>, <tspan class="math">z</tspan>: <tspan class="code" xml:space="preserve">[B, T, 256]</tspan> · Feedforward intermediate: <tspan class="code" xml:space="preserve">[B, T, 1024]</tspan> · Each norm has its own learned scale and shift.</text>
 <text x="65" y="826" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#26364c" font-weight="400">Attention mixes accessible positions. The feedforward network transforms each position separately using shared weights.</text>
 <rect x="32" y="884" width="748" height="191" rx="20" fill="white" stroke="#dbe2ed"/>
 <rect x="800" y="884" width="768" height="191" rx="20" fill="white" stroke="#dbe2ed"/>
@@ -109,8 +116,8 @@
 <text x="56" y="994" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">Position embeddings: 256 rows × 256 coordinates</text>
 <text x="56" y="1031" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">Output reuses the token table (weight tying).</text>
 <text x="824" y="922" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#65738a" font-weight="700">04   ATTENTION DETAIL</text>
-<text x="824" y="960" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">One combined projection: 256 → 768 → split Q, K, V</text>
+<text x="824" y="960" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">One combined projection: 256 → 768 → split <tspan class="math">Q</tspan>, <tspan class="math">K</tspan>, <tspan class="math">V</tspan></text>
 <text x="824" y="994" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">4 heads × 64 coordinates → concatenate → width 256</text>
-<text x="824" y="1031" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">Causal softmax(QKᵀ / √64) V, then output projection.</text>
-<text x="48" y="1105" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#65738a" font-weight="400">B = batch examples · T = input positions · Block sizes are schematic, not parameter counts or spatial image dimensions.</text>
+<text x="824" y="1031" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#26364c" font-weight="400">Causal softmax(<tspan class="math">Q</tspan> <tspan class="math">K</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%"><tspan class="math-upright">T</tspan></tspan> / √64) <tspan class="math">V</tspan>, then output projection.</text>
+<text x="48" y="1105" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#65738a" font-weight="400"><tspan class="math">B</tspan> = batch examples · <tspan class="math">T</tspan> = input positions · Block sizes are schematic, not parameter counts or spatial image dimensions.</text>
 </svg>

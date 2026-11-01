@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">One row of weights for each query</title><desc id="desc">Six query rows and six contributing columns. Row two, journey, is highlighted and matches the previously calculated weights. Values rounded to four decimals; full precision rows sum to one.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">One row of weights for each query</title><desc id="desc">Six query rows and six contributing columns. Row two, journey, is highlighted and matches the previously calculated weights. Values rounded to four decimals; full precision rows sum to one.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
 <text x="40" y="55" font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="700" fill="#26364c">Each query gets its own mixture</text>
-<text x="40" y="100" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">ij</tspan>: row i asks; column j contributes</text>
+<text x="40" y="100" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" fill="#26364c"><tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">ij</tspan></tspan>: row <tspan class="math">i</tspan> asks; column <tspan class="math">j</tspan> contributes</text>
 <text x="220" y="165" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#26364c">Columns → contributing input positions</text>
 <text x="218" y="215" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#26364c">Your</text>
 <text x="333" y="215" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#26364c">journey</text>
@@ -88,7 +95,7 @@
 <text x="797" y="656" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">0.1896</text>
 <text x="40" y="745" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="700" fill="#26364c">Rows ↓ query positions</text>
 <text x="40" y="790" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Highlighted row 2 = weights we already computed for “journey”.</text>
-<text x="40" y="835" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">23</tspan> ≈ 0.2333: contribution of “starts” to the context for “journey”.</text>
+<text x="40" y="835" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c"><tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">23</tspan> ≈ 0.2333: contribution of “starts” to the context for “journey”.</text>
 <text x="40" y="885" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Each full-precision row sums to ≈ 1. Columns need not sum to 1.</text>
 <text x="40" y="930" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Rounded display values may not add up to exactly 1.</text>
 <text x="40" y="970" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Inputs from the book example; original companion layout. No causal mask.</text>

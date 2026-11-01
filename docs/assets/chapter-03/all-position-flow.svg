@@ -1,25 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">All-position self-attention shape trace</title><desc id="desc">The input X has six rows and three coordinates. X times its transpose produces six by six scores. Softmax normalizes across each row. Weights times original X produces six three-coordinate context vectors.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">All-position self-attention shape trace</title><desc id="desc">The input X has six rows and three coordinates. X times its transpose produces six by six scores. Softmax normalizes across each row. Weights times original X produces six three-coordinate context vectors.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
 <text x="40" y="55" font-family="Arial,Helvetica,sans-serif" font-size="32" font-weight="700" fill="#26364c">Same three steps, now for every query</text>
 <rect x="40" y="100" width="920" height="115" rx="10" fill="#fff" stroke="#aebed1"/>
-<text x="65" y="139" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">INPUTS X: [6, 3]</text>
+<text x="65" y="139" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">INPUTS <tspan class="math">X</tspan>: <tspan class="code" xml:space="preserve">[6, 3]</tspan></text>
 <text x="65" y="179" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">6 token positions × 3 coordinates per vector</text>
 <text x="480" y="249" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↓</text>
 <rect x="40" y="265" width="920" height="150" rx="10" fill="#dce9ff" stroke="#aebed1"/>
-<text x="65" y="307" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#26364c">1. COMPARE · scores = X @ X.T</text>
-<text x="65" y="347" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[6, 3] @ [3, 6] → [6, 6]</text>
-<text x="65" y="385" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Row i compares query i against all six original input vectors.</text>
+<text x="65" y="307" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#26364c">1. COMPARE · <tspan class="math-upright">Ω</tspan> = <tspan class="math">X</tspan> <tspan class="math">X</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%"><tspan class="math-upright">T</tspan></tspan></text>
+<text x="65" y="347" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[6, 3]</tspan> <tspan class="code" xml:space="preserve">@</tspan> <tspan class="code" xml:space="preserve">[3, 6]</tspan> → <tspan class="code" xml:space="preserve">[6, 6]</tspan></text>
+<text x="65" y="385" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Row <tspan class="math">i</tspan> compares query <tspan class="math">i</tspan> against all six original input vectors.</text>
 <text x="480" y="449" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↓</text>
 <rect x="40" y="465" width="920" height="150" rx="10" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="65" y="507" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">2. NORMALIZE · weights = softmax(scores, dim=-1)</text>
-<text x="65" y="547" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c">[6, 6] → [6, 6] · normalize across columns within each row</text>
+<text x="65" y="507" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="700" fill="#26364c">2. NORMALIZE · <tspan class="math">A</tspan> = softmax(<tspan class="math-upright">Ω</tspan>), row by row</text>
+<text x="65" y="547" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[6, 6]</tspan> → <tspan class="code" xml:space="preserve">[6, 6]</tspan> · normalize across columns within each row</text>
 <text x="65" y="585" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Six independent mixtures; each query row sums to ≈ 1.</text>
 <text x="480" y="649" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#26364c">↓</text>
 <rect x="40" y="665" width="920" height="150" rx="10" fill="#dce9ff" stroke="#aebed1"/>
-<text x="65" y="707" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#26364c">3. MIX · contexts = weights @ X</text>
-<text x="65" y="747" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c">[6, 6] @ [6, 3] → [6, 3]</text>
-<text x="65" y="785" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Use the original X again. Each output row is a weighted sum.</text>
+<text x="65" y="707" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#26364c">3. MIX · <tspan class="math">Z</tspan> = <tspan class="math">A</tspan> <tspan class="math">X</tspan></text>
+<text x="65" y="747" font-family="Arial,Helvetica,sans-serif" font-size="26" font-weight="400" fill="#26364c"><tspan class="code" xml:space="preserve">[6, 6]</tspan> <tspan class="code" xml:space="preserve">@</tspan> <tspan class="code" xml:space="preserve">[6, 3]</tspan> → <tspan class="code" xml:space="preserve">[6, 3]</tspan></text>
+<text x="65" y="785" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="400" fill="#26364c">Use the original <tspan class="math">X</tspan> again. Each output row is a weighted sum.</text>
 <rect x="40" y="850" width="920" height="105" rx="10" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="65" y="891" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#26364c">Row 2: z<tspan baseline-shift="super" font-size="70%">(2)</tspan> ≈ [0.4419, 0.6515, 0.5683]</text>
+<text x="65" y="891" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="700" fill="#26364c">Row 2: <tspan class="math">z</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> ≈ [0.4419, 0.6515, 0.5683]</text>
 <text x="65" y="929" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" fill="#26364c">Matches the single-query result. No context feeds into another here.</text>
-<text x="40" y="984" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Simplified attention: no learned Q/K/V projections and no causal mask yet.</text>
+<text x="40" y="984" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" fill="#26364c">Simplified attention: no learned <tspan class="math">Q</tspan>/<tspan class="math">K</tspan>/<tspan class="math">V</tspan> projections and no causal mask yet.</text>
 </svg>
