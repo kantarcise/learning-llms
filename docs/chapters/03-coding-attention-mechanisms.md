@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 now compares separate query projections with one larger projection; the following batched-multiplication walkthrough is still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 now compares separate query projections with one larger projection; the following batched-multiplication example now explains independent per-head score matrices.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -2069,7 +2069,98 @@ Here the code-style names are readable text equivalents of the subscripted mathe
 
 In PyTorch storage order, packing two `nn.Linear(3, 2)` query weights means stacking their `[2, 3]` weight tables along dimension zero to form `[4, 3]`. That is the transpose of placing `[3, 2]` mathematical matrices side by side. This storage convention explains how the single larger `W_query` layer represents both heads; `view` and `transpose` then arrange its output as `[B, H, T, D]` for attention.
 
-We pause here before the book's next batched-multiplication example.
+#### Batched matrix multiplication: one score matrix per head
+
+The book next isolates the matrix multiplication with a small tensor. This example changes the sizes from our earlier walkthrough: **one batch example, two heads, three token positions, and four coordinates per token per head**. The supplied numbers illustrate the operation; they are not trained-model results.
+
+```python
+# Example from Section 3.6.2 of the book: [B, H, T, D] = [1, 2, 3, 4].
+a = torch.tensor([
+    [
+        [
+            [0.2745, 0.6584, 0.2775, 0.8573],
+            [0.8993, 0.0390, 0.9268, 0.7388],
+            [0.7179, 0.7058, 0.9156, 0.4340],
+        ],
+        [
+            [0.0772, 0.3565, 0.1479, 0.5331],
+            [0.4066, 0.2318, 0.4545, 0.9737],
+            [0.4606, 0.5159, 0.4220, 0.5786],
+        ],
+    ]
+])
+
+# Swap token and coordinate axes; preserve batch and head axes.
+result = a @ a.transpose(2, 3)
+print(result)
+print("result.shape:", result.shape)
+```
+
+```text
+tensor([[[[1.3208, 1.1631, 1.2879],
+          [1.1631, 2.2150, 1.8424],
+          [1.2879, 1.8424, 2.0402]],
+
+         [[0.4391, 0.7003, 0.5903],
+          [0.7003, 1.3737, 1.0620],
+          [0.5903, 1.0620, 0.9912]]]])
+result.shape: torch.Size([1, 2, 3, 3])
+```
+
+The multiplication acts on the **last two axes**; the leading batch/head axes identify which matrices belong together:
+
+```text
+a:                    [1, 2, 3, 4]
+a.transpose(2, 3):    [1, 2, 4, 3]
+result:               [1, 2, 3, 3]
+                       B  H  T  T
+
+For each (batch example, head): [3, 4] @ [4, 3] → [3, 3]
+```
+
+We see two matrices in the printout because there are two heads. They are **two `[3, 3]` slices inside one `[1, 2, 3, 3]` tensor**, not two separate returned tensors. Each score compares a pair of token vectors within that head. There are no comparisons between head 1 and head 2.
+
+For instance, the first entry of the first head's result is its first token vector dotted with itself:
+
+```text
+0.2745² + 0.6584² + 0.2775² + 0.8573² ≈ 1.3208
+```
+
+#### Check the same calculation one head at a time
+
+The book then unpacks the grouped operation. Once we select a single example and head, we have an ordinary two-dimensional matrix, so `.T` is appropriate:
+
+```python
+first_head = a[0, 0, :, :]   # [3, 4]
+first_res = first_head @ first_head.T
+
+second_head = a[0, 1, :, :]  # [3, 4]
+second_res = second_head @ second_head.T
+
+print("First head:\n", first_res)
+print("Second head:\n", second_res)
+print("Head 1 matches:", torch.allclose(result[0, 0], first_res))
+print("Head 2 matches:", torch.allclose(result[0, 1], second_res))
+```
+
+```text
+First head:
+ tensor([[1.3208, 1.1631, 1.2879],
+        [1.1631, 2.2150, 1.8424],
+        [1.2879, 1.8424, 2.0402]])
+Second head:
+ tensor([[0.4391, 0.7003, 0.5903],
+        [0.7003, 1.3737, 1.0620],
+        [0.5903, 1.0620, 0.9912]])
+Head 1 matches: True
+Head 2 matches: True
+```
+
+!!! note "This demonstrates the multiplication, not the full attention output"
+
+    The example multiplies `a` by its own transpose to make the mechanics visible. In the attention class, the corresponding line is `queries @ keys.transpose(2, 3)`: Q and K have compatible shapes but generally different values. The example's matrices are dot-product results, not normalized attention weights or context vectors. Scaling, causal masking, softmax, dropout, and the value mixture are separate steps. These self-dot-product matrices are symmetric; real query–key score matrices need not be.
+
+We pause here after the per-head comparison, before continuing the author's explanation.
 
 ## End of chapter
 
