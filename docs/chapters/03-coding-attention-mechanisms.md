@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Dropout and the remaining sections are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Section 3.5.2 introduces attention-weight dropout and the PyTorch demonstration; the compact causal attention class and remaining sections are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1332,6 +1332,101 @@ causal_contexts = masked_attn_weights @ values  # [6, 6] @ [6, 2] -> [6, 2]
 ```
 
 Every output row mixes only past and current values. No extra normalization follows softmax, and no parameter update has occurred. This is the score-masking approach used in our Character Logs attention implementation. Section 3.5.1 is now covered; the next subsection introduces dropout as a training regularizer to help reduce overfitting.
+
+### 3.5.2 Masking additional attention weights with dropout
+
+Causal masking answers **which positions may this query use?** Dropout adds a different restriction during training: **randomly leave out some of those permitted contributions on this forward pass**. This is a regularization technique: it can help reduce overfitting by discouraging the model from relying too heavily on particular combinations of activations. It does not guarantee better generalization on every dataset.
+
+The familiar description is “drop hidden units.” More precisely, `nn.Dropout` temporarily zeros elements of the tensor it receives. Here that tensor contains **attention weights after softmax**, not hidden layers or learned projection parameters. W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub> remain trainable parameters; the attention weights are computed from the current inputs and those parameters. Dropout adds no learned parameters and does not permanently delete anything.
+
+The book describes two places to apply dropout around attention:
+
+| Placement | What gets zeroed in our single-sequence example? |
+| --- | --- |
+| After softmax, before mixing values | Entries in the attention-weight matrix `[T, T]`: row = query position, column = contributing value position. |
+| After mixing the value vectors | Coordinates of the context vectors `[T, d_out]`: row = position, column = output feature. |
+
+We follow the first placement here. These are different operations, not interchangeable ways of selecting the same contributions. For our six-token example, the flow is:
+
+```text
+causally masked scores [6, 6]
+    → row-wise softmax
+    → attention weights [6, 6]
+    → dropout during training
+    → weights [6, 6] @ values [6, 2]
+    → context vectors [6, 2]
+```
+
+<figure markdown="1">
+
+[![Four-position example: causal attention weights, one illustrative keep-or-drop mask, and the dropout result. Future positions stay zero; dropped allowed entries become zero; survivors double at dropout probability one half.](../assets/chapter-03/attention-dropout.svg)](../assets/chapter-03/attention-dropout.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.22 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Uses four positions and deliberately chosen weights and mask for readable arithmetic, not the book's seeded output. Unlike a picture showing only which connections disappear, this includes PyTorch's scaling of surviving weights.</figcaption>
+</figure>
+
+#### What does a 50% dropout rate mean?
+
+With `p=0.5`, **each entry independently has a 50% probability of being zeroed**. A particular matrix need not lose exactly half its entries; a short row can lose every allowed contribution. Future entries were already zero because of causal masking, so the visible fraction of additional zeros is not necessarily 50% either.
+
+PyTorch scales each surviving entry by `1 / (1 - p)` during training. At `p=0.5`, that is `2`. For one possible mask:
+
+```text
+Attention weights:       [0.20, 0.30, 0.50, 0.00]  sum = 1.00
+Keep (1) / drop (0):     [   1,    0,    1,    0]
+After dropout and ×2:    [0.40, 0.00, 1.00, 0.00]  sum = 1.40
+```
+
+!!! note "Scaling is not row renormalization"
+
+    In Section 3.5.1 we divided by the retained row sum to produce a distribution over permitted positions. Dropout instead uses the fixed factor `1 / (1 - p)`. We **do not renormalize afterward**. Rows can sum to more or less than one, and a surviving weight can exceed one. Each entry's expected value is preserved: `0.5 × 0 + 0.5 × (2 × a) = a`. This is an average over random masks, not a promise about each individual output row.
+
+#### Try `nn.Dropout` on ones first
+
+The book starts with ones so the zeros and scaling are easy to see:
+
+```python
+import torch
+
+# A newly created nn.Dropout module starts in training mode.
+torch.manual_seed(123)
+dropout = torch.nn.Dropout(p=0.5)
+example = torch.ones(6, 6)
+dropped_example = dropout(example)
+print(dropped_example)
+```
+
+Every output entry is either `0` (dropped) or `2` (kept and scaled). The shape stays `[6, 6]`. The seed makes a demonstration repeatable in the same environment; the exact random pattern can differ across PyTorch versions or devices, so compare the behavior rather than requiring the book's precise mask.
+
+Applied to the causal weights from Section 3.5.1:
+
+```python
+# Reuse masked_attn_weights [6, 6] and values [6, 2].
+torch.manual_seed(123)
+dropped_weights = dropout(masked_attn_weights)
+training_contexts = dropped_weights @ values  # [6, 2]
+```
+
+Causal zeros remain zero: neither dropping nor scaling can create a future contribution. Randomly dropped entries remove individual query-to-value contributions on this pass; they do not remove entire tokens from every query.
+
+!!! tip "Training mode and evaluation mode"
+
+    Dropout is used during training and disabled for ordinary evaluation and generation. With `nn.Dropout`, call `model.eval()` on the containing model (or `dropout.eval()` for this standalone demonstration). The module then returns its input unchanged, with no extra scaling. `model.train()` enables it again. `torch.no_grad()` controls gradient tracking; it does **not** switch dropout off.
+
+```python
+dropout.eval()
+print(torch.equal(dropout(masked_attn_weights), masked_attn_weights))  # True
+dropout.train()  # Restore training mode for subsequent demonstrations.
+```
+
+See the [PyTorch `nn.Dropout` documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.Dropout.html) for its elementwise probability, scaling, and evaluation behavior.
+
+#### Did our earlier experiments use dropout?
+
+**No: neither of our maintained training models applies dropout.** [Character Logs](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/README.md) explicitly omitted it to keep the first model small and understandable. Its learned parameters and computed attention weights are still separate concepts; causal masking alone is not dropout.
+
+Our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) calls `F.scaled_dot_product_attention(query, key, value, is_causal=True)` without a dropout argument. That function's default is `dropout_p=0.0`, so it also trains without attention dropout. Neither model adds dropout to the context vectors or feedforward layers. We have not run a comparison demonstrating whether adding dropout would help these experiments.
+
+One API distinction for later: the functional attention call uses its explicit `dropout_p` argument even in evaluation mode. If we add dropout there, we must pass zero during evaluation ourselves; `nn.Dropout` handles its mode switch automatically. See [PyTorch's functional attention documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.functional.scaled_dot_product_attention.html).
 
 ## 3.6 Extending single-head attention to multi-head attention
 
