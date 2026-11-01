@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1120" viewBox="0 0 1000 1120" role="img" aria-labelledby="title desc">
+<style>
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style>
+<title id="title">Dropout removes permitted contributions during training</title>
+<desc id="desc">Four query rows and four value columns. One chosen dropout mask zeros all allowed entries in row two. Surviving weights double at p equals 0.5. Future weights remain zero. Row sums after dropout are 2, 0, 1.4, and 1.</desc>
+<rect width="1000" height="1120" fill="#f5f7fb"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="35" y="48" font-size="29">Attention-weight dropout: remove, then scale</text>
+<text x="35" y="85" font-size="21">Illustrative four-position example · <tspan class="math">p</tspan> = 0.5 · training only</text>
+<text x="35" y="120" font-size="25">1. Causal weights <tspan class="math">A</tspan></text>
+<text x="151" y="152" font-size="17" text-anchor="middle">1</text>
+<text x="214" y="152" font-size="17" text-anchor="middle">2</text>
+<text x="277" y="152" font-size="17" text-anchor="middle">3</text>
+<text x="340" y="152" font-size="17" text-anchor="middle">4</text>
+<text x="105" y="196" font-size="18" text-anchor="middle">1</text>
+<rect x="122" y="165" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="195" font-size="20" text-anchor="middle">1.00</text>
+<rect x="185" y="165" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="214" y="195" font-size="20" text-anchor="middle">0.00</text>
+<rect x="248" y="165" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="277" y="195" font-size="20" text-anchor="middle">0.00</text>
+<rect x="311" y="165" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="340" y="195" font-size="20" text-anchor="middle">0.00</text>
+<text x="105" y="248" font-size="18" text-anchor="middle">2</text>
+<rect x="122" y="217" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="247" font-size="20" text-anchor="middle">0.60</text>
+<rect x="185" y="217" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="214" y="247" font-size="20" text-anchor="middle">0.40</text>
+<rect x="248" y="217" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="277" y="247" font-size="20" text-anchor="middle">0.00</text>
+<rect x="311" y="217" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="340" y="247" font-size="20" text-anchor="middle">0.00</text>
+<text x="105" y="300" font-size="18" text-anchor="middle">3</text>
+<rect x="122" y="269" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="299" font-size="20" text-anchor="middle">0.20</text>
+<rect x="185" y="269" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="214" y="299" font-size="20" text-anchor="middle">0.30</text>
+<rect x="248" y="269" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="299" font-size="20" text-anchor="middle">0.50</text>
+<rect x="311" y="269" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="340" y="299" font-size="20" text-anchor="middle">0.00</text>
+<text x="105" y="352" font-size="18" text-anchor="middle">4</text>
+<rect x="122" y="321" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="351" font-size="20" text-anchor="middle">0.10</text>
+<rect x="185" y="321" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="214" y="351" font-size="20" text-anchor="middle">0.20</text>
+<rect x="248" y="321" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="351" font-size="20" text-anchor="middle">0.30</text>
+<rect x="311" y="321" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="340" y="351" font-size="20" text-anchor="middle">0.40</text>
+<text x="425" y="200" font-size="22">Rows: query positions</text>
+<text x="425" y="242" font-size="22">Columns: value positions</text>
+<text x="425" y="284" font-size="22">Each row sums to 1.</text>
+<text x="235" y="400" font-size="30">↓</text>
+<text x="35" y="430" font-size="25">2. One random keep mask <tspan class="math">M</tspan></text>
+<text x="151" y="462" font-size="17" text-anchor="middle">1</text>
+<text x="214" y="462" font-size="17" text-anchor="middle">2</text>
+<text x="277" y="462" font-size="17" text-anchor="middle">3</text>
+<text x="340" y="462" font-size="17" text-anchor="middle">4</text>
+<text x="105" y="506" font-size="18" text-anchor="middle">1</text>
+<rect x="122" y="475" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="505" font-size="20" text-anchor="middle">1</text>
+<rect x="185" y="475" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="214" y="505" font-size="20" text-anchor="middle">0</text>
+<rect x="248" y="475" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="505" font-size="20" text-anchor="middle">1</text>
+<rect x="311" y="475" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="340" y="505" font-size="20" text-anchor="middle">0</text>
+<text x="105" y="558" font-size="18" text-anchor="middle">2</text>
+<rect x="122" y="527" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="151" y="557" font-size="20" text-anchor="middle">0</text>
+<rect x="185" y="527" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="214" y="557" font-size="20" text-anchor="middle">0</text>
+<rect x="248" y="527" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="557" font-size="20" text-anchor="middle">1</text>
+<rect x="311" y="527" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="340" y="557" font-size="20" text-anchor="middle">1</text>
+<text x="105" y="610" font-size="18" text-anchor="middle">3</text>
+<rect x="122" y="579" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="609" font-size="20" text-anchor="middle">1</text>
+<rect x="185" y="579" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="214" y="609" font-size="20" text-anchor="middle">0</text>
+<rect x="248" y="579" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="609" font-size="20" text-anchor="middle">1</text>
+<rect x="311" y="579" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="340" y="609" font-size="20" text-anchor="middle">0</text>
+<text x="105" y="662" font-size="18" text-anchor="middle">4</text>
+<rect x="122" y="631" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="151" y="661" font-size="20" text-anchor="middle">0</text>
+<rect x="185" y="631" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="214" y="661" font-size="20" text-anchor="middle">1</text>
+<rect x="248" y="631" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="661" font-size="20" text-anchor="middle">1</text>
+<rect x="311" y="631" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="340" y="661" font-size="20" text-anchor="middle">0</text>
+<text x="425" y="510" font-size="22">1 = keep; 0 = drop</text>
+<text x="425" y="552" font-size="22">A new mask is sampled per call.</text>
+<text x="425" y="594" font-size="22">This chosen mask is illustrative.</text>
+<text x="235" y="710" font-size="30">↓</text>
+<text x="35" y="740" font-size="25">3. Dropout result: <tspan class="math">A</tspan> × <tspan class="math">M</tspan> × 2 (elementwise)</text>
+<text x="151" y="772" font-size="17" text-anchor="middle">1</text>
+<text x="214" y="772" font-size="17" text-anchor="middle">2</text>
+<text x="277" y="772" font-size="17" text-anchor="middle">3</text>
+<text x="340" y="772" font-size="17" text-anchor="middle">4</text>
+<text x="105" y="816" font-size="18" text-anchor="middle">1</text>
+<rect x="122" y="785" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="815" font-size="20" text-anchor="middle">2.00</text>
+<rect x="185" y="785" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="214" y="815" font-size="20" text-anchor="middle">0.00</text>
+<rect x="248" y="785" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="277" y="815" font-size="20" text-anchor="middle">0.00</text>
+<rect x="311" y="785" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="340" y="815" font-size="20" text-anchor="middle">0.00</text>
+<text x="105" y="868" font-size="18" text-anchor="middle">2</text>
+<rect x="122" y="837" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="151" y="867" font-size="20" text-anchor="middle">0.00</text>
+<rect x="185" y="837" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="214" y="867" font-size="20" text-anchor="middle">0.00</text>
+<rect x="248" y="837" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="277" y="867" font-size="20" text-anchor="middle">0.00</text>
+<rect x="311" y="837" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="340" y="867" font-size="20" text-anchor="middle">0.00</text>
+<text x="105" y="920" font-size="18" text-anchor="middle">3</text>
+<rect x="122" y="889" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="151" y="919" font-size="20" text-anchor="middle">0.40</text>
+<rect x="185" y="889" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="214" y="919" font-size="20" text-anchor="middle">0.00</text>
+<rect x="248" y="889" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="919" font-size="20" text-anchor="middle">1.00</text>
+<rect x="311" y="889" width="58" height="47" rx="5" fill="#e5e9ef" stroke="#aebed1"/>
+<text x="340" y="919" font-size="20" text-anchor="middle">0.00</text>
+<text x="105" y="972" font-size="18" text-anchor="middle">4</text>
+<rect x="122" y="941" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="151" y="971" font-size="20" text-anchor="middle">0.00</text>
+<rect x="185" y="941" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="214" y="971" font-size="20" text-anchor="middle">0.40</text>
+<rect x="248" y="941" width="58" height="47" rx="5" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="277" y="971" font-size="20" text-anchor="middle">0.60</text>
+<rect x="311" y="941" width="58" height="47" rx="5" fill="#fff1cf" stroke="#aebed1"/>
+<text x="340" y="971" font-size="20" text-anchor="middle">0.00</text>
+<text x="425" y="820" font-size="22">Survivors scale by 1 / (1 − <tspan class="math">p</tspan>).</text>
+<text x="425" y="862" font-size="22">Row sums: 2, 0, 1.4, 1</text>
+<text x="425" y="904" font-size="22">No row renormalization.</text>
+<text x="35" y="1070" font-size="21">Gray: future positions in <tspan class="math">A</tspan> and the result. Yellow: dropped entries.</text>
+</g></svg>

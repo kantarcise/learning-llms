@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Dropout and the remaining sections are still ahead.
+Status: Chapter 3 reading is complete through Section 3.6.2, Exercises 3.1–3.3, and the chapter summary. The next reading step is Chapter 4: assembling the GPT architecture.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1025,7 +1025,7 @@ tensor([[-0.0739,  0.0713],
 
 !!! note "Why do the outputs differ from SelfAttentionV1?"
 
-    `SelfAttentionV1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttentionV1` drew values uniformly from $[0, 1)$ with `torch.rand`, while `nn.Linear` initializes weights uniformly between −1/√d_in and +1/√d_in. PyTorch implements that default through `kaiming_uniform_` with a particular parameter choice; it is not a guarantee of stable training. These examples also use different seeds. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
+    `SelfAttentionV1` and `SelfAttention_v2` perform identical mathematical steps during the forward pass. Their outputs differ here solely because of their starting weights. `SelfAttentionV1` drew values uniformly from [0, 1) with `torch.rand`, while `nn.Linear` initializes weights uniformly between −1/√<i>d</i><sub>in</sub> and +1/√<i>d</i><sub>in</sub>. PyTorch implements that default through `kaiming_uniform_` with a particular parameter choice; it is not a guarantee of stable training. These examples also use different seeds. In Exercise 3.1, we will verify this by transferring weights between the two implementations.
 
 #### Exercise 3.1: Comparing `SelfAttentionV1` and `SelfAttention_v2`
 
@@ -1033,8 +1033,8 @@ To confirm that the output difference comes purely from weight initialization ra
 
 The key observation is how each class stores its projection weights:
 
-1. In `SelfAttentionV1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width $d_{in} = 3$ and output width $d_{out} = 2$, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
-2. In `SelfAttention_v2`, `nn.Linear(d_in, d_out, bias=False)` stores its underlying weight matrix as `layer.weight` with shape `[d_out, d_in]` (`[2, 3]`), because `nn.Linear` evaluates $x W^T$.
+1. In `SelfAttentionV1`, projections are explicit matrices multiplied on the right: `x @ self.W_query`. With input width <i>d</i><sub>in</sub> = 3 and output width <i>d</i><sub>out</sub> = 2, `self.W_query` has shape `[3, 2]` (`[d_in, d_out]`).
+2. In `SelfAttention_v2`, `nn.Linear(d_in, d_out, bias=False)` stores its underlying weight matrix as `layer.weight` with shape `[d_out, d_in]` (`[2, 3]`), because `nn.Linear` evaluates <i>xW</i><sup>T</sup>.
 
 To transfer the weights, transpose each V2 matrix and copy its values into the existing V1 parameter. Use `torch.no_grad()` because this setup operation is not part of the forward computation. The two modules keep independent parameter storage. This comparison uses `qkv_bias=False`, matching the bias-free V1 class:
 
@@ -1080,15 +1080,15 @@ torch.allclose: True
 
     `torch.allclose(a, b)` checks whether all values fall within a narrow numerical tolerance:
     
-    $$|a - b| \le (\text{atol} + \text{rtol} \times |b|)$$
+    <p>|<i>a</i> − <i>b</i>| ≤ (atol + rtol × |<i>b</i>|)</p>
     
-    with PyTorch defaults $\text{rtol} = 10^{-5}$ and $\text{atol} = 10^{-8}$. Returning `True` means all corresponding values in these tested outputs agree within that tolerance. It does not prove that two implementations are mathematically equivalent for every possible input. Here, the matching formulas and copied parameters explain why we expect agreement.
+    with PyTorch defaults rtol = 10<sup>−5</sup> and atol = 10<sup>−8</sup>. Returning `True` means all corresponding values in these tested outputs agree within that tolerance. It does not prove that two implementations are mathematically equivalent for every possible input. Here, the matching formulas and copied parameters explain why we expect agreement.
 
 #### Looking ahead: causal masking and multiple heads
 
 With trainable projections packaged into a clean PyTorch module, the author outlines two remaining enhancements needed before plugging attention into a full GPT architecture:
 
-1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position $t$ cannot peek at token $t+1$. Our [character-log experiment](../preparation/training-comparison.md) enforces this restriction. Without it, training predictions could access their target tokens, allowing information leakage and misleadingly low loss.
+1. **Causal masking (Section 3.5)**: *Causal* (cause and effect—not *casual*!) attention modifies the mechanism so each position can only attend to previous and current tokens, never future tokens. For autoregressive language models, next-word prediction requires that position <i>t</i> cannot peek at token <i>t</i> + 1. Our [character-log experiment](../preparation/training-comparison.md) enforces this restriction. Without it, training predictions could access their target tokens, allowing information leakage and misleadingly low loss.
 2. **Multi-head attention (Section 3.6)**: Rather than relying on a single set of query, key, and value projections, multi-head attention splits the projection dimension across multiple independent "heads." Each head projects the representations into a different subspace, allowing different learned mixtures in parallel. We do not assign heads fixed jobs such as syntax or semantics, and distinct useful specializations are not guaranteed.
 
 With these two goals in view, Section 3.5 tackles causal masking first.
@@ -1333,14 +1333,986 @@ causal_contexts = masked_attn_weights @ values  # [6, 6] @ [6, 2] -> [6, 2]
 
 Every output row mixes only past and current values. No extra normalization follows softmax, and no parameter update has occurred. This is the score-masking approach used in our Character Logs attention implementation. Section 3.5.1 is now covered; the next subsection introduces dropout as a training regularizer to help reduce overfitting.
 
+### 3.5.2 Masking additional attention weights with dropout
+
+Causal masking answers **which positions may this query use?** Dropout adds a different restriction during training: **randomly leave out some of those permitted contributions on this forward pass**. This is a regularization technique: it can help reduce overfitting by discouraging the model from relying too heavily on particular combinations of activations. It does not guarantee better generalization on every dataset.
+
+The familiar description is “drop hidden units.” More precisely, `nn.Dropout` temporarily zeros elements of the tensor it receives. Here that tensor contains **attention weights after softmax**, not hidden layers or learned projection parameters. W<sub>Q</sub>, W<sub>K</sub>, and W<sub>V</sub> remain trainable parameters; the attention weights are computed from the current inputs and those parameters. Dropout adds no learned parameters and does not permanently delete anything.
+
+The book describes two places to apply dropout around attention:
+
+| Placement | What gets zeroed in our single-sequence example? |
+| --- | --- |
+| After softmax, before mixing values | Entries in the attention-weight matrix `[T, T]`: row = query position, column = contributing value position. |
+| After mixing the value vectors | Coordinates of the context vectors `[T, d_out]`: row = position, column = output feature. |
+
+We follow the first placement here. These are different operations, not interchangeable ways of selecting the same contributions. For our six-token example, the flow is:
+
+```text
+causally masked scores [6, 6]
+    → row-wise softmax
+    → attention weights [6, 6]
+    → dropout during training
+    → weights [6, 6] @ values [6, 2]
+    → context vectors [6, 2]
+```
+
+<figure markdown="1">
+
+[![Four-position example: causal attention weights, one illustrative keep-or-drop mask, and the dropout result. Future positions stay zero; dropped allowed entries become zero; survivors double at dropout probability one half.](../assets/chapter-03/attention-dropout.svg)](../assets/chapter-03/attention-dropout.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.22 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Uses four positions and deliberately chosen weights and mask for readable arithmetic, not the book's seeded output. Unlike a picture showing only which connections disappear, this includes PyTorch's scaling of surviving weights.</figcaption>
+</figure>
+
+#### What does a 50% dropout rate mean?
+
+With `p=0.5`, **each entry independently has a 50% probability of being zeroed**. A particular matrix need not lose exactly half its entries; a short row can lose every allowed contribution. Future entries were already zero because of causal masking, so the visible fraction of additional zeros is not necessarily 50% either.
+
+For `0 <= p < 1`, PyTorch scales each surviving entry by `1 / (1 - p)` during training. At `p=0.5`, the scale factor is `2`. (The special case `p=1` drops every entry instead.) For one possible mask:
+
+```text
+Attention weights:       [0.20, 0.30, 0.50, 0.00]  sum = 1.00
+Keep (1) / drop (0):     [   1,    0,    1,    0]
+After dropout and ×2:    [0.40, 0.00, 1.00, 0.00]  sum = 1.40
+```
+
+!!! note "Scaling is not row renormalization"
+
+    In Section 3.5.1 we divided by the retained row sum to produce a distribution over permitted positions. Dropout instead uses the fixed factor `1 / (1 - p)`. We **do not renormalize afterward**. Rows can sum to more or less than one, and a surviving weight can exceed one. Each entry's expected value is preserved: `0.5 × 0 + 0.5 × (2 × a) = a`. For example, a weight of `0.3` becomes either `0` or `0.6`, with equal probability, so its expected value remains `0.3`. For fixed value vectors, this also preserves the expected weighted sum before subsequent nonlinear operations. This is an average over random masks, not a promise about each individual output row or the full model output.
+
+#### Try `nn.Dropout` on ones first
+
+The book starts with ones so the zeros and scaling are easy to see:
+
+```python
+import torch
+
+# A newly created nn.Dropout module starts in training mode.
+torch.manual_seed(123)
+dropout = torch.nn.Dropout(p=0.5)
+example = torch.ones(6, 6)
+dropped_example = dropout(example)
+print(dropped_example)
+```
+
+Every output entry is either `0` (dropped) or `2` (kept and scaled). The shape stays `[6, 6]`. The seed makes a demonstration repeatable in the same environment; the exact random pattern can differ across PyTorch versions or devices, so compare the behavior rather than requiring the book's precise mask.
+
+!!! note "Is the book's dropout reproducibility issue resolved?"
+
+    As checked on **November 1, 2026**, [PyTorch issue #121595](https://github.com/pytorch/pytorch/issues/121595), opened by Raschka, remains open. The discussion traced the reported CPU discrepancy to different Bernoulli sampling implementations in builds with and without Intel's Math Kernel Library (MKL). Those implementations can produce different masks from the same seed. Operating system alone is therefore not the whole explanation. Maintainers consider this permitted behavior under PyTorch's reproducibility policy: identical seeds do not guarantee identical results across builds, platforms, devices, or releases. A different zero pattern does not by itself mean dropout is incorrect; the drop probability and survivor scaling are the behavior to check.
+
+Applied to the causal weights from Section 3.5.1:
+
+```python
+# Reuse masked_attn_weights [6, 6] and values [6, 2].
+torch.manual_seed(123)
+dropped_weights = dropout(masked_attn_weights)
+training_contexts = dropped_weights @ values  # [6, 2]
+```
+
+The dropout mask is applied to **attention weights after softmax**, even though Figure 3.22 uses “attention scores” in one annotation. These are the computed mixing coefficients, not the raw query–key scores or learned projection matrices. Causal zeros remain zero: neither dropping nor scaling can create a future contribution. Randomly dropped entries remove individual query-to-value contributions on this pass; they do not remove entire tokens from every query.
+
+!!! tip "Training mode and evaluation mode"
+
+    Dropout is used during training and disabled for ordinary evaluation and generation. With `nn.Dropout`, call `model.eval()` on the containing model (or `dropout.eval()` for this standalone demonstration). The module then returns its input unchanged, with no extra scaling. `model.train()` enables it again. `torch.no_grad()` controls gradient tracking; it does **not** switch dropout off.
+
+```python
+dropout.eval()
+print(torch.equal(dropout(masked_attn_weights), masked_attn_weights))  # True
+dropout.train()  # Restore training mode for subsequent demonstrations.
+```
+
+See the [PyTorch `nn.Dropout` documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.Dropout.html) for its elementwise probability, scaling, and evaluation behavior.
+
+#### Did our earlier experiments use dropout?
+
+**Our earlier experiments did not use dropout.** Character Logs deliberately omitted it for simplicity; we have not compared training with and without dropout to determine whether it would help either experiment. Its absence from the pre-book introduction was a simplification, not evidence that small datasets do not need dropout.
+
+The [Character Logs notes](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/README.md) record that choice. Its learned parameters and computed attention weights are still separate concepts; causal masking alone is not dropout.
+
+Our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) calls `F.scaled_dot_product_attention(query, key, value, is_causal=True)` without a dropout argument. That function's default is `dropout_p=0.0`, so it also trains without attention dropout. Neither model adds dropout to the context vectors or feedforward layers.
+
+One API distinction for later: the functional attention call uses its explicit `dropout_p` argument even in evaluation mode. If we add dropout there, we must pass zero during evaluation ourselves; `nn.Dropout` handles its mode switch automatically. See [PyTorch's functional attention documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.functional.scaled_dot_product_attention.html).
+
+### 3.5.3 Implementing a compact causal attention class
+
+This is another building block: **the earlier self-attention class, now with causal masking and dropout, plus support for batches**. The projections, scaled query–key scores, softmax, and weighted sum of values retain their familiar roles. Packaging these pieces together gives us the single head we will later extend to multi-head attention.
+
+#### Add a batch axis
+
+Chapter 2's data loader produces batches, not just one sequence at a time. To make the new dimension visible, the book duplicates the same six-token example. Reuse our `book_inputs` tensor for “Your journey starts with one step”:
+
+```python
+batch = torch.stack((book_inputs, book_inputs), dim=0)
+print(batch.shape)
+```
+
+```text
+torch.Size([2, 6, 3])
+```
+
+```text
+One sequence: [   6, 3]   → six tokens, three coordinates each
+Batch:        [2, 6, 3]   → two sequences, six tokens each, three coordinates each
+               B  T  d_in
+```
+
+`stack` introduces the new axis at position zero. The duplicate sequences make this demonstration easy to compare; real batches can contain different sequences. Both examples use the **same learned projection parameters**, but attention mixes positions only within each example. Nothing in this calculation allows one batch example to attend to the other.
+
+#### Put causal masking and dropout into the class
+
+The following adapts Listing 3.3 from [Raschka's book and Chapter 3 code](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb), with type hints and shape comments. We store the mask as a Boolean tensor from the start, rather than converting the book's numeric mask to Boolean in each forward pass. The exclusion rule is unchanged: `True` means a future position.
+
+```python title="CausalAttention — one head, with a batch dimension"
+import torch
+from torch import nn
+
+
+class CausalAttention(nn.Module):
+    """Batched single-head attention with a causal mask and weight dropout."""
+
+    mask: torch.Tensor
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        context_length: int,
+        dropout: float,
+        qkv_bias: bool = False,
+    ) -> None:
+        """Create projections and a fixed mask for up to context_length tokens.
+
+        d_in is input-vector width; d_out is query/key/value-vector width.
+        dropout is the probability of zeroing each attention-weight entry.
+        """
+        super().__init__()
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.dropout = nn.Dropout(dropout)
+        self.register_buffer(
+            "mask",
+            torch.triu(
+                torch.ones(context_length, context_length, dtype=torch.bool),
+                diagonal=1,
+            ),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating-point vectors [B, T, d_in] to contexts [B, T, d_out].
+
+        B = batch examples; T = tokens per example, with 1 <= T <= the
+        configured context_length. x and the module must share a device.
+        Inputs are embedded vectors, not integer token IDs. Attention never
+        mixes examples. Forward computes outputs without updating parameters.
+        """
+        num_tokens = x.shape[1]
+        keys = self.W_key(x)      # [B, T, d_out]
+        queries = self.W_query(x)  # [B, T, d_out]
+        values = self.W_value(x)  # [B, T, d_out]
+
+        # Keep B in front: transpose token and feature axes only.
+        # [B, T, d_out] @ [B, d_out, T] -> [B, T, T]
+        attn_scores = queries @ keys.transpose(1, 2)
+        attn_scores.masked_fill_(
+            self.mask[:num_tokens, :num_tokens], -torch.inf
+        )
+        attn_weights = torch.softmax(
+            attn_scores / keys.shape[-1] ** 0.5, dim=-1
+        )
+        attn_weights = self.dropout(attn_weights)
+        return attn_weights @ values  # [B, T, T] @ [B, T, d_out]
+```
+
+Compared with our single-sequence `SelfAttention_v2`, three details deserve attention:
+
+- `keys.transpose(1, 2)` changes `[B, T, d_out]` into `[B, d_out, T]`. It preserves the batch axis; `.T` is not the right way to transpose just the last two axes of this three-dimensional tensor.
+- The stored mask has shape `[context_length, context_length]`. Slicing selects `[T, T]` for the current sequence length, and broadcasting applies that same causal rule to each of the `B` examples. The class expects sequences no longer than its configured context length.
+- `masked_fill_` changes the newly computed score tensor in place; the trailing underscore marks that behavior. It does not change the learned matrices or the stored mask. Dropout then acts on the weights **after softmax**, before the value mixture.
+
+#### Why register the mask as a buffer?
+
+The mask is **model state, but not a trainable parameter**. `register_buffer` makes PyTorch manage it alongside the model: `ca.to(device)` moves the registered mask with the parameters, and the mask is included in `ca.state_dict()` by default. It is not included in `ca.parameters()`, and this Boolean mask is not learned by gradient updates. See [PyTorch's buffer documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.Module.html#torch.nn.Module.register_buffer).
+
+This connects to moving a camera frame onto the GPU before processing it. The model and tensors participating in these operations must be on compatible devices, but they do not all move through the same call:
+
+| Tensor | How it moves to the selected device |
+| --- | --- |
+| Input frame or embedded batch | Move it explicitly: `batch = batch.to(device)`. |
+| Learned projection parameters | `ca.to(device)` moves them. |
+| Registered causal-mask buffer | The same `ca.to(device)` call moves it too. |
+| Tensor stored as an ordinary attribute | `ca.to(device)` does not automatically move it. |
+
+!!! note "A buffer does not move the input for us"
+
+    Registering the mask avoids manually moving that internal tensor whenever the model moves. The incoming batch remains our responsibility. Calling `ca(batch)` does not automatically copy a CPU batch to the GPU. The mask's registration also does not add it to the set of trainable projection parameters.
+
+#### Instantiate the head and inspect its output
+
+As before, constructing the object initializes its parameters; calling the object runs the calculation:
+
+```python
+torch.manual_seed(123)
+d_in, d_out = 3, 2
+context_length = batch.shape[1]  # 6 token positions, not batch size 2
+ca = CausalAttention(d_in, d_out, context_length, dropout=0.0)
+context_vecs = ca(batch)
+print("context_vecs.shape:", context_vecs.shape)
+```
+
+```text
+context_vecs.shape: torch.Size([2, 6, 2])
+```
+
+**`ca(batch)` calls the module with `batch` as its input**; it is not an attribute lookup such as `ca.batch`. PyTorch routes the call through the module machinery to `forward`.
+
+The input is `[B, T, d_in] = [2, 6, 3]`; the output is `[B, T, d_out] = [2, 6, 2]`. We still have two sequences and six token positions in each. Each token's new context vector has **two coordinates** because we selected `d_out=2`. “Three-dimensional tensor” describes the three axes; it does not mean that each token still has three coordinates. These are computed context vectors, not new entries written into the token embedding table.
+
+The book uses `dropout=0.0` here, so no entries are randomly dropped even though the dropout layer is present. For the identical inputs, the two output slices match. With nonzero dropout during training, independently sampled masks can make those slices differ even for identical inputs.
+
+#### Where we are: from simplified attention to multiple heads
+
+<figure markdown="1">
+
+[![Four-stage attention roadmap. Simplified attention uses input vectors directly; trainable self-attention introduces learned query, key, and value projections; the current causal head adds batches, a causal mask, and dropout; multi-head attention is the next reading step.](../assets/chapter-03/attention-building-blocks.svg)](../assets/chapter-03/attention-building-blocks.svg)
+
+<figcaption markdown="span">Original companion roadmap inspired by Figure 3.23 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The highlighted stage is our current single causal head. The final stage previews Section 3.6 below, where we implement both the wrapper and grouped multi-head versions.</figcaption>
+</figure>
+
+#### Did our earlier experiments already use multiple heads?
+
+Our memory of the experiments fits the code and recorded configurations:
+
+| Experiment | Transformer blocks | Attention heads per block | Representation width |
+| --- | --- | --- | --- |
+| [Character Logs](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) | 1 | 1 | 32 coordinates |
+| [Cosmopedia](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) | 4 | 4 | 256 coordinates total; 64 per head |
+
+Cosmopedia's [recorded 1,000-step run configuration](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/user-1000steps/run.json) confirms four heads and four layers; these are not just unused defaults. Its code reshapes projected vectors into four heads, performs causal attention, combines their outputs, and applies an output projection. Both experiments omit dropout, as discussed above.
+
+**Heads and blocks count different things.** Within one block, heads compute different attention mixtures alongside one another. Blocks are applied in sequence: the output of one becomes the input to the next. Four blocks with four heads each does not mean one attention operation with sixteen heads. Our next reading step will unpack how the multiple heads are implemented.
+
 ## 3.6 Extending single-head attention to multi-head attention
 
-Notes to come as we read this section.
+We have one causal attention head. The next step is to apply **several heads to the same input and combine their outputs**. Each head has its own learned query, key, and value projections, giving it a different way to compare positions and prepare the information it mixes.
 
-## Questions to bring to the chapter
+The book develops this in two stages: first an intuitive wrapper containing several instances of `CausalAttention`, then an implementation that groups the head computations more efficiently. We will follow that order as we read.
 
-- How do multiple heads differ from multiple transformer blocks in the code? Revisit this in section 3.6, after the single-head calculation is clear.
+!!! note "Single head does not mean a sequential loop through tokens"
+
+    Our single-head class already calculates the scores for all query positions together. Causal masking restricts which positions each query can use; it does not require computing one context vector after another during this full-sequence forward pass. “Multiple heads” means multiple sets of projections and attention mixtures, not a change from sequential token processing to parallel token processing.
+
+### 3.6.1 Stacking multiple single-head attention layers
+
+#### Read Figure 3.24 as two branches from the same input
+
+The figure shows **two attention calculations**, not two different input sequences. Both heads receive the same input matrix X. We do not divide the sentence so that head 1 gets some tokens and head 2 gets the rest, and the attention operation does not overwrite the input embeddings.
+
+<figure markdown="1">
+
+[![The same six-by-three input branches into two causal attention heads. Each owns three learned projection matrices, computes its own queries, keys, values, scores and weights, and produces six-by-two context vectors. Joining the outputs along the feature axis gives six-by-four contexts.](../assets/chapter-03/two-head-attention.svg)](../assets/chapter-03/two-head-attention.svg)
+
+<figcaption markdown="span">Original companion diagram inspired by Figure 3.24 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows one sequence; a batch adds the same leading B axis to the computed tensors. The example output coordinates are deliberately illustrative, not results computed from specified projection matrices. Shapes and the concatenation are exact for two heads of width two.</figcaption>
+</figure>
+
+Follow the two branches:
+
+| Object | Head 1 | Head 2 |
+| --- | --- | --- |
+| Input | The same X `[6, 3]` | The same X `[6, 3]` |
+| Learned projections | W<sub>Q1</sub>, W<sub>K1</sub>, W<sub>V1</sub> | Separate W<sub>Q2</sub>, W<sub>K2</sub>, W<sub>V2</sub> |
+| Computed queries, keys, values | Q₁, K₁, V₁: each `[6, 2]` | Q₂, K₂, V₂: each `[6, 2]` |
+| Computed scores and attention weights | Each `[6, 6]` | Each `[6, 6]` |
+| Output context vectors | Z₁ `[6, 2]` | Z₂ `[6, 2]` |
+
+There are **six learned projection matrices in total**: three per head. In the mathematical `X @ W` convention, each is `[3, 2]`; an `nn.Linear(3, 2)` stores its weight as `[2, 3]` and handles the transpose. These stored parameters are distinct from Q₁/Q₂ and the other projected activations, and from the attention-weight matrices computed for this input.
+
+Each head uses its own Q and K to compute scores, then applies the **same causal rule**, scaling, and softmax. If dropout is enabled during training, its random mask is sampled for each head's calculation and can differ between heads. The resulting weights mix that head's own V into its context matrix Z. The heads can therefore produce different contexts for the same token; independence does not guarantee that they learn different roles or assign them predefined jobs.
+
+#### Combine the contexts for the same position
+
+The fifth row in the book is one highlighted example, not the only row being processed. Each head produces a context for **every** token position. To combine them, join the corresponding rows along the feature axis:
+
+```text
+Illustrative position 5:
+Head 1 context:  [ 0.20, 0.80]
+Head 2 context:  [-0.40, 0.60]
+Combined:       [ 0.20, 0.80, -0.40, 0.60]
+
+All positions:  Z₁ [6, 2] and Z₂ [6, 2] → concatenate → Z [6, 4]
+With a batch:   [B, 6, 2] and [B, 6, 2] → [B, 6, 4]
+```
+
+Here “combine” means **concatenate**, not elementwise addition or averaging. The number of token positions stays six; each output vector becomes wider. In this example each head contributes two coordinates, so two heads contribute four coordinates altogether. Our original diagram uses its own illustrative numbers to make that joining step explicit.
+
+!!! tip "Stacked heads are not successive transformer blocks"
+
+    The book draws heads stacked on top of one another; our companion figure places them side by side. In both layouts, they are parallel branches of the same attention operation. Head 2 receives X, not Z₁. Transformer blocks instead run in sequence, as in our four-block Cosmopedia model. The simple wrapper may call heads one after another in Python; that execution order does not make one head depend on another head's output.
+
+#### Implement the wrapper with `nn.ModuleList`
+
+Listing 3.4 puts the branches into a small class. Reuse our `CausalAttention` class from Section 3.5.3. This adapts the [official Chapter 3 implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb), with type hints and explicit axis descriptions:
+
+```python title="MultiHeadAttentionWrapper — separate heads, joined outputs"
+class MultiHeadAttentionWrapper(nn.Module):
+    """Run separate causal heads on the same input and concatenate features."""
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        context_length: int,
+        dropout: float,
+        num_heads: int,
+        qkv_bias: bool = False,
+    ) -> None:
+        """Create num_heads heads; d_out is the output width of EACH head."""
+        super().__init__()
+        self.heads = nn.ModuleList(
+            [
+                CausalAttention(
+                    d_in, d_out, context_length, dropout, qkv_bias
+                )
+                for _ in range(num_heads)
+            ]
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating vectors [B, T, d_in] to [B, T, num_heads * d_out].
+
+        B = batch examples; T = token positions. Input length must fit the
+        heads' context_length, and x must share the module's device/dtype.
+        Each head produces [B, T, d_out]. Concatenation joins the last axis;
+        it preserves the batch and token axes and adds no separate head axis.
+        """
+        return torch.cat([head(x) for head in self.heads], dim=-1)
+```
+
+The constructor's list comprehension creates a **new `CausalAttention` instance on each iteration**. Each instance owns its own projection parameters. We are not calling the same head repeatedly or resetting the seed before each head.
+
+[`nn.ModuleList`](https://docs.pytorch.org/docs/2.9/generated/torch.nn.ModuleList.html) registers the heads as child modules. This lets the wrapper's `.parameters()`, `.to(device)`, `.eval()`, and `.state_dict()` reach them. A plain Python list would not register its contents with those model-management operations. `ModuleList` does not choose a computation order or combine outputs itself; our `forward` method does that.
+
+In `forward`, `[head(x) for head in self.heads]` produces a Python list of output tensors. [`torch.cat(..., dim=-1)`](https://docs.pytorch.org/docs/2.9/generated/torch.cat.html) joins the existing last dimension. This differs from `torch.stack`, which introduced the new batch axis earlier. The wrapper calls heads one after another in Python; their input dependencies are parallel branches, but this implementation does not explicitly compute all heads together in one grouped operation.
+
+#### Figure 3.25: two coordinates per head become four per token
+
+<figure markdown="1">
+
+[![Two heads each produce a six-row, two-column context matrix for one sentence. The two matrices concatenate along columns into a six-row, four-column result. Both sentences in the duplicated batch get this calculation, giving output shape two by six by four.](../assets/chapter-03/multihead-context-concatenation.svg)](../assets/chapter-03/multihead-context-concatenation.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.25 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows one batch item's six token rows, using the verified wrapper output below, rounded to four decimals. The colors track which two columns come from each head. The batch axis is preserved; it does not count heads.</figcaption>
+</figure>
+
+!!! note "Which width does d_out mean here?"
+
+    In this wrapper's constructor, `d_out=2` is **per-head width**. Each Z₁ or Z₂ therefore has two columns per token. The concatenated Z has **four** columns: `num_heads * d_out = 2 * 2`. Keep the per-head width and the combined width separate when reading the figure's dimension labels.
+
+#### Instantiate the wrapper and inspect the result
+
+We reuse `batch` with shape `[2, 6, 3]`: two copies of “Your journey starts with one step.” Like the book, we set dropout to zero for this demonstration.
+
+```python
+torch.manual_seed(123)
+context_length = batch.shape[1]  # 6 tokens, not 2 batch examples
+d_in, d_out = 3, 2
+mha = MultiHeadAttentionWrapper(
+    d_in, d_out, context_length, dropout=0.0, num_heads=2
+)
+context_vecs = mha(batch)
+print(context_vecs)
+print("context_vecs.shape:", context_vecs.shape)
+```
+
+```text
+tensor([[[-0.4519,  0.2216,  0.4772,  0.1063],
+         [-0.5874,  0.0058,  0.5891,  0.3257],
+         [-0.6300, -0.0632,  0.6202,  0.3860],
+         [-0.5675, -0.0843,  0.5478,  0.3589],
+         [-0.5526, -0.0981,  0.5321,  0.3428],
+         [-0.5299, -0.1081,  0.5077,  0.3493]],
+
+        [[-0.4519,  0.2216,  0.4772,  0.1063],
+         [-0.5874,  0.0058,  0.5891,  0.3257],
+         [-0.6300, -0.0632,  0.6202,  0.3860],
+         [-0.5675, -0.0843,  0.5478,  0.3589],
+         [-0.5526, -0.0981,  0.5321,  0.3428],
+         [-0.5299, -0.1081,  0.5077,  0.3493]]], grad_fn=<CatBackward0>)
+context_vecs.shape: torch.Size([2, 6, 4])
+```
+
+The model parameters are shared across batch examples. Because both inputs are identical and dropout is zero, the two output slices are identical too. This does **not** mean the two heads have identical outputs: within each token's four numbers, the first pair comes from head 1 and the second pair from head 2. Nonzero dropout during training can make duplicate batch examples produce different results.
+
+#### Read `[2, 6, 4]` one axis at a time
+
+```text
+context_vecs.shape = [2, 6, 4]
+                     │  │  └─ coordinates per token: 2 heads × 2 coordinates
+                     │  └──── token positions in each sentence
+                     └─────── sentence examples in the batch
+```
+
+| Axis | Size | What it counts |
+| --- | --- | --- |
+| 0: batch | 2 | Two copies of the input sentence. This is not the number of heads. |
+| 1: token position | 6 | Your, journey, starts, with, one, step. |
+| 2: combined features | 4 | Two coordinates from head 1 followed by two from head 2. |
+
+Think of the output as **two tables, each with six rows and four columns**. Each table belongs to one sentence, each row belongs to a token, and the four columns hold the concatenated context vector for that token. The tensor has three axes; each token's vector has four coordinates. It contains `2 * 6 * 4 = 48` scalar values altogether.
+
+For the first sentence's first token, the actual row is:
+
+```text
+Token: “Your”
+Head 1 supplies: [-0.4519, 0.2216]
+Head 2 supplies: [ 0.4772, 0.1063]
+Joined vector:  [-0.4519, 0.2216, 0.4772, 0.1063]
+```
+
+We can select those pieces without changing the tensor:
+
+```python
+print(context_vecs[0].shape)         # [6, 4]: first sentence's table
+print(context_vecs[0, 0].shape)      # [4]: its first token's vector
+print(context_vecs[0, 0, :2])        # first token, head 1's two coordinates
+print(context_vecs[0, 0, 2:])        # first token, head 2's two coordinates
+print(context_vecs[1, 0])            # same token in the duplicate sentence
+```
+
+Two different counts happen to equal two here: **batch size is two**, and **head count is also two**. Their equality is coincidental. Concatenation incorporates the head outputs into the feature axis, so there is no separate head axis in the final `[2, 6, 4]` tensor. These are context-vector coordinates, not vocabulary probabilities or a newly stored token embedding table.
+
+#### Exercise 3.2: Returning two-dimensional embedding vectors
+
+The book asks us to adjust the `MultiHeadAttentionWrapper` call so that each token's final context vector has **two coordinates instead of four**, while keeping `num_heads=2` and leaving the class implementation unchanged.
+
+The key is that this wrapper's `d_out` argument controls **each head's output width**, not the combined width:
+
+<p>Combined width = number of heads × <i>d</i><sub>out</sub></p>
+
+1. The preceding example uses two heads with `d_out=2`, giving `2 × 2 = 4` coordinates per token.
+2. To obtain two coordinates while keeping two heads, set **`d_out=1`**, giving `2 × 1 = 2`.
+
+Reuse the existing `batch`, whose input shape remains `[2, 6, 3]`:
+
+```python
+# Only the per-head output-width argument changes from the earlier call.
+torch.manual_seed(123)
+mha_two_dim = MultiHeadAttentionWrapper(
+    d_in=3,
+    d_out=1,
+    context_length=batch.shape[1],
+    dropout=0.0,
+    num_heads=2,
+)
+context_vecs_two_dim = mha_two_dim(batch)
+print("context_vecs.shape:", context_vecs_two_dim.shape)
+```
+
+```text
+context_vecs.shape: torch.Size([2, 6, 2])
+```
+
+Each head now produces `[2, 6, 1]`. Concatenating along the last axis gives `[2, 6, 2]`: two sentences, six token positions each, and two coordinates per token.
+
+```text
+For one token:
+Head 1:  [a]
+Head 2:  [b]
+Joined:  [a, b]
+```
+
+!!! note "Input width and output width are different choices"
+
+    `d_in=3` still describes the three coordinates in each input vector. We keep that argument because the input batch has not changed. `d_out=1` changes the learned projection sizes inside each newly created head. The resulting two coordinates are newly computed using those narrower projections; they need not equal the first two coordinates from the earlier four-coordinate result.
+
+The exercise changes only a constructor argument. The existing wrapper already concatenates any compatible per-head output widths; its implementation needs no edit. The more efficient grouped implementation is the next reading step.
+
+### 3.6.2 Implementing multi-head attention with weight splits
+
+The wrapper made the structure visible: create several `CausalAttention` objects, call each on the same input, then concatenate their outputs. The integrated class expresses the head calculations together in larger tensors. We retain separate learned projections for each head, but store them inside larger query, key, and value layers instead of separate head objects.
+
+There are two different kinds of work here:
+
+- **Linear projections and attention calculate new values.** Learned matrices produce Q, K, and V; attention computes scores, weights, and weighted mixtures.
+- **Reshaping and transposing organize those values.** They expose a head axis and put it in the right place for batched matrix multiplication. They do not introduce new learned parameters or change a coordinate's numerical value by themselves.
+
+#### First, notice the change in what `d_out` means
+
+!!! note "The wrapper and integrated class use d_out differently"
+
+    In `MultiHeadAttentionWrapper`, `d_out` meant **width per head**. In the integrated `MultiHeadAttention`, it means **total output width across all heads**. The new class computes `head_dim = d_out // num_heads`, so `d_out` must be divisible by `num_heads`.
+
+For the same two-head, two-coordinates-per-head layout:
+
+| Class | Constructor arguments | Width per head | Combined width |
+| --- | --- | --- | --- |
+| `MultiHeadAttentionWrapper` | `d_out=2`, `num_heads=2` | 2 | 4 |
+| `MultiHeadAttention` | `d_out=4`, `num_heads=2` | 2 | 4 |
+
+Setting `d_out=2` in the **new class** instead gives one coordinate per head and a combined width of two, like the target shape in Exercise 3.2. The argument's meaning changed; keep that distinction in mind while following the shapes.
+
+#### The integrated class, with each shape change spelled out
+
+The following adapts Listing 3.5 from [Raschka's Chapter 3 implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb). We add type hints, separate the value mixture from its transpose for readability, and retain our Boolean mask from Section 3.5.3. The mathematical steps match the book's class.
+
+For the concrete shape comments, choose `B=2`, `T=6`, `d_in=3`, total `d_out=4`, `num_heads=2`, and `head_dim=2`. Here B counts batch examples, T counts token positions, H counts heads, and D counts coordinates **per head**.
+
+```python title="MultiHeadAttention — project together, split into heads"
+class MultiHeadAttention(nn.Module):
+    """Causal multi-head attention with grouped projections and weight dropout."""
+
+    mask: torch.Tensor
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        context_length: int,
+        dropout: float,
+        num_heads: int,
+        qkv_bias: bool = False,
+    ) -> None:
+        """Configure positive widths/head count and a maximum context length.
+
+        d_in is the input width; d_out is TOTAL output width across heads.
+        Each head uses head_dim = d_out // num_heads coordinates for Q/K/V.
+        """
+        super().__init__()
+        assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
+        self.d_out = d_out
+        self.num_heads = num_heads
+        self.head_dim = d_out // num_heads
+
+        # One larger layer PER ROLE projects to every head's coordinates.
+        # Each head still has its own rows in these stored weight tables.
+        # Here each Linear stores [4, 3]; output activations are [B, T, 4].
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+
+        # After concatenation, mix information across the joined head features.
+        # Shape stays [B, T, d_out]. This Linear includes a bias by default;
+        # qkv_bias controls only the three projection layers above.
+        self.out_proj = nn.Linear(d_out, d_out)
+        self.dropout = nn.Dropout(dropout)
+
+        # True marks a future position; the diagonal remains permitted.
+        # This fixed [context_length, context_length] rule moves with the model.
+        self.register_buffer(
+            "mask",
+            torch.triu(
+                torch.ones(context_length, context_length, dtype=torch.bool),
+                diagonal=1,
+            ),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating vectors [B, T, d_in] to [B, T, d_out].
+
+        B = batch examples; T = tokens; H = heads; D = head_dim.
+        Require 1 <= T <= context_length and matching input/model device and
+        floating dtype. Learned parameters are shared across B and T. Neither
+        batch examples nor heads mix during the attention calculation itself.
+        The final output projection mixes head features within each position.
+        """
+        b, num_tokens, _ = x.shape
+
+        # 1. PROJECT: each role gets all H * D coordinates in one operation.
+        # [B, T, d_in] -> [B, T, d_out], e.g. [2, 6, 3] -> [2, 6, 4].
+        keys = self.W_key(x)
+        queries = self.W_query(x)
+        values = self.W_value(x)
+
+        # 2. EXPOSE HEADS: split the last axis into H groups of D coordinates.
+        # [B, T, H * D] -> [B, T, H, D], e.g. [2, 6, 4] -> [2, 6, 2, 2].
+        # view adds no parameters and performs no new projection arithmetic.
+        keys = keys.view(b, num_tokens, self.num_heads, self.head_dim)
+        queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
+        values = values.view(b, num_tokens, self.num_heads, self.head_dim)
+
+        # 3. GROUP BY HEAD: swap token axis 1 with head axis 2.
+        # [B, T, H, D] -> [B, H, T, D]. B and each coordinate's identity stay.
+        # Each [T, D] slice now holds one head's vectors for one example.
+        keys = keys.transpose(1, 2)
+        queries = queries.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # 4. COMPARE: transpose only K's last two axes, leaving B/H untouched.
+        # [B, H, T, D] @ [B, H, D, T] -> scores [B, H, T, T].
+        # Matrix multiplication operates on the last two axes independently
+        # for each (example, head) pair. Here scores have shape [2, 2, 6, 6].
+        attn_scores = queries @ keys.transpose(2, 3)
+
+        # Slice the common [T, T] causal rule for the current sequence length.
+        # It broadcasts across BOTH B and H, hiding the future in every head.
+        mask_bool = self.mask[:num_tokens, :num_tokens]
+        attn_scores.masked_fill_(mask_bool, -torch.inf)
+
+        # Scale by sqrt(D), not sqrt(total d_out): dot products use D features.
+        # Softmax runs over the last axis: contributing key/token positions.
+        # Dropout acts on the computed weights, not the learned weight tables.
+        attn_weights = torch.softmax(attn_scores / keys.shape[-1] ** 0.5, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+
+        # 5. MIX VALUES within each head, then put token positions first again.
+        # [B, H, T, T] @ [B, H, T, D] -> [B, H, T, D].
+        head_contexts = attn_weights @ values
+        context_vec = head_contexts.transpose(1, 2)  # [B, T, H, D]
+
+        # 6. JOIN HEAD FEATURES: [B, T, H, D] -> [B, T, H * D].
+        # Transpose can leave non-contiguous storage. contiguous() makes the
+        # layout suitable for this view; it preserves the logical values.
+        context_vec = context_vec.contiguous().view(b, num_tokens, self.d_out)
+
+        # 7. OUTPUT PROJECTION: learned mixing of the concatenated features.
+        # [B, T, d_out] -> [B, T, d_out]; no mixing of token/batch positions.
+        context_vec = self.out_proj(context_vec)
+        return context_vec
+```
+
+The stored projection weights are trainable parameters. Q/K/V, scores, attention weights, and contexts are computed activations. The causal mask is a fixed buffer. The `view` and `transpose` calls create no new trainable objects.
+
+#### Follow one projected vector through the split
+
+Suppose one token's already-projected query is `[10, 11, 20, 21]`. These invented numbers isolate the arrangement; they are not measured outputs from our model.
+
+```text
+Before the split:  [10, 11, 20, 21]   four projected query coordinates
+After the split:  [[10, 11],         head 1's two coordinates
+                   [20, 21]]         head 2's two coordinates
+```
+
+Every head's projection was calculated from the **full input vector**. We group the resulting coordinates; we do not give different heads different subsets of the original sentence or require them to ignore original input features. The same arrangement applies separately to queries, keys, and values.
+
+After `view`, the axes read `[example, token, head, coordinate]`. After `transpose(1, 2)`, they read `[example, head, token, coordinate]`. That makes the final two dimensions a `[T, D]` matrix for each example/head pair, exactly what the attention matrix multiplication needs. Both shapes happen to be `[2, 6, 2, 2]` and `[2, 2, 6, 2]` in our chosen example, but the axis meanings are more important than their sizes.
+
+| Stage | General shape | Our two-head layout |
+| --- | --- | --- |
+| Input vectors | `[B, T, d_in]` | `[2, 6, 3]` |
+| Projected Q, K, V | Each `[B, T, H * D]` | `[2, 6, 4]` |
+| Expose the head axis with `view` | Each `[B, T, H, D]` | `[2, 6, 2, 2]` |
+| Group by head with `transpose(1, 2)` | Each `[B, H, T, D]` | `[2, 2, 6, 2]` |
+| Scores and attention weights | `[B, H, T, T]` | `[2, 2, 6, 6]` |
+| Each head's contexts | `[B, H, T, D]` | `[2, 2, 6, 2]` |
+| Put token axis back first | `[B, T, H, D]` | `[2, 6, 2, 2]` |
+| Join head features | `[B, T, H * D]` | `[2, 6, 4]` |
+| Apply the output projection | `[B, T, d_out]` | `[2, 6, 4]` |
+
+[`view`](https://docs.pytorch.org/docs/2.9/generated/torch.Tensor.view.html) changes the shape while sharing storage and requires a compatible memory layout. [`transpose`](https://docs.pytorch.org/docs/2.9/generated/torch.transpose.html) swaps two axes; for these dense tensors it also shares storage. After the return transpose, [`contiguous`](https://docs.pytorch.org/docs/2.9/generated/torch.Tensor.contiguous.html) provides a contiguous layout when needed so we can merge the adjacent head/coordinate axes with `view`. None of these operations learns how to split the heads; the learned projections determine their features.
+
+!!! note "The new output projection is an additional operation"
+
+    The wrapper returned the concatenation directly. This class also applies `out_proj`, a learned linear layer across the combined feature coordinates. It can mix information from different heads while preserving `[B, T, d_out]`. “The same concept” refers to the per-head attention structure; it does not promise the same final numbers from the two classes. Matching numerical results would require compatible widths and projection parameters, and accounting for this additional output layer. A shared random seed alone does not do that.
+
+This is the same grouping idea already used by our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py). Cosmopedia goes one step further by computing all three Q/K/V projections in a combined linear layer and using PyTorch's functional attention operation. Here we keep the three roles and explicit attention steps visible while learning their arrangement. We have not measured a speedup for this book implementation.
+
+#### Figure 3.26: one larger projection, then expose the heads
+
+The general idea is exactly this: **pack the separate heads' projection weights into one larger matrix, multiply once, then organize the projected coordinates into heads**. The figure shows queries only; we do the same thing separately for keys and values.
+
+<figure markdown="1">
+
+[![Separate query projections use the same input X with two three-by-two matrices to produce Q1 and Q2, each six by two. The grouped version packs the weights side by side into a three-by-four matrix and multiplies X once to obtain six-by-four Q. Its first two columns are Q1 and last two are Q2. The split rearranges the projected coordinates without further projection arithmetic.](../assets/chapter-03/query-weight-splits.svg)](../assets/chapter-03/query-weight-splits.svg)
+
+<figcaption markdown="span">Original companion diagram inspired by Figure 3.26 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows one sequence with six positions, input width three, and two query coordinates per head. Uses the mathematical XW convention, so weights are `[input width, output width]`; `nn.Linear` stores their transposes. Matching colors identify the same parameter blocks and output coordinates in the two arrangements.</figcaption>
+</figure>
+
+In mathematical notation, placing the two weight blocks side by side gives:
+
+<p><i>W</i><sub><i>Q</i></sub> = [<i>W</i><sub><i>Q</i>1</sub> | <i>W</i><sub><i>Q</i>2</sub>]<br>
+⇒ <i>XW</i><sub><i>Q</i></sub> = [<i>XW</i><sub><i>Q</i>1</sub> | <i>XW</i><sub><i>Q</i>2</sub>] = [<i>Q</i><sub>1</sub> | <i>Q</i><sub>2</sub>]</p>
+
+The vertical bars mark column boundaries, not an operation that mixes the heads. If the parameter blocks have the same values as the separate matrices, the projected queries match, up to floating-point rounding. Reshaping then exposes those column groups as a head axis. A newly initialized larger layer is not guaranteed to match two independently initialized smaller layers merely because the seed is the same.
+
+For the six-token example:
+
+| Arrangement | Query projections | Query result |
+| --- | --- | --- |
+| Separate heads | Two products: `[6, 3] @ [3, 2]`, one for each head | Two `[6, 2]` matrices |
+| Grouped heads | One product: `[6, 3] @ [3, 4]` | One `[6, 4]` matrix, containing the two heads' columns |
+
+Each head still has its own learned query parameters. We have **12 query-weight entries either way**: `2 * (3 * 2)` separately, or `3 * 4` together, excluding biases. Grouping does not force the heads to share the same projection or reduce the total feature width.
+
+A small hand-worked example makes the equality tangible. For one invented input vector and two illustrative projection matrices:
+
+```text
+x = [1, 2, 3]
+
+       W_Q1              W_Q2
+       [1, 0]            [ 2, 0]
+       [0, 1]            [ 0, 2]
+       [1, 1]            [-1, 1]
+
+x W_Q1 = [1 + 3, 2 + 3]        = [ 4, 5]
+x W_Q2 = [2 - 3, 4 + 3]        = [-1, 7]
+
+Pack their columns into W_Q:
+       [1, 0 |  2, 0]
+       [0, 1 |  0, 2]
+       [1, 1 | -1, 1]
+
+x W_Q = [4, 5 | -1, 7]
+Split = head 1 [4, 5], head 2 [-1, 7]
+```
+
+Here the code-style names are readable text equivalents of the subscripted mathematical symbols. The numbers illustrate the projection identity; they are not outputs from a trained experiment.
+
+!!! note "A larger multiplication still has a cost"
+
+    The benefit is not that matrix size stops mattering. For these matching shapes, the basic scalar arithmetic is comparable; we express it in fewer, larger operations. That can reduce per-operation overhead and give optimized CPU/GPU matrix routines a larger amount of work to process efficiently. The actual speed depends on dimensions, device, and implementation. We have verified the projection identity, not measured a speedup for this example.
+
+In PyTorch storage order, packing two `nn.Linear(3, 2)` query weights means stacking their `[2, 3]` weight tables along dimension zero to form `[4, 3]`. That is the transpose of placing `[3, 2]` mathematical matrices side by side. This storage convention explains how the single larger `W_query` layer represents both heads; `view` and `transpose` then arrange its output as `[B, H, T, D]` for attention.
+
+#### Batched matrix multiplication: one score matrix per head
+
+The book next isolates the matrix multiplication with a small tensor. This example changes the sizes from our earlier walkthrough: **one batch example, two heads, three token positions, and four coordinates per token per head**. The supplied numbers illustrate the operation; they are not trained-model results.
+
+```python
+# Example from Section 3.6.2 of the book: [B, H, T, D] = [1, 2, 3, 4].
+a = torch.tensor([
+    [
+        [
+            [0.2745, 0.6584, 0.2775, 0.8573],
+            [0.8993, 0.0390, 0.9268, 0.7388],
+            [0.7179, 0.7058, 0.9156, 0.4340],
+        ],
+        [
+            [0.0772, 0.3565, 0.1479, 0.5331],
+            [0.4066, 0.2318, 0.4545, 0.9737],
+            [0.4606, 0.5159, 0.4220, 0.5786],
+        ],
+    ]
+])
+
+# Swap token and coordinate axes; preserve batch and head axes.
+result = a @ a.transpose(2, 3)
+print(result)
+print("result.shape:", result.shape)
+```
+
+```text
+tensor([[[[1.3208, 1.1631, 1.2879],
+          [1.1631, 2.2150, 1.8424],
+          [1.2879, 1.8424, 2.0402]],
+
+         [[0.4391, 0.7003, 0.5903],
+          [0.7003, 1.3737, 1.0620],
+          [0.5903, 1.0620, 0.9912]]]])
+result.shape: torch.Size([1, 2, 3, 3])
+```
+
+The multiplication acts on the **last two axes**; the leading batch/head axes identify which matrices belong together:
+
+```text
+a:                    [1, 2, 3, 4]
+a.transpose(2, 3):    [1, 2, 4, 3]
+result:               [1, 2, 3, 3]
+                       B  H  T  T
+
+For each (batch example, head): [3, 4] @ [4, 3] → [3, 3]
+```
+
+We see two matrices in the printout because there are two heads. They are **two `[3, 3]` slices inside one `[1, 2, 3, 3]` tensor**, not two separate returned tensors. Each score compares a pair of token vectors within that head. There are no comparisons between head 1 and head 2.
+
+For instance, the first entry of the first head's result is its first token vector dotted with itself:
+
+```text
+0.2745² + 0.6584² + 0.2775² + 0.8573² ≈ 1.3208
+```
+
+#### Check the same calculation one head at a time
+
+The book then unpacks the grouped operation. Once we select a single example and head, we have an ordinary two-dimensional matrix, so `.T` is appropriate:
+
+```python
+first_head = a[0, 0, :, :]   # [3, 4]
+first_res = first_head @ first_head.T
+
+second_head = a[0, 1, :, :]  # [3, 4]
+second_res = second_head @ second_head.T
+
+print("First head:\n", first_res)
+print("Second head:\n", second_res)
+print("Head 1 matches:", torch.allclose(result[0, 0], first_res))
+print("Head 2 matches:", torch.allclose(result[0, 1], second_res))
+```
+
+```text
+First head:
+ tensor([[1.3208, 1.1631, 1.2879],
+        [1.1631, 2.2150, 1.8424],
+        [1.2879, 1.8424, 2.0402]])
+Second head:
+ tensor([[0.4391, 0.7003, 0.5903],
+        [0.7003, 1.3737, 1.0620],
+        [0.5903, 1.0620, 0.9912]])
+Head 1 matches: True
+Head 2 matches: True
+```
+
+!!! note "This demonstrates the multiplication, not the full attention output"
+
+    The example multiplies `a` by its own transpose to make the mechanics visible. In the attention class, the corresponding line is `queries @ keys.transpose(2, 3)`: Q and K have compatible shapes but generally different values. The example's matrices are dot-product results, not normalized attention weights or context vectors. Scaling, causal masking, softmax, dropout, and the value mixture are separate steps. These self-dot-product matrices are symmetric; real query–key score matrices need not be.
+
+#### Join the head contexts, then learn how to mix their features
+
+After the attention-weight/value multiplication, the contexts from all heads are stored together with shape `[B, H, T, D]`. Selecting one head gives `[B, T, D]`. The return transpose changes that to `[B, T, H, D]`, putting all of one token's head vectors together. The final reshape joins its head/coordinate axes:
+
+```text
+Head contexts:      [B, H, T, D]
+Transpose back:    [B, T, H, D]
+Join head features: [B, T, H * D] = [B, T, d_out]
+Output projection:  [B, T, d_out]
+```
+
+The last dimension is **combined feature width**, `d_out = H * D`, not the token count T. Joining preserves the batch size and token positions. The distinction between joining and projecting is the new point here:
+
+- **Concatenation** places the head outputs side by side. In our two-head, width-two example, `[a, b]` and `[c, d]` become `[a, b, c, d]`. It introduces no learned parameters.
+- **The output projection**, `self.out_proj = nn.Linear(d_out, d_out)`, applies a learned transformation to that combined vector. Each output coordinate can use coordinates from all heads. Its parameter matrix and bias are shared across batch examples and token positions.
+
+For one token, PyTorch evaluates:
+
+<p><i>z</i><sub>out</sub> = <i>z</i><sub>joined</sub> <i>W</i><sub>out</sub><sup>T</sup> + <i>b</i><sub>out</sub></p>
+
+Here `W_out` denotes the layer's stored `[d_out, d_out]` weight table, following `nn.Linear` storage order. This projection changes values while keeping the same vector width. It mixes **features within a position**; the attention calculation before it is what mixed information across permitted token positions.
+
+A small numerical illustration uses two head outputs `[1, 2]` and `[10, 20]`. Choose an output matrix that takes sums and differences across their corresponding coordinates, and a zero bias:
+
+```python
+# Deliberately chosen demonstration weights, not trained model parameters.
+joined = torch.tensor([1.0, 2.0, 10.0, 20.0])
+projection = nn.Linear(4, 4)
+with torch.no_grad():
+    projection.weight.copy_(torch.tensor([
+        [1.0, 0.0,  1.0,  0.0],
+        [0.0, 1.0,  0.0,  1.0],
+        [1.0, 0.0, -1.0,  0.0],
+        [0.0, 1.0,  0.0, -1.0],
+    ]))
+    projection.bias.zero_()
+
+projected = projection(joined)
+print(projected.detach())
+```
+
+```text
+tensor([ 11.,  22.,  -9., -18.])
+```
+
+The four calculations are `1 + 10`, `2 + 20`, `1 - 10`, and `2 - 20`. We still have four coordinates, but their values combine information from both heads. In the model, training determines the projection's weights and bias; these hand-picked sums and differences only illustrate what a linear projection can do.
+
+!!! note "What does ‘not strictly necessary’ mean?"
+
+    The attention mechanism already produces usable context vectors after concatenating heads, as our wrapper demonstrated. An output projection is therefore not required just to obtain a valid attention result or join the heads. The author includes it so this class also has the learned output-mixing step commonly used in Transformer attention. ‘For completeness’ means completing that architectural pattern. We have not measured the contribution of this layer in isolation. Appendix B is the author's reference for further discussion.
+
+Neither concatenation nor this per-position linear projection introduces future-token access: they combine features already produced for that same position. Both our Character Logs and Cosmopedia attention implementations also include an output projection, as their source code shows.
+
+#### Run the integrated class on our two-sentence batch
+
+We can instantiate `MultiHeadAttention` and call it just like the earlier attention modules. The class defined here applies causal masking; the familiar call pattern does not turn it into unmasked attention.
+
+The book returns to a tiny **total output width of two**, so the printed values remain readable. With two heads, each head has one query/key/value coordinate:
+
+```python
+torch.manual_seed(123)
+batch_size, context_length, d_in = batch.shape
+d_out = 2
+mha = MultiHeadAttention(
+    d_in, d_out, context_length, dropout=0.0, num_heads=2
+)
+context_vecs = mha(batch)
+print(context_vecs)
+print("context_vecs.shape:", context_vecs.shape)
+```
+
+```text
+tensor([[[0.3190, 0.4858],
+         [0.2943, 0.3897],
+         [0.2856, 0.3593],
+         [0.2693, 0.3873],
+         [0.2639, 0.3928],
+         [0.2575, 0.4028]],
+
+        [[0.3190, 0.4858],
+         [0.2943, 0.3897],
+         [0.2856, 0.3593],
+         [0.2693, 0.3873],
+         [0.2639, 0.3928],
+         [0.2575, 0.4028]]], grad_fn=<ViewBackward0>)
+context_vecs.shape: torch.Size([2, 6, 2])
+```
+
+The input shape is `[2, 6, 3]` and the output is `[2, 6, 2]`. Both sentence examples receive identical outputs here because the inputs are duplicated, the parameters are shared, and dropout is zero. Unlike the wrapper, this class's `d_out` directly specifies the final width. Its output projection is included in the values above. Printed backward-function labels can differ between PyTorch versions.
+
+The author calls the integrated implementation more efficient because it expresses the head projections as **one larger multiplication per role**, rather than one per role **per head** in a Python loop. Grouping also lets the attention products operate over the batch/head axes together. This is an implementation advantage, not a speed measurement from our companion examples.
+
+#### From readable toy widths to GPT-2-sized attention
+
+The small widths let us inspect complete tensors; the same class can use larger dimensions. The book contrasts two GPT-2 configurations:
+
+| Configuration | Heads | Total representation width | Coordinates per head |
+| --- | --- | --- | --- |
+| Smallest GPT-2 | 12 | 768 | `768 / 12 = 64` |
+| Largest GPT-2 | 25 | 1,600 | `1600 / 25 = 64` |
+
+In these GPT-2 configurations, the input and output representation widths match: `d_in = d_out`. This lets attention fit into the surrounding transformer architecture without changing the width at every block. Our tiny teaching examples used unequal input/output widths to make the roles visible. The smallest configuration's 768-coordinate width, 12 heads, and 1,024-token context are also recorded in [OpenAI's original GPT-2 defaults](https://github.com/openai/gpt-2/blob/master/src/model.py#L5-L10).
+
+#### Exercise 3.3: Initializing GPT-2 size attention modules
+
+The book asks us to initialize one `MultiHeadAttention` module with the smallest GPT-2 model's **12 heads**, **768-coordinate inputs and outputs**, and **maximum context length of 1,024 tokens**.
+
+The total width divides evenly across the heads:
+
+<p>Coordinates per head = 768 ÷ 12 = 64</p>
+
+Use those values in the existing constructor; the class implementation needs no change:
+
+```python
+torch.manual_seed(123)
+gpt2_attention = MultiHeadAttention(
+    d_in=768,
+    d_out=768,
+    context_length=1024,
+    dropout=0.0,
+    num_heads=12,
+)
+
+print("num_heads:", gpt2_attention.num_heads)
+print("head_dim:", gpt2_attention.head_dim)
+print("query weight shape:", gpt2_attention.W_query.weight.shape)
+print("mask shape:", gpt2_attention.mask.shape)
+```
+
+```text
+num_heads: 12
+head_dim: 64
+query weight shape: torch.Size([768, 768])
+mask shape: torch.Size([1024, 1024])
+```
+
+Each Q/K/V layer maps 768 input coordinates to 768 projected coordinates. Reshaping groups those projected coordinates into 12 heads of width 64. After attention, the heads join back into 768 coordinates and pass through the 768-to-768 output projection.
+
+!!! note "A maximum context length is not a required batch length"
+
+    `context_length=1024` allocates the causal-mask capacity. A call can use a shorter sequence, with the mask sliced to its actual token count T. The expected input/output shapes are `[B, T, 768]` for `1 <= T <= 1024`. The constructor does not create a 1,024-token input batch by itself.
+
+This initializes **one attention module with random parameters**, using the requested head count, widths, and context capacity. Dropout is set to zero for the exercise, and Q/K/V bias follows our class's default. Matching these dimensions does not load pretrained weights or construct the complete GPT-2 model. The full architecture also needs the surrounding embeddings, transformer blocks, and output layers.
+
 
 ## End of chapter
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Chapter 3 reading is complete. The book's summary brings the attention mechanisms together; our companion now traces the progression from a single dot product to the causal multi-head module that the next chapter will place inside GPT.
+
+The main distinctions to carry forward:
+
+- **Attention produces context vectors by mixing information from accessible positions.** In the simplified example, the input vectors supply both the comparisons and the information being mixed. In trainable attention, learned projections separate those roles into queries, keys, and values.
+- **Scores, attention weights, and model parameters are different objects.** A query–key dot product produces a raw score. Scaling by the square root of the key width and applying softmax produces attention weights. Those weights mix the values; the stored projection matrices are the parameters training can update.
+- **Matrix multiplication packages many dot products and weighted sums.** It replaces explicit loops with grouped operations. In `[B, H, T, D]` tensors, the last two axes participate in each matrix product, while the leading axes identify independent example/head calculations.
+- **Causal masking restricts information flow.** Each position may use itself and earlier positions. Replacing future scores with negative infinity before softmax gives those positions zero weight; ordinary full-sequence training can still compute all query positions together.
+- **Dropout is a training-time regularizer with a different purpose from causal masking.** It randomly zeros attention-weight entries and scales survivors, preserving their expected values rather than renormalizing each realized row. Evaluation disables it in our `nn.Dropout` layers.
+- **Multiple heads give separate learned projections and mixtures for the same input.** Concatenating head outputs joins their coordinates; the output projection learns how to mix those features. Heads within a block are different from transformer blocks applied one after another.
+- **The wrapper and weight-split class express the same per-head attention idea in different arrangements.** Larger projection layers pack the head parameters together; `view` and `transpose` arrange the projected activations. The integrated class also includes the output projection, and its `d_out` means total width across heads.
+
+The exercises check three concrete details: [transfer transposed projection weights between implementations](#exercise-31-comparing-selfattentionv1-and-selfattention_v2), [choose per-head width for a desired combined output](#exercise-32-returning-two-dimensional-embedding-vectors), and [initialize a GPT-2-sized attention module](#exercise-33-initializing-gpt-2-size-attention-modules). The companion examples verify these calculations; they do not claim a new training run or benchmark.
+
+Chapter 2 gave us embedded inputs. Chapter 3 supplied the attention building block. [Chapter 4](04-implementing-a-gpt-model.md) will assemble the surrounding GPT architecture, including normalization, shortcut connections, and feedforward layers. Our pre-book experiments already contain those pieces; the reading will unpack their design in the same step-by-step way.
