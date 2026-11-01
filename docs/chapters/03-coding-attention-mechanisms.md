@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6 and the opening of 3.6.1 now introduce multiple heads through Figure 3.24; the wrapper implementation is next.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. The exercise and efficient multi-head implementation are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1650,7 +1650,138 @@ Here “combine” means **concatenate**, not elementwise addition or averaging.
 
     The figure draws heads stacked on top of one another, but they are parallel branches of the same attention operation. Head 2 receives X, not Z₁. Transformer blocks instead run in sequence, as in our four-block Cosmopedia model. The simple wrapper may call heads one after another in Python; that execution order does not make one head depend on another head's output.
 
-The next reading step is the wrapper code that puts these branches together. We have not implemented that wrapper in these notes yet.
+#### Implement the wrapper with `nn.ModuleList`
+
+Listing 3.4 puts the branches into a small class. Reuse our `CausalAttention` class from Section 3.5.3. This adapts the [official Chapter 3 implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb), with type hints and explicit axis descriptions:
+
+```python title="MultiHeadAttentionWrapper — separate heads, joined outputs"
+class MultiHeadAttentionWrapper(nn.Module):
+    """Run separate causal heads on the same input and concatenate features."""
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        context_length: int,
+        dropout: float,
+        num_heads: int,
+        qkv_bias: bool = False,
+    ) -> None:
+        """Create num_heads heads; d_out is the output width of EACH head."""
+        super().__init__()
+        self.heads = nn.ModuleList(
+            [
+                CausalAttention(
+                    d_in, d_out, context_length, dropout, qkv_bias
+                )
+                for _ in range(num_heads)
+            ]
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating vectors [B, T, d_in] to [B, T, num_heads * d_out].
+
+        B = batch examples; T = token positions. Input length must fit the
+        heads' context_length, and x must share the module's device/dtype.
+        Each head produces [B, T, d_out]. Concatenation joins the last axis;
+        it preserves the batch and token axes and adds no separate head axis.
+        """
+        return torch.cat([head(x) for head in self.heads], dim=-1)
+```
+
+The constructor's list comprehension creates a **new `CausalAttention` instance on each iteration**. Each instance owns its own projection parameters. We are not calling the same head repeatedly or resetting the seed before each head.
+
+[`nn.ModuleList`](https://docs.pytorch.org/docs/2.9/generated/torch.nn.ModuleList.html) registers the heads as child modules. This lets the wrapper's `.parameters()`, `.to(device)`, `.eval()`, and `.state_dict()` reach them. A plain Python list would not register its contents with those model-management operations. `ModuleList` does not choose a computation order or combine outputs itself; our `forward` method does that.
+
+In `forward`, `[head(x) for head in self.heads]` produces a Python list of output tensors. [`torch.cat(..., dim=-1)`](https://docs.pytorch.org/docs/2.9/generated/torch.cat.html) joins the existing last dimension. This differs from `torch.stack`, which introduced the new batch axis earlier. The wrapper calls heads one after another in Python; their input dependencies are parallel branches, but this implementation does not explicitly compute all heads together in one grouped operation.
+
+#### Figure 3.25: two coordinates per head become four per token
+
+<figure markdown="1">
+
+[![Two heads each produce a six-row, two-column context matrix for one sentence. The two matrices concatenate along columns into a six-row, four-column result. Both sentences in the duplicated batch get this calculation, giving output shape two by six by four.](../assets/chapter-03/multihead-context-concatenation.svg)](../assets/chapter-03/multihead-context-concatenation.svg)
+
+<figcaption markdown="span">Original companion illustration inspired by Figure 3.25 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). Shows one batch item's six token rows, using the verified wrapper output below, rounded to four decimals. The colors track which two columns come from each head. The batch axis is preserved; it does not count heads.</figcaption>
+</figure>
+
+!!! note "Which width does d_out mean here?"
+
+    In this wrapper's constructor, `d_out=2` is **per-head width**. Each Z₁ or Z₂ therefore has two columns per token. The concatenated Z has **four** columns: `num_heads * d_out = 2 * 2`. Keep the per-head width and the combined width separate when reading the figure's dimension labels.
+
+#### Instantiate the wrapper and inspect the result
+
+We reuse `batch` with shape `[2, 6, 3]`: two copies of “Your journey starts with one step.” Like the book, we set dropout to zero for this demonstration.
+
+```python
+torch.manual_seed(123)
+context_length = batch.shape[1]  # 6 tokens, not 2 batch examples
+d_in, d_out = 3, 2
+mha = MultiHeadAttentionWrapper(
+    d_in, d_out, context_length, dropout=0.0, num_heads=2
+)
+context_vecs = mha(batch)
+print(context_vecs)
+print("context_vecs.shape:", context_vecs.shape)
+```
+
+```text
+tensor([[[-0.4519,  0.2216,  0.4772,  0.1063],
+         [-0.5874,  0.0058,  0.5891,  0.3257],
+         [-0.6300, -0.0632,  0.6202,  0.3860],
+         [-0.5675, -0.0843,  0.5478,  0.3589],
+         [-0.5526, -0.0981,  0.5321,  0.3428],
+         [-0.5299, -0.1081,  0.5077,  0.3493]],
+
+        [[-0.4519,  0.2216,  0.4772,  0.1063],
+         [-0.5874,  0.0058,  0.5891,  0.3257],
+         [-0.6300, -0.0632,  0.6202,  0.3860],
+         [-0.5675, -0.0843,  0.5478,  0.3589],
+         [-0.5526, -0.0981,  0.5321,  0.3428],
+         [-0.5299, -0.1081,  0.5077,  0.3493]]], grad_fn=<CatBackward0>)
+context_vecs.shape: torch.Size([2, 6, 4])
+```
+
+The model parameters are shared across batch examples. Because both inputs are identical and dropout is zero, the two output slices are identical too. This does **not** mean the two heads have identical outputs: within each token's four numbers, the first pair comes from head 1 and the second pair from head 2. Nonzero dropout during training can make duplicate batch examples produce different results.
+
+#### Read `[2, 6, 4]` one axis at a time
+
+```text
+context_vecs.shape = [2, 6, 4]
+                     │  │  └─ coordinates per token: 2 heads × 2 coordinates
+                     │  └──── token positions in each sentence
+                     └─────── sentence examples in the batch
+```
+
+| Axis | Size | What it counts |
+| --- | --- | --- |
+| 0: batch | 2 | Two copies of the input sentence. This is not the number of heads. |
+| 1: token position | 6 | Your, journey, starts, with, one, step. |
+| 2: combined features | 4 | Two coordinates from head 1 followed by two from head 2. |
+
+Think of the output as **two tables, each with six rows and four columns**. Each table belongs to one sentence, each row belongs to a token, and the four columns hold the concatenated context vector for that token. The tensor has three axes; each token's vector has four coordinates. It contains `2 * 6 * 4 = 48` scalar values altogether.
+
+For the first sentence's first token, the actual row is:
+
+```text
+Token: “Your”
+Head 1 supplies: [-0.4519, 0.2216]
+Head 2 supplies: [ 0.4772, 0.1063]
+Joined vector:  [-0.4519, 0.2216, 0.4772, 0.1063]
+```
+
+We can select those pieces without changing the tensor:
+
+```python
+print(context_vecs[0].shape)         # [6, 4]: first sentence's table
+print(context_vecs[0, 0].shape)      # [4]: its first token's vector
+print(context_vecs[0, 0, :2])        # first token, head 1's two coordinates
+print(context_vecs[0, 0, 2:])        # first token, head 2's two coordinates
+print(context_vecs[1, 0])            # same token in the duplicate sentence
+```
+
+Two different counts happen to equal two here: **batch size is two**, and **head count is also two**. Their equality is coincidental. Concatenation incorporates the head outputs into the feature axis, so there is no separate head axis in the final `[2, 6, 4]` tensor. These are context-vector coordinates, not vocabulary probabilities or a newly stored token embedding table.
+
+We stop here before Exercise 3.2 and the more efficient grouped implementation.
 
 ## End of chapter
 

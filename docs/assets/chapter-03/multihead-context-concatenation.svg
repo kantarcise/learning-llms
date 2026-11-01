@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1390" viewBox="0 0 1000 1390" role="img" aria-labelledby="title desc">
+<title id="title">Two heads become four coordinates per token</title>
+<desc id="desc">Input batch 2 by 6 by 3 goes to two causal heads, each producing 2 by 6 by 2 contexts. For one sentence, six token rows from each head are shown. Concatenating their feature columns yields 2 by 6 by 4. Batch size counts sentences, not heads. The first token combines minus 0.4519, 0.2216 from head one and 0.4772, 0.1063 from head two. The duplicate sentence has identical outputs with dropout zero.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#476582"/></marker></defs>
+<rect width="1000" height="1390" fill="#f5f7fb"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="35" y="48" font-size="30" text-anchor="start">Two heads → four coordinates for every token</text>
+<text x="35" y="85" font-size="20" text-anchor="start">Verified wrapper output · seed 123 · dropout = 0 · values rounded to 4 decimals</text>
+<rect x="100" y="110" width="800" height="105" rx="10" fill="#fff" stroke="#aebed1"/>
+<text x="500" y="151" font-size="27" text-anchor="middle">Input <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">X</tspan> [2, 6, 3]</text>
+<text x="500" y="190" font-size="23" text-anchor="middle">2 sentences × 6 token positions × 3 input coordinates</text>
+<path d="M500 215 V235 H255 V270" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M500 235 H745 V270" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="285" width="440" height="395" rx="10" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="255" y="326" font-size="26" text-anchor="middle">Head 1: <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Z<tspan baseline-shift="sub" font-size="70%" font-style="normal">1</tspan></tspan> [2, 6, 2]</text>
+<text x="255" y="363" font-size="20" text-anchor="middle">One sentence’s 6 × 2 table shown below</text>
+<text x="55" y="403" font-size="21" text-anchor="start">Your</text>
+<text x="255" y="403" font-size="22" text-anchor="middle">−0.4519</text>
+<text x="385" y="403" font-size="22" text-anchor="middle">0.2216</text>
+<text x="55" y="446" font-size="21" text-anchor="start">journey</text>
+<text x="255" y="446" font-size="22" text-anchor="middle">−0.5874</text>
+<text x="385" y="446" font-size="22" text-anchor="middle">0.0058</text>
+<text x="55" y="489" font-size="21" text-anchor="start">starts</text>
+<text x="255" y="489" font-size="22" text-anchor="middle">−0.6300</text>
+<text x="385" y="489" font-size="22" text-anchor="middle">−0.0632</text>
+<text x="55" y="532" font-size="21" text-anchor="start">with</text>
+<text x="255" y="532" font-size="22" text-anchor="middle">−0.5675</text>
+<text x="385" y="532" font-size="22" text-anchor="middle">−0.0843</text>
+<text x="55" y="575" font-size="21" text-anchor="start">one</text>
+<text x="255" y="575" font-size="22" text-anchor="middle">−0.5526</text>
+<text x="385" y="575" font-size="22" text-anchor="middle">−0.0981</text>
+<text x="55" y="618" font-size="21" text-anchor="start">step</text>
+<text x="255" y="618" font-size="22" text-anchor="middle">−0.5299</text>
+<text x="385" y="618" font-size="22" text-anchor="middle">−0.1081</text>
+<rect x="525" y="285" width="440" height="395" rx="10" fill="#e6e2f5" stroke="#aebed1"/>
+<text x="745" y="326" font-size="26" text-anchor="middle">Head 2: <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Z<tspan baseline-shift="sub" font-size="70%" font-style="normal">2</tspan></tspan> [2, 6, 2]</text>
+<text x="745" y="363" font-size="20" text-anchor="middle">One sentence’s 6 × 2 table shown below</text>
+<text x="545" y="403" font-size="21" text-anchor="start">Your</text>
+<text x="745" y="403" font-size="22" text-anchor="middle">0.4772</text>
+<text x="875" y="403" font-size="22" text-anchor="middle">0.1063</text>
+<text x="545" y="446" font-size="21" text-anchor="start">journey</text>
+<text x="745" y="446" font-size="22" text-anchor="middle">0.5891</text>
+<text x="875" y="446" font-size="22" text-anchor="middle">0.3257</text>
+<text x="545" y="489" font-size="21" text-anchor="start">starts</text>
+<text x="745" y="489" font-size="22" text-anchor="middle">0.6202</text>
+<text x="875" y="489" font-size="22" text-anchor="middle">0.3860</text>
+<text x="545" y="532" font-size="21" text-anchor="start">with</text>
+<text x="745" y="532" font-size="22" text-anchor="middle">0.5478</text>
+<text x="875" y="532" font-size="22" text-anchor="middle">0.3589</text>
+<text x="545" y="575" font-size="21" text-anchor="start">one</text>
+<text x="745" y="575" font-size="22" text-anchor="middle">0.5321</text>
+<text x="875" y="575" font-size="22" text-anchor="middle">0.3428</text>
+<text x="545" y="618" font-size="21" text-anchor="start">step</text>
+<text x="745" y="618" font-size="22" text-anchor="middle">0.5077</text>
+<text x="875" y="618" font-size="22" text-anchor="middle">0.3493</text>
+<path d="M255 680 V705 H500 M745 680 V705 H500" fill="none" stroke="#476582" stroke-width="2"/>
+<path d="M500 705 V766" fill="none" stroke="#476582" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="240" y="716" width="520" height="34" fill="#f5f7fb"/>
+<text x="500" y="741" font-family="Courier New,monospace" font-size="22" text-anchor="middle">torch.cat(head_outputs, dim=-1)</text>
+<rect x="35" y="785" width="930" height="405" rx="10" fill="#fff" stroke="#aebed1"/>
+<text x="500" y="826" font-size="27" text-anchor="middle">Combined <tspan font-family="STIX Two Math,Cambria Math,Times New Roman,serif" font-style="italic">Z</tspan> [2, 6, 4]</text>
+<text x="500" y="863" font-size="22" text-anchor="middle">Same six rows, now four columns per sentence</text>
+<rect x="285" y="886" width="300" height="276" rx="8" fill="#d8f1eb"/>
+<rect x="600" y="886" width="300" height="276" rx="8" fill="#e6e2f5"/>
+<text x="435" y="917" font-size="20" text-anchor="middle">From head 1</text>
+<text x="750" y="917" font-size="20" text-anchor="middle">From head 2</text>
+<text x="60" y="957" font-size="22" text-anchor="start">Your</text>
+<text x="360" y="957" font-size="22" text-anchor="middle">−0.4519</text>
+<text x="510" y="957" font-size="22" text-anchor="middle">0.2216</text>
+<text x="675" y="957" font-size="22" text-anchor="middle">0.4772</text>
+<text x="825" y="957" font-size="22" text-anchor="middle">0.1063</text>
+<text x="60" y="994" font-size="22" text-anchor="start">journey</text>
+<text x="360" y="994" font-size="22" text-anchor="middle">−0.5874</text>
+<text x="510" y="994" font-size="22" text-anchor="middle">0.0058</text>
+<text x="675" y="994" font-size="22" text-anchor="middle">0.5891</text>
+<text x="825" y="994" font-size="22" text-anchor="middle">0.3257</text>
+<text x="60" y="1031" font-size="22" text-anchor="start">starts</text>
+<text x="360" y="1031" font-size="22" text-anchor="middle">−0.6300</text>
+<text x="510" y="1031" font-size="22" text-anchor="middle">−0.0632</text>
+<text x="675" y="1031" font-size="22" text-anchor="middle">0.6202</text>
+<text x="825" y="1031" font-size="22" text-anchor="middle">0.3860</text>
+<text x="60" y="1068" font-size="22" text-anchor="start">with</text>
+<text x="360" y="1068" font-size="22" text-anchor="middle">−0.5675</text>
+<text x="510" y="1068" font-size="22" text-anchor="middle">−0.0843</text>
+<text x="675" y="1068" font-size="22" text-anchor="middle">0.5478</text>
+<text x="825" y="1068" font-size="22" text-anchor="middle">0.3589</text>
+<text x="60" y="1105" font-size="22" text-anchor="start">one</text>
+<text x="360" y="1105" font-size="22" text-anchor="middle">−0.5526</text>
+<text x="510" y="1105" font-size="22" text-anchor="middle">−0.0981</text>
+<text x="675" y="1105" font-size="22" text-anchor="middle">0.5321</text>
+<text x="825" y="1105" font-size="22" text-anchor="middle">0.3428</text>
+<text x="60" y="1142" font-size="22" text-anchor="start">step</text>
+<text x="360" y="1142" font-size="22" text-anchor="middle">−0.5299</text>
+<text x="510" y="1142" font-size="22" text-anchor="middle">−0.1081</text>
+<text x="675" y="1142" font-size="22" text-anchor="middle">0.5077</text>
+<text x="825" y="1142" font-size="22" text-anchor="middle">0.3493</text>
+<rect x="35" y="1220" width="930" height="130" rx="10" fill="#fff1cf" stroke="#aebed1"/>
+<text x="500" y="1259" font-size="25" text-anchor="middle">[2, 6, 4] = sentences × tokens × combined coordinates</text>
+<text x="500" y="1297" font-size="22" text-anchor="middle">The first 2 counts batch examples. Head outputs are joined into the final 4.</text>
+<text x="500" y="1330" font-size="21" text-anchor="middle">Duplicate inputs give duplicate tables here because dropout is zero.</text>
+</g></svg>
