@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Section 3.5.2 introduces attention-weight dropout and the PyTorch demonstration; the compact causal attention class and remaining sections are still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Multi-head attention in Section 3.6 is next.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1433,6 +1433,165 @@ The [Character Logs notes](https://github.com/kantarcise/learning-llms/blob/main
 Our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) calls `F.scaled_dot_product_attention(query, key, value, is_causal=True)` without a dropout argument. That function's default is `dropout_p=0.0`, so it also trains without attention dropout. Neither model adds dropout to the context vectors or feedforward layers.
 
 One API distinction for later: the functional attention call uses its explicit `dropout_p` argument even in evaluation mode. If we add dropout there, we must pass zero during evaluation ourselves; `nn.Dropout` handles its mode switch automatically. See [PyTorch's functional attention documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.functional.scaled_dot_product_attention.html).
+
+### 3.5.3 Implementing a compact causal attention class
+
+This is another building block: **the earlier self-attention class, now with causal masking and dropout, plus support for batches**. The projections, scaled query–key scores, softmax, and weighted sum of values retain their familiar roles. Packaging these pieces together gives us the single head we will later extend to multi-head attention.
+
+#### Add a batch axis
+
+Chapter 2's data loader produces batches, not just one sequence at a time. To make the new dimension visible, the book duplicates the same six-token example. Reuse our `book_inputs` tensor for “Your journey starts with one step”:
+
+```python
+batch = torch.stack((book_inputs, book_inputs), dim=0)
+print(batch.shape)
+```
+
+```text
+torch.Size([2, 6, 3])
+```
+
+```text
+One sequence: [   6, 3]   → six tokens, three coordinates each
+Batch:        [2, 6, 3]   → two sequences, six tokens each, three coordinates each
+               B  T  d_in
+```
+
+`stack` introduces the new axis at position zero. The duplicate sequences make this demonstration easy to compare; real batches can contain different sequences. Both examples use the **same learned projection parameters**, but attention mixes positions only within each example. Nothing in this calculation allows one batch example to attend to the other.
+
+#### Put causal masking and dropout into the class
+
+The following adapts Listing 3.3 from [Raschka's book and Chapter 3 code](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb), with type hints and shape comments. We store the mask as a Boolean tensor from the start, rather than converting the book's numeric mask to Boolean in each forward pass. The exclusion rule is unchanged: `True` means a future position.
+
+```python title="CausalAttention — one head, with a batch dimension"
+import torch
+from torch import nn
+
+
+class CausalAttention(nn.Module):
+    """Batched single-head attention with a causal mask and weight dropout."""
+
+    mask: torch.Tensor
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        context_length: int,
+        dropout: float,
+        qkv_bias: bool = False,
+    ) -> None:
+        """Create projections and a fixed mask for up to context_length tokens.
+
+        d_in is input-vector width; d_out is query/key/value-vector width.
+        dropout is the probability of zeroing each attention-weight entry.
+        """
+        super().__init__()
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.dropout = nn.Dropout(dropout)
+        self.register_buffer(
+            "mask",
+            torch.triu(
+                torch.ones(context_length, context_length, dtype=torch.bool),
+                diagonal=1,
+            ),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating-point vectors [B, T, d_in] to contexts [B, T, d_out].
+
+        B = batch examples; T = tokens per example, with 1 <= T <= the
+        configured context_length. x and the module must share a device.
+        Inputs are embedded vectors, not integer token IDs. Attention never
+        mixes examples. Forward computes outputs without updating parameters.
+        """
+        num_tokens = x.shape[1]
+        keys = self.W_key(x)      # [B, T, d_out]
+        queries = self.W_query(x)  # [B, T, d_out]
+        values = self.W_value(x)  # [B, T, d_out]
+
+        # Keep B in front: transpose token and feature axes only.
+        # [B, T, d_out] @ [B, d_out, T] -> [B, T, T]
+        attn_scores = queries @ keys.transpose(1, 2)
+        attn_scores.masked_fill_(
+            self.mask[:num_tokens, :num_tokens], -torch.inf
+        )
+        attn_weights = torch.softmax(
+            attn_scores / keys.shape[-1] ** 0.5, dim=-1
+        )
+        attn_weights = self.dropout(attn_weights)
+        return attn_weights @ values  # [B, T, T] @ [B, T, d_out]
+```
+
+Compared with our single-sequence `SelfAttention_v2`, three details deserve attention:
+
+- `keys.transpose(1, 2)` changes `[B, T, d_out]` into `[B, d_out, T]`. It preserves the batch axis; `.T` is not the right way to transpose just the last two axes of this three-dimensional tensor.
+- The stored mask has shape `[context_length, context_length]`. Slicing selects `[T, T]` for the current sequence length, and broadcasting applies that same causal rule to each of the `B` examples. The class expects sequences no longer than its configured context length.
+- `masked_fill_` changes the newly computed score tensor in place; the trailing underscore marks that behavior. It does not change the learned matrices or the stored mask. Dropout then acts on the weights **after softmax**, before the value mixture.
+
+#### Why register the mask as a buffer?
+
+The mask is **model state, but not a trainable parameter**. `register_buffer` makes PyTorch manage it alongside the model: `ca.to(device)` moves the registered mask with the parameters, and the mask is included in `ca.state_dict()` by default. It is not included in `ca.parameters()`, and this Boolean mask is not learned by gradient updates. See [PyTorch's buffer documentation](https://docs.pytorch.org/docs/2.9/generated/torch.nn.Module.html#torch.nn.Module.register_buffer).
+
+This connects to moving a camera frame onto the GPU before processing it. The model and tensors participating in these operations must be on compatible devices, but they do not all move through the same call:
+
+| Tensor | How it moves to the selected device |
+| --- | --- |
+| Input frame or embedded batch | Move it explicitly: `batch = batch.to(device)`. |
+| Learned projection parameters | `ca.to(device)` moves them. |
+| Registered causal-mask buffer | The same `ca.to(device)` call moves it too. |
+| Tensor stored as an ordinary attribute | `ca.to(device)` does not automatically move it. |
+
+!!! note "A buffer does not move the input for us"
+
+    Registering the mask avoids manually moving that internal tensor whenever the model moves. The incoming batch remains our responsibility. Calling `ca(batch)` does not automatically copy a CPU batch to the GPU. The mask's registration also does not add it to the set of trainable projection parameters.
+
+#### Instantiate the head and inspect its output
+
+As before, constructing the object initializes its parameters; calling the object runs the calculation:
+
+```python
+torch.manual_seed(123)
+d_in, d_out = 3, 2
+context_length = batch.shape[1]  # 6 token positions, not batch size 2
+ca = CausalAttention(d_in, d_out, context_length, dropout=0.0)
+context_vecs = ca(batch)
+print("context_vecs.shape:", context_vecs.shape)
+```
+
+```text
+context_vecs.shape: torch.Size([2, 6, 2])
+```
+
+**`ca(batch)` calls the module with `batch` as its input**; it is not an attribute lookup such as `ca.batch`. PyTorch routes the call through the module machinery to `forward`.
+
+The input is `[B, T, d_in] = [2, 6, 3]`; the output is `[B, T, d_out] = [2, 6, 2]`. We still have two sequences and six token positions in each. Each token's new context vector has **two coordinates** because we selected `d_out=2`. “Three-dimensional tensor” describes the three axes; it does not mean that each token still has three coordinates. These are computed context vectors, not new entries written into the token embedding table.
+
+The book uses `dropout=0.0` here, so no entries are randomly dropped even though the dropout layer is present. For the identical inputs, the two output slices match. With nonzero dropout during training, independently sampled masks can make those slices differ even for identical inputs.
+
+#### Where we are: from simplified attention to multiple heads
+
+<figure markdown="1">
+
+[![Four-stage attention roadmap. Simplified attention uses input vectors directly; trainable self-attention introduces learned query, key, and value projections; the current causal head adds batches, a causal mask, and dropout; multi-head attention is the next reading step.](../assets/chapter-03/attention-building-blocks.svg)](../assets/chapter-03/attention-building-blocks.svg)
+
+<figcaption markdown="span">Original companion roadmap inspired by Figure 3.23 in [Raschka's book](https://sebastianraschka.com/llms-from-scratch/). The highlighted stage is our current single causal head. The final stage is a preview of the next reading section, not a claim that we have implemented it in these chapter notes.</figcaption>
+</figure>
+
+#### Did our earlier experiments already use multiple heads?
+
+Our memory of the experiments fits the code and recorded configurations:
+
+| Experiment | Transformer blocks | Attention heads per block | Representation width |
+| --- | --- | --- | --- |
+| [Character Logs](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) | 1 | 1 | 32 coordinates |
+| [Cosmopedia](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py) | 4 | 4 | 256 coordinates total; 64 per head |
+
+Cosmopedia's [recorded 1,000-step run configuration](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/user-1000steps/run.json) confirms four heads and four layers; these are not just unused defaults. Its code reshapes projected vectors into four heads, performs causal attention, combines their outputs, and applies an output projection. Both experiments omit dropout, as discussed above.
+
+**Heads and blocks count different things.** Within one block, heads compute different attention mixtures alongside one another. Blocks are applied in sequence: the output of one becomes the input to the next. Four blocks with four heads each does not mean one attention operation with sixteen heads. Our next reading step will unpack how the multiple heads are implemented.
 
 ## 3.6 Extending single-head attention to multi-head attention
 

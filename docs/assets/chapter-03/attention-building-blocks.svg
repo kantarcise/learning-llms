@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="940" viewBox="0 0 1000 940" role="img" aria-labelledby="title desc">
+<title id="title">Building attention one step at a time</title>
+<desc id="desc">A four-stage roadmap: simplified attention, learned query/key/value projections, our current batched causal head with dropout, and multi-head attention as the next reading step.</desc>
+<rect width="1000" height="940" fill="#f5f7fb"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<text x="35" y="49" font-size="30">Building attention one step at a time</text>
+<text x="35" y="88" font-size="22">Sections 3.3 → 3.4 → 3.5 → 3.6</text>
+<rect x="35" y="120" width="930" height="150" rx="12" fill="#ffffff" stroke="#aebed1"/>
+<text x="60" y="162" font-size="26">1. Simplified self-attention</text>
+<text x="60" y="205" font-size="22">Use input vectors to compare positions and mix information.</text>
+<text x="60" y="241" font-size="21">No learned Q/K/V projections yet.</text>
+<text x="480" y="303" font-size="30">↓</text>
+<rect x="35" y="315" width="930" height="150" rx="12" fill="#ffffff" stroke="#aebed1"/>
+<text x="60" y="357" font-size="26">2. Self-attention with trainable projections</text>
+<text x="60" y="400" font-size="22">Learn W_Q, W_K, W_V; compute scores, weights, and contexts.</text>
+<text x="60" y="436" font-size="21">One set of projections is shared across input positions.</text>
+<text x="480" y="498" font-size="30">↓</text>
+<rect x="35" y="510" width="930" height="150" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
+<text x="60" y="552" font-size="26">3. Batched causal attention · current section</text>
+<text x="60" y="595" font-size="22">Add the causal mask and attention-weight dropout.</text>
+<text x="60" y="631" font-size="21">Input [B, T, d_in] → contexts [B, T, d_out]; still one head.</text>
+<text x="480" y="693" font-size="30">↓</text>
+<rect x="35" y="705" width="930" height="150" rx="12" fill="#fff1cf" stroke="#aebed1"/>
+<text x="60" y="747" font-size="26">4. Multi-head attention · next section</text>
+<text x="60" y="790" font-size="22">Compute several attention mixtures and combine their outputs.</text>
+<text x="60" y="826" font-size="21">Multiple heads within a block; blocks form a sequence.</text>
+<text x="35" y="908" font-size="21">Each stage builds on the previous one. No optimizer update is shown here.</text>
+</g></svg>
