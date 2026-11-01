@@ -1,11 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc"><title id="title">Mask scores before softmax</title><desc id="desc">For query position two, replace future scores with negative infinity. Divide by square root of two and apply softmax to get weights 0.5517, 0.4483, zero, zero, zero, zero.</desc><rect width="1000" height="700" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">Mask scores before softmax</title><desc id="desc">For query position two, replace future scores with negative infinity. Divide by square root of two and apply softmax to get weights 0.5517, 0.4483, zero, zero, zero, zero.</desc><rect width="1000" height="700" fill="#f5f7fb"/><g font-family="Arial,Helvetica,sans-serif" fill="#26364c">
 <text x="35" y="48" font-size="30">A shorter route: hide future scores, then apply softmax</text>
 <rect x="35" y="90" width="930" height="125" rx="12" fill="#fff" stroke="#aebed1"/>
-<text x="60" y="134" font-size="27">Attention scores Ω [6, 6]</text>
+<text x="60" y="134" font-size="27">Attention scores <tspan class="math-upright">Ω</tspan> <tspan class="code" xml:space="preserve">[6, 6]</tspan></text>
 <text x="60" y="179" font-size="23">Row 2 compares query 2 with all six keys.</text>
 <text x="480" y="253" font-size="32">↓</text>
 <rect x="35" y="270" width="930" height="125" rx="12" fill="#fff1cf" stroke="#aebed1"/>
-<text x="60" y="314" font-size="27">1. masked_fill(future_mask, −∞)</text>
+<text x="60" y="314" font-size="27">1. <tspan class="code" xml:space="preserve">masked_fill(future_mask, -torch.inf)</tspan></text>
 <text x="60" y="359" font-size="23">Row 2: [0.4656, 0.1723, −∞, −∞, −∞, −∞]</text>
 <text x="480" y="433" font-size="32">↓</text>
 <rect x="35" y="450" width="930" height="125" rx="12" fill="#d8f1eb" stroke="#aebed1"/>

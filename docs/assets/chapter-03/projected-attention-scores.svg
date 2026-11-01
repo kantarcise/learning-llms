@@ -1,43 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc"><title id="title">One projected query compares with six projected keys</title><desc id="desc">Input at position two produces query two through W Q. All six inputs produce keys through W K and values through W V. The six query-key dot products are unscaled scores. Score omega two two is 1.8524. Values are saved for the later mixture.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">One projected query compares with six projected keys</title><desc id="desc">Input at position two produces query two through W Q. All six inputs produce keys through W K and values through W V. The six query-key dot products are unscaled scores. Score omega two two is 1.8524. Values are saved for the later mixture.</desc><rect width="1000" height="1000" fill="#f5f7fb"/>
 <text x="40" y="50" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c">Compare projected queries with projected keys</text>
 <rect x="40" y="90" width="440" height="150" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
 <text x="60" y="128" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Query source: “journey” at position 2</text>
-<text x="60" y="173" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">x<tspan baseline-shift="super" font-size="70%">(2)</tspan> [3] × W<tspan baseline-shift="sub" font-size="70%">Q</tspan> [3, 2] → q<tspan baseline-shift="super" font-size="70%">(2)</tspan> [2]</text>
-<text x="60" y="217" font-family="Arial,Helvetica,sans-serif" font-size="25" fill="#26364c">q<tspan baseline-shift="super" font-size="70%">(2)</tspan> ≈ [0.4306, 1.4551]</text>
+<text x="60" y="173" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> <tspan class="code" xml:space="preserve">[3]</tspan> × <tspan class="math">W</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">Q</tspan></tspan> <tspan class="code" xml:space="preserve">[3, 2]</tspan> → <tspan class="math">q</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> <tspan class="code" xml:space="preserve">[2]</tspan></text>
+<text x="60" y="217" font-family="Arial,Helvetica,sans-serif" font-size="25" fill="#26364c"><tspan class="math">q</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> ≈ [0.4306, 1.4551]</text>
 <rect x="510" y="90" width="450" height="150" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="530" y="128" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">All inputs X: [6, 3]</text>
-<text x="530" y="173" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">X @ W<tspan baseline-shift="sub" font-size="70%">K</tspan> → keys [6, 2]</text>
-<text x="530" y="217" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">X @ W<tspan baseline-shift="sub" font-size="70%">V</tspan> → values [6, 2]</text>
-<text x="40" y="285" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Same query q<tspan baseline-shift="super" font-size="70%">(2)</tspan> for every row below; one dot product per key.</text>
+<text x="530" y="128" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">All inputs <tspan class="math">X</tspan>: <tspan class="code" xml:space="preserve">[6, 3]</tspan></text>
+<text x="530" y="173" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">X</tspan> <tspan class="math">W</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">K</tspan></tspan> → keys <tspan class="code" xml:space="preserve">[6, 2]</tspan></text>
+<text x="530" y="217" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">X</tspan> <tspan class="math">W</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%"><tspan class="math">V</tspan></tspan> → values <tspan class="code" xml:space="preserve">[6, 2]</tspan></text>
+<text x="40" y="285" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Same query <tspan class="math">q</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> for every row below; one dot product per key.</text>
 <text x="60" y="335" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Input position</text>
-<text x="295" y="335" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Key vector k<tspan baseline-shift="super" font-size="70%">(j)</tspan></text>
-<text x="620" y="335" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Score ω<tspan baseline-shift="sub" font-size="70%">2j</tspan> = q<tspan baseline-shift="super" font-size="70%">(2)</tspan> · k<tspan baseline-shift="super" font-size="70%">(j)</tspan></text>
+<text x="295" y="335" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Key vector <tspan class="math">k</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(<tspan class="math">j</tspan>)</tspan></text>
+<text x="620" y="335" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Score <tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">2<tspan class="math">j</tspan></tspan> = <tspan class="math">q</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> · <tspan class="math">k</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(<tspan class="math">j</tspan>)</tspan></text>
 <rect x="40" y="355" width="920" height="55" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="60" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">1. Your</text>
 <text x="295" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[0.3669, 0.7646]</text>
-<text x="640" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">21</tspan> ≈ 1.2705</text>
+<text x="640" y="390" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">21</tspan> ≈ 1.2705</text>
 <rect x="40" y="418" width="920" height="55" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
 <text x="60" y="453" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">2. journey</text>
 <text x="295" y="453" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[0.4433, 1.1419]</text>
-<text x="640" y="453" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">22</tspan> ≈ 1.8524</text>
+<text x="640" y="453" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">22</tspan> ≈ 1.8524</text>
 <rect x="40" y="481" width="920" height="55" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="60" y="516" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">3. starts</text>
 <text x="295" y="516" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[0.4361, 1.1156]</text>
-<text x="640" y="516" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">23</tspan> ≈ 1.8111</text>
+<text x="640" y="516" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">23</tspan> ≈ 1.8111</text>
 <rect x="40" y="544" width="920" height="55" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="60" y="579" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">4. with</text>
 <text x="295" y="579" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[0.2408, 0.6706]</text>
-<text x="640" y="579" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">24</tspan> ≈ 1.0795</text>
+<text x="640" y="579" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">24</tspan> ≈ 1.0795</text>
 <rect x="40" y="607" width="920" height="55" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="60" y="642" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">5. one</text>
 <text x="295" y="642" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[0.1827, 0.3292]</text>
-<text x="640" y="642" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">25</tspan> ≈ 0.5577</text>
+<text x="640" y="642" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">25</tspan> ≈ 0.5577</text>
 <rect x="40" y="670" width="920" height="55" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="60" y="705" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">6. step</text>
 <text x="295" y="705" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[0.3275, 0.9642]</text>
-<text x="640" y="705" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">26</tspan> ≈ 1.5440</text>
-<text x="40" y="785" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">One operation: query_2 @ keys.T</text>
-<text x="40" y="828" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">[2] @ [2, 6] → [6] · six scores for query 2, not all query positions</text>
+<text x="640" y="705" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">26</tspan> ≈ 1.5440</text>
+<text x="40" y="785" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">One operation: <tspan class="code" xml:space="preserve">query_2 @ keys.T</tspan></text>
+<text x="40" y="828" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c"><tspan class="code" xml:space="preserve">[2]</tspan> <tspan class="code" xml:space="preserve">@</tspan> <tspan class="code" xml:space="preserve">[2, 6]</tspan> → <tspan class="code" xml:space="preserve">[6]</tspan> · six scores for query 2, not all query positions</text>
 <rect x="40" y="860" width="920" height="85" rx="12" fill="#fff" stroke="#aebed1"/>
 <text x="60" y="895" font-family="Arial,Helvetica,sans-serif" font-size="24" fill="#26364c">Values are ready, but are NOT used in these dot products.</text>
 <text x="60" y="929" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Later: attention weights will combine the value vectors.</text>

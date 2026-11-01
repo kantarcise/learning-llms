@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style>
 <title id="title">Build a vocabulary, then reuse it to encode and decode</title>
 <desc id="desc">The illustrative training text dog brown dog yields two unique sorted entries: brown maps to zero and dog to one. Encoding dog brown dog produces 1, 0, 1; decoding those IDs reconstructs dog brown dog. A separate model embedding lookup maps these IDs to three vectors, reusing row one for both dog positions.</desc>
 <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#52647b" stroke-width="1.5"/></marker></defs>
@@ -23,19 +30,19 @@
 <rect x="24" y="350" width="952" height="245" rx="16" fill="white" stroke="#dbe2ed"/>
 <text x="45" y="385" font-size="17" font-weight="700">2  ONE TOKENIZER OBJECT, TWO DIRECTIONS</text>
 <text x="55" y="449" font-size="24">dog brown dog</text>
-<text x="754" y="449" font-size="24">[1, 0, 1]</text>
+<text x="754" y="449" font-size="24"><tspan class="code" xml:space="preserve">[1, 0, 1]</tspan></text>
 <path d="M265,440 H720" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="359" y="424" font-size="19">encode: text → IDs</text>
 <path d="M720,510 H265" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="354" y="541" font-size="19">decode: IDs → text</text>
 <text x="55" y="518" font-size="24">dog brown dog</text>
-<text x="754" y="518" font-size="24">[1, 0, 1]</text>
+<text x="754" y="518" font-size="24"><tspan class="code" xml:space="preserve">[1, 0, 1]</tspan></text>
 <text x="45" y="573" font-size="17">The vocabulary stays fixed. Decoding this simple example does not demonstrate exact whitespace recovery.</text>
 <rect x="24" y="615" width="952" height="155" rx="16" fill="white" stroke="#dbe2ed"/>
 <text x="45" y="650" font-size="17" font-weight="700">3  THE MODEL’S EMBEDDING LOOKUP IS A SEPARATE STEP</text>
-<text x="45" y="693" font-size="22">[1, 0, 1]</text>
-<path d="M155,687 H270" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="45" y="693" font-size="22"><tspan class="code" xml:space="preserve">[1, 0, 1]</tspan></text>
+<path d="M180,687 H270" stroke="#52647b" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="290" y="693" font-size="21">[table row 1, table row 0, table row 1]</text>
-<text x="45" y="735" font-size="18">Two vocabulary rows; three input positions. Each selected row contains D learned coordinates.</text>
+<text x="45" y="735" font-size="18">Two vocabulary rows; three input positions. Each selected row contains <tspan class="math">D</tspan> learned coordinates.</text>
 </g>
 </svg>

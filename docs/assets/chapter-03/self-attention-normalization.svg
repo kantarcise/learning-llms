@@ -1,32 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc"><title id="title">From scores omega to weights alpha</title><desc id="desc">Scores 1, 5, 2, 4 for query position two are divided by their sum 12. The weights are one twelfth, five twelfths, two twelfths, and four twelfths, which sum to one.</desc><rect width="1000" height="700" fill="#f5f7fb"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+<style>
+/* Math variables are italic; numerals, operators, and prose stay upright.
+   Local font fallbacks only. Literal Python and tensor shapes use monospace. */
+.math { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: italic; font-weight: normal; }
+.math-upright { font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif; font-style: normal; font-weight: normal; }
+.code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-style: normal; font-weight: normal; }
+</style><title id="title">From scores omega to weights alpha</title><desc id="desc">Scores 1, 5, 2, 4 for query position two are divided by their sum 12. The weights are one twelfth, five twelfths, two twelfths, and four twelfths, which sum to one.</desc><rect width="1000" height="700" fill="#f5f7fb"/>
 <text x="40" y="55" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">From attention scores to mixing weights</text>
-<text x="40" y="100" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Same query: x<tspan baseline-shift="super" font-size="70%">(2)</tspan> = [0, 2, 1] · Same four input vectors</text>
+<text x="40" y="100" font-family="Arial,Helvetica,sans-serif" font-size="23" fill="#26364c">Same query: <tspan class="math">x</tspan><tspan class="math-upright" baseline-shift="super" font-size="70%">(2)</tspan> = <tspan class="code" xml:space="preserve">[0, 2, 1]</tspan> · Same four input vectors</text>
 <rect x="40" y="150" width="200" height="90" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="65" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">21</tspan> = 1</text>
+<text x="65" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">21</tspan> = 1</text>
 <text x="100" y="300" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#26364c">÷ 12</text>
 <text x="120" y="350" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="40" y="385" width="200" height="90" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="55" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">21</tspan> = 1/12</text>
+<text x="55" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c"><tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">21</tspan> = 1/12</text>
 <rect x="280" y="150" width="200" height="90" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="305" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">22</tspan> = 5</text>
+<text x="305" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">22</tspan> = 5</text>
 <text x="340" y="300" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#26364c">÷ 12</text>
 <text x="360" y="350" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="280" y="385" width="200" height="90" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="295" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">22</tspan> = 5/12</text>
+<text x="295" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c"><tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">22</tspan> = 5/12</text>
 <rect x="520" y="150" width="200" height="90" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="545" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">23</tspan> = 2</text>
+<text x="545" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">23</tspan> = 2</text>
 <text x="580" y="300" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#26364c">÷ 12</text>
 <text x="600" y="350" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="520" y="385" width="200" height="90" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="535" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">23</tspan> = 2/12</text>
+<text x="535" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c"><tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">23</tspan> = 2/12</text>
 <rect x="760" y="150" width="200" height="90" rx="12" fill="#dce9ff" stroke="#aebed1"/>
-<text x="785" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c">ω<tspan baseline-shift="sub" font-size="70%">24</tspan> = 4</text>
+<text x="785" y="205" font-family="Arial,Helvetica,sans-serif" font-size="30" fill="#26364c"><tspan class="math">ω</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">24</tspan> = 4</text>
 <text x="820" y="300" font-family="Arial,Helvetica,sans-serif" font-size="28" fill="#26364c">÷ 12</text>
 <text x="840" y="350" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#26364c">↓</text>
 <rect x="760" y="385" width="200" height="90" rx="12" fill="#d8f1eb" stroke="#aebed1"/>
-<text x="775" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c">α<tspan baseline-shift="sub" font-size="70%">24</tspan> = 4/12</text>
+<text x="775" y="440" font-family="Arial,Helvetica,sans-serif" font-size="27" fill="#26364c"><tspan class="math">α</tspan><tspan class="math-upright" baseline-shift="sub" font-size="70%">24</tspan> = 4/12</text>
 <text x="40" y="535" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">Sum of scores: 1 + 5 + 2 + 4 = 12</text>
 <text x="40" y="585" font-family="Arial,Helvetica,sans-serif" font-size="26" fill="#26364c">Sum of weights: (1 + 5 + 2 + 4) / 12 = 1</text>
 <text x="40" y="635" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">Simple sum normalization for these positive toy scores—not softmax.</text>
-<text x="40" y="672" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">The subscripts mean: query position 2, contributing position i.</text>
+<text x="40" y="672" font-family="Arial,Helvetica,sans-serif" font-size="22" fill="#26364c">The subscripts mean: query position 2, contributing position <tspan class="math">i</tspan>.</text>
 </svg>
