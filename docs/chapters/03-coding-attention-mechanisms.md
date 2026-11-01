@@ -1,6 +1,6 @@
 # Chapter 3 — Coding Attention Mechanisms
 
-Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. The efficient multi-head implementation is still ahead.
+Status: reading started. These notes cover the chapter introduction and sections 3.1–3.2, and the self-attention walkthroughs in 3.3.1–3.3.2. Section 3.4.1 now covers the complete context-vector calculation for query 2; section 3.4.2 now introduces the compact parameter-based class and the all-position overview. The `nn.Linear` class and Exercise 3.1 are covered; section 3.5 now introduces causal masking through Figure 3.19. Section 3.5.1 covers both mask-and-renormalize and masking scores before softmax. Sections 3.5.2–3.5.3 cover attention-weight dropout and the compact batched causal attention class. Section 3.6.1 now covers the multi-head wrapper, concatenated context vectors, and their batch/token/feature axes through Figure 3.25. Exercise 3.2 now shows how to return two coordinates per token with two heads. Section 3.6.2 now introduces the commented weight-split class and its shape changes; Figure 3.26 and the following walkthrough are still ahead.
 
 [Chapter 2](02-working-with-text-data.md) prepared the inputs: text became token IDs, training windows, and vectors carrying token and position information. Now we move into the model architecture itself and study **attention**: how a token's representation gathers information from other accessible positions.
 
@@ -1828,6 +1828,187 @@ Joined:  [a, b]
     `d_in=3` still describes the three coordinates in each input vector. We keep that argument because the input batch has not changed. `d_out=1` changes the learned projection sizes inside each newly created head. The resulting two coordinates are newly computed using those narrower projections; they need not equal the first two coordinates from the earlier four-coordinate result.
 
 The exercise changes only a constructor argument. The existing wrapper already concatenates any compatible per-head output widths; its implementation needs no edit. The more efficient grouped implementation is the next reading step.
+
+### 3.6.2 Implementing multi-head attention with weight splits
+
+The wrapper made the structure visible: create several `CausalAttention` objects, call each on the same input, then concatenate their outputs. The integrated class expresses the head calculations together in larger tensors. We retain separate learned projections for each head, but store them inside larger query, key, and value layers instead of separate head objects.
+
+There are two different kinds of work here:
+
+- **Linear projections and attention calculate new values.** Learned matrices produce Q, K, and V; attention computes scores, weights, and weighted mixtures.
+- **Reshaping and transposing organize those values.** They expose a head axis and put it in the right place for batched matrix multiplication. They do not introduce new learned parameters or change a coordinate's numerical value by themselves.
+
+#### First, notice the change in what `d_out` means
+
+!!! note "The wrapper and integrated class use d_out differently"
+
+    In `MultiHeadAttentionWrapper`, `d_out` meant **width per head**. In the integrated `MultiHeadAttention`, it means **total output width across all heads**. The new class computes `head_dim = d_out // num_heads`, so `d_out` must be divisible by `num_heads`.
+
+For the same two-head, two-coordinates-per-head layout:
+
+| Class | Constructor arguments | Width per head | Combined width |
+| --- | --- | --- | --- |
+| `MultiHeadAttentionWrapper` | `d_out=2`, `num_heads=2` | 2 | 4 |
+| `MultiHeadAttention` | `d_out=4`, `num_heads=2` | 2 | 4 |
+
+Setting `d_out=2` in the **new class** instead gives one coordinate per head and a combined width of two, like the target shape in Exercise 3.2. The argument's meaning changed; keep that distinction in mind while following the shapes.
+
+#### The integrated class, with each shape change spelled out
+
+The following adapts Listing 3.5 from [Raschka's Chapter 3 implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch03/01_main-chapter-code/ch03.ipynb). We add type hints, separate the value mixture from its transpose for readability, and retain our Boolean mask from Section 3.5.3. The mathematical steps match the book's class.
+
+For the concrete shape comments, choose `B=2`, `T=6`, `d_in=3`, total `d_out=4`, `num_heads=2`, and `head_dim=2`. Here B counts batch examples, T counts token positions, H counts heads, and D counts coordinates **per head**.
+
+```python title="MultiHeadAttention — project together, split into heads"
+class MultiHeadAttention(nn.Module):
+    """Causal multi-head attention with grouped projections and weight dropout."""
+
+    mask: torch.Tensor
+
+    def __init__(
+        self,
+        d_in: int,
+        d_out: int,
+        context_length: int,
+        dropout: float,
+        num_heads: int,
+        qkv_bias: bool = False,
+    ) -> None:
+        """Configure positive widths/head count and a maximum context length.
+
+        d_in is the input width; d_out is TOTAL output width across heads.
+        Each head uses head_dim = d_out // num_heads coordinates for Q/K/V.
+        """
+        super().__init__()
+        assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
+        self.d_out = d_out
+        self.num_heads = num_heads
+        self.head_dim = d_out // num_heads
+
+        # One larger layer PER ROLE projects to every head's coordinates.
+        # Each head still has its own rows in these stored weight tables.
+        # Here each Linear stores [4, 3]; output activations are [B, T, 4].
+        self.W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_key = nn.Linear(d_in, d_out, bias=qkv_bias)
+        self.W_value = nn.Linear(d_in, d_out, bias=qkv_bias)
+
+        # After concatenation, mix information across the joined head features.
+        # Shape stays [B, T, d_out]. This Linear includes a bias by default;
+        # qkv_bias controls only the three projection layers above.
+        self.out_proj = nn.Linear(d_out, d_out)
+        self.dropout = nn.Dropout(dropout)
+
+        # True marks a future position; the diagonal remains permitted.
+        # This fixed [context_length, context_length] rule moves with the model.
+        self.register_buffer(
+            "mask",
+            torch.triu(
+                torch.ones(context_length, context_length, dtype=torch.bool),
+                diagonal=1,
+            ),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating vectors [B, T, d_in] to [B, T, d_out].
+
+        B = batch examples; T = tokens; H = heads; D = head_dim.
+        Require 1 <= T <= context_length and matching input/model device and
+        floating dtype. Learned parameters are shared across B and T. Neither
+        batch examples nor heads mix during the attention calculation itself.
+        The final output projection mixes head features within each position.
+        """
+        b, num_tokens, _ = x.shape
+
+        # 1. PROJECT: each role gets all H * D coordinates in one operation.
+        # [B, T, d_in] -> [B, T, d_out], e.g. [2, 6, 3] -> [2, 6, 4].
+        keys = self.W_key(x)
+        queries = self.W_query(x)
+        values = self.W_value(x)
+
+        # 2. EXPOSE HEADS: split the last axis into H groups of D coordinates.
+        # [B, T, H * D] -> [B, T, H, D], e.g. [2, 6, 4] -> [2, 6, 2, 2].
+        # view adds no parameters and performs no new projection arithmetic.
+        keys = keys.view(b, num_tokens, self.num_heads, self.head_dim)
+        queries = queries.view(b, num_tokens, self.num_heads, self.head_dim)
+        values = values.view(b, num_tokens, self.num_heads, self.head_dim)
+
+        # 3. GROUP BY HEAD: swap token axis 1 with head axis 2.
+        # [B, T, H, D] -> [B, H, T, D]. B and each coordinate's identity stay.
+        # Each [T, D] slice now holds one head's vectors for one example.
+        keys = keys.transpose(1, 2)
+        queries = queries.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # 4. COMPARE: transpose only K's last two axes, leaving B/H untouched.
+        # [B, H, T, D] @ [B, H, D, T] -> scores [B, H, T, T].
+        # Matrix multiplication operates on the last two axes independently
+        # for each (example, head) pair. Here scores have shape [2, 2, 6, 6].
+        attn_scores = queries @ keys.transpose(2, 3)
+
+        # Slice the common [T, T] causal rule for the current sequence length.
+        # It broadcasts across BOTH B and H, hiding the future in every head.
+        mask_bool = self.mask[:num_tokens, :num_tokens]
+        attn_scores.masked_fill_(mask_bool, -torch.inf)
+
+        # Scale by sqrt(D), not sqrt(total d_out): dot products use D features.
+        # Softmax runs over the last axis: contributing key/token positions.
+        # Dropout acts on the computed weights, not the learned weight tables.
+        attn_weights = torch.softmax(attn_scores / keys.shape[-1] ** 0.5, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+
+        # 5. MIX VALUES within each head, then put token positions first again.
+        # [B, H, T, T] @ [B, H, T, D] -> [B, H, T, D].
+        head_contexts = attn_weights @ values
+        context_vec = head_contexts.transpose(1, 2)  # [B, T, H, D]
+
+        # 6. JOIN HEAD FEATURES: [B, T, H, D] -> [B, T, H * D].
+        # Transpose can leave non-contiguous storage. contiguous() makes the
+        # layout suitable for this view; it preserves the logical values.
+        context_vec = context_vec.contiguous().view(b, num_tokens, self.d_out)
+
+        # 7. OUTPUT PROJECTION: learned mixing of the concatenated features.
+        # [B, T, d_out] -> [B, T, d_out]; no mixing of token/batch positions.
+        context_vec = self.out_proj(context_vec)
+        return context_vec
+```
+
+The stored projection weights are trainable parameters. Q/K/V, scores, attention weights, and contexts are computed activations. The causal mask is a fixed buffer. The `view` and `transpose` calls create no new trainable objects.
+
+#### Follow one projected vector through the split
+
+Suppose one token's already-projected query is `[10, 11, 20, 21]`. These invented numbers isolate the arrangement; they are not measured outputs from our model.
+
+```text
+Before the split:  [10, 11, 20, 21]   four projected query coordinates
+After the split:  [[10, 11],         head 1's two coordinates
+                   [20, 21]]         head 2's two coordinates
+```
+
+Every head's projection was calculated from the **full input vector**. We group the resulting coordinates; we do not give different heads different subsets of the original sentence or require them to ignore original input features. The same arrangement applies separately to queries, keys, and values.
+
+After `view`, the axes read `[example, token, head, coordinate]`. After `transpose(1, 2)`, they read `[example, head, token, coordinate]`. That makes the final two dimensions a `[T, D]` matrix for each example/head pair, exactly what the attention matrix multiplication needs. Both shapes happen to be `[2, 6, 2, 2]` and `[2, 2, 6, 2]` in our chosen example, but the axis meanings are more important than their sizes.
+
+| Stage | General shape | Our two-head layout |
+| --- | --- | --- |
+| Input vectors | `[B, T, d_in]` | `[2, 6, 3]` |
+| Projected Q, K, V | Each `[B, T, H * D]` | `[2, 6, 4]` |
+| Expose the head axis with `view` | Each `[B, T, H, D]` | `[2, 6, 2, 2]` |
+| Group by head with `transpose(1, 2)` | Each `[B, H, T, D]` | `[2, 2, 6, 2]` |
+| Scores and attention weights | `[B, H, T, T]` | `[2, 2, 6, 6]` |
+| Each head's contexts | `[B, H, T, D]` | `[2, 2, 6, 2]` |
+| Put token axis back first | `[B, T, H, D]` | `[2, 6, 2, 2]` |
+| Join head features | `[B, T, H * D]` | `[2, 6, 4]` |
+| Apply the output projection | `[B, T, d_out]` | `[2, 6, 4]` |
+
+[`view`](https://docs.pytorch.org/docs/2.9/generated/torch.Tensor.view.html) changes the shape while sharing storage and requires a compatible memory layout. [`transpose`](https://docs.pytorch.org/docs/2.9/generated/torch.transpose.html) swaps two axes; for these dense tensors it also shares storage. After the return transpose, [`contiguous`](https://docs.pytorch.org/docs/2.9/generated/torch.Tensor.contiguous.html) provides a contiguous layout when needed so we can merge the adjacent head/coordinate axes with `view`. None of these operations learns how to split the heads; the learned projections determine their features.
+
+!!! note "The new output projection is an additional operation"
+
+    The wrapper returned the concatenation directly. This class also applies `out_proj`, a learned linear layer across the combined feature coordinates. It can mix information from different heads while preserving `[B, T, d_out]`. “The same concept” refers to the per-head attention structure; it does not promise the same final numbers from the two classes. Matching numerical results would require compatible widths and projection parameters, and accounting for this additional output layer. A shared random seed alone does not do that.
+
+This is the same grouping idea already used by our [Cosmopedia attention implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py). Cosmopedia goes one step further by computing all three Q/K/V projections in a combined linear layer and using PyTorch's functional attention operation. Here we keep the three roles and explicit attention steps visible while learning their arrangement. We have not measured a speedup for this book implementation.
+
+We pause here before Figure 3.26 and the book's next batched-multiplication example.
 
 ## End of chapter
 
