@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="835" viewBox="0 0 820 835" role="img" aria-labelledby="title desc"><title id="title">Two texts through the dummy GPT</title><desc id="desc">B = 2 examples · T = 4 positions · D = 768 coordinates · V = 50,257 tokens; Outside model · encode text, then stack token-ID rows / “Every effort moves you” and “Every day holds a” → IDs [2, 4]; Inside model · look up two independent embedding tables / Token IDs → [2, 4, 768]; position IDs [0, 1, 2, 3] → [4, 768]; Add token and position vectors, then apply embedding dropout / Broadcast position vectors across both examples → [2, 4, 768]; Twelve dummy blocks, then dummy normalization / All are identity operations here → still [2, 4, 768]; Vocabulary projection · 768 coordinates → 50,257 scores / out_head returns logits [2, 4, 50257]; Outside model · last-position scores for generation / logits[:, -1, :] has shape [2, 50257]; token selection comes later.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#475569"/></marker></defs>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#172b45;font-size:20px}.title{font-size:26px;font-weight:bold}.detail{font-size:18px;fill:#42566d}.code{font-family:Consolas,monospace;font-size:18px}</style>
+<rect width="820" height="835" rx="16" fill="#f8fafc"/>
+<text class="title" x="30" y="43">Two texts through the dummy GPT</text>
+<text class="detail" x="30" y="75">B = 2 examples · T = 4 positions · D = 768 coordinates · V = 50,257 tokens</text>
+<rect x="30" y="105" width="760" height="85" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="137">Outside model · encode text, then stack token-ID rows</text>
+<text class="detail" text-anchor="middle" x="410" y="166">“Every effort moves you” and “Every day holds a” → IDs [2, 4]</text>
+<path d="M410 190 V218" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="220" width="760" height="85" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="252">Inside model · look up two independent embedding tables</text>
+<text class="detail" text-anchor="middle" x="410" y="281">Token IDs → [2, 4, 768]; position IDs [0, 1, 2, 3] → [4, 768]</text>
+<path d="M410 305 V333" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="335" width="760" height="85" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="367">Add token and position vectors, then apply embedding dropout</text>
+<text class="detail" text-anchor="middle" x="410" y="396">Broadcast position vectors across both examples → [2, 4, 768]</text>
+<path d="M410 420 V448" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="450" width="760" height="85" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="482">Twelve dummy blocks, then dummy normalization</text>
+<text class="detail" text-anchor="middle" x="410" y="511">All are identity operations here → still [2, 4, 768]</text>
+<path d="M410 535 V563" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="565" width="760" height="85" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="597">Vocabulary projection · 768 coordinates → 50,257 scores</text>
+<text class="detail" text-anchor="middle" x="410" y="626">out_head returns logits [2, 4, 50257]</text>
+<path d="M410 650 V678" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="680" width="760" height="85" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="712">Outside model · last-position scores for generation</text>
+<text class="detail" text-anchor="middle" x="410" y="741">logits[:, -1, :] has shape [2, 50257]; token selection comes later.</text>
+</svg>
