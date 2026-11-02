@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="1120" viewBox="0 0 840 1120" role="img" aria-labelledby="title desc">
+<title id="title">From input text to the next token: a GPT model</title>
+<desc id="desc">Tokenization produces IDs. The model adds token and position embeddings, applies embedding dropout, repeated transformer blocks, final layer normalization, and a vocabulary projection. Each transformer block includes masked multi-head attention and a feedforward network with normalization and residual connections. The model returns logits at every position. Outside the model, generation selects the next token using the last position and appends it to the input.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker></defs>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#172b45;font-size:19px}.heading{font-size:26px;font-weight:bold}.label{font-size:17px;fill:#42566d}.strong{font-weight:bold}.box{stroke:#637c96;stroke-width:1.6}.flow{fill:none;stroke:#475569;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="840" height="1120" rx="16" fill="#f8fafc"/>
+<text x="30" y="44" class="heading">Assembling a GPT model</text>
+<text x="30" y="74" class="label">The attention module becomes one part of a larger computation.</text>
+
+<rect class="box" x="50" y="102" width="440" height="60" rx="12" fill="#fff"/>
+<text x="270.0" y="138.0" text-anchor="middle">Input text: “Learning takes”</text>
+<path class="flow" d="M270 162 L270 188"/>
+<rect class="box" x="50" y="190" width="440" height="60" rx="12" fill="#fff"/>
+<text x="270.0" y="226.0" text-anchor="middle">Tokenizer → token IDs</text>
+<text x="530" y="225" class="label">Chapter 2: prepare inputs</text>
+<rect x="25" y="277" width="790" height="585" rx="18" fill="#edf3fc" stroke="#8299ba" stroke-width="2"/>
+<path class="flow" d="M270 250 L270 312"/>
+<text x="550" y="309" class="strong">Inside the GPT model</text>
+<rect class="box" x="50" y="314" width="440" height="80" rx="12" fill="#dcecfb"/>
+<text x="270.0" y="347.0" text-anchor="middle">Token embeddings + position embeddings</text>
+<text x="270.0" y="373.0" text-anchor="middle">then embedding dropout</text>
+<path class="flow" d="M270 394 L270 427"/>
+<rect class="box" x="50" y="429" width="440" height="190" rx="12" fill="#e2e0f6"/>
+<text x="270.0" y="478.0" text-anchor="middle">Transformer block</text>
+<text x="270.0" y="504.0" text-anchor="middle">Normalize → masked multi-head attention</text>
+<text x="270.0" y="530.0" text-anchor="middle">→ dropout → residual addition</text>
+<text x="270.0" y="556.0" text-anchor="middle">Normalize → feedforward network</text>
+<text x="270.0" y="582.0" text-anchor="middle">→ dropout → residual addition</text>
+<text x="530" y="462" class="strong">Repeat the block structure</text><text x="530" y="495">12 blocks in GPT-2 small</text><text x="530" y="528" class="label">Each has its own parameters.</text><text x="530" y="570" class="label">Attention: Chapter 3</text><text x="530" y="597" class="label">Other components: Chapter 4</text>
+<path class="flow" d="M270 619 L270 652"/>
+<rect class="box" x="50" y="654" width="440" height="60" rx="12" fill="#dcecfb"/>
+<text x="270.0" y="690.0" text-anchor="middle">Final layer normalization</text>
+<path class="flow" d="M270 714 L270 747"/>
+<rect class="box" x="50" y="749" width="440" height="80" rx="12" fill="#dcecfb"/>
+<text x="270.0" y="782.0" text-anchor="middle">Vocabulary projection</text>
+<text x="270.0" y="808.0" text-anchor="middle">→ logits at every input position</text>
+<text x="530" y="778" class="label">One score per candidate token.</text><text x="530" y="807" class="label">Scores are not probabilities.</text>
+<path class="flow" d="M270 829 L270 887"/>
+<rect class="box" x="50" y="889" width="440" height="80" rx="12" fill="#dcefe8"/>
+<text x="270.0" y="922.0" text-anchor="middle">Use the last position’s logits</text>
+<text x="270.0" y="948.0" text-anchor="middle">→ select the next token</text>
+<text x="530" y="921" class="strong">Generation code</text><text x="530" y="950" class="label">Outside the model’s forward pass.</text>
+<path class="flow" d="M270 969 L270 1002"/>
+<rect class="box" x="50" y="1004" width="440" height="70" rx="12" fill="#dcefe8"/>
+<text x="270.0" y="1032.0" text-anchor="middle">Append token; repeat with longer input</text>
+<text x="270.0" y="1058.0" text-anchor="middle">Illustration: “Learning takes time”</text>
+<text x="530" y="1030" class="label">The continuation is an example,</text><text x="530" y="1057" class="label">not a measured model output.</text></svg>
