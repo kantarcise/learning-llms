@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="720" viewBox="0 0 820 720" role="img" aria-labelledby="title desc"><title id="title">Our implementation roadmap</title><desc id="desc">Development order, not the order of operations in a forward pass.; 1 · GPT backbone / Write DummyGPTModel to establish the overall structure.; 2 · Layer normalization → 3 · GELU activation / Implement the components that the outline still lacks.; 4 · Feedforward network → 5 · Shortcut connections / Use GELU inside the feedforward network; add residual paths.; 6 · Transformer block / Combine these pieces with Chapter 3’s multi-head attention.; 7 · Complete GPT architecture / Replace the dummy blocks and normalization with real modules.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#475569"/></marker></defs>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#172b45;font-size:20px}.title{font-size:26px;font-weight:bold}.detail{font-size:18px;fill:#42566d}.code{font-family:Consolas,monospace;font-size:18px}</style>
+<rect width="820" height="720" rx="16" fill="#f8fafc"/>
+<text class="title" x="30" y="43">Our implementation roadmap</text>
+<text class="detail" x="30" y="75">Development order, not the order of operations in a forward pass.</text>
+<rect x="30" y="105" width="760" height="85" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="137">1 · GPT backbone</text>
+<text class="detail" text-anchor="middle" x="410" y="166">Write DummyGPTModel to establish the overall structure.</text>
+<path d="M410 190 V218" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="220" width="760" height="85" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="252">2 · Layer normalization → 3 · GELU activation</text>
+<text class="detail" text-anchor="middle" x="410" y="281">Implement the components that the outline still lacks.</text>
+<path d="M410 305 V333" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="335" width="760" height="85" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="367">4 · Feedforward network → 5 · Shortcut connections</text>
+<text class="detail" text-anchor="middle" x="410" y="396">Use GELU inside the feedforward network; add residual paths.</text>
+<path d="M410 420 V448" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="450" width="760" height="85" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="482">6 · Transformer block</text>
+<text class="detail" text-anchor="middle" x="410" y="511">Combine these pieces with Chapter 3’s multi-head attention.</text>
+<path d="M410 535 V563" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="565" width="760" height="85" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text text-anchor="middle" x="410" y="597">7 · Complete GPT architecture</text>
+<text class="detail" text-anchor="middle" x="410" y="626">Replace the dummy blocks and normalization with real modules.</text>
+</svg>
