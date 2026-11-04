@@ -268,7 +268,58 @@ The model does not automatically return the word `"forward"` shown in the book's
 
 ## 4.2 Normalizing activations with layer normalization
 
-Notes to come as we read this section.
+The difficulty of training deep networks is familiar from CNNs: gradients can become very small or very large as they propagate through many layers, making useful parameter updates harder. The forward-pass values also need care. **Activations** are the values computed as data passes through the network; they are distinct from the learned parameters used to compute them.
+
+Layer normalization helps control the scale of those activations. It often makes optimization more stable and can help training converge. It is one part of the design, alongside choices such as residual connections, initialization, and the optimizer; it does not guarantee stable training or solve every gradient problem by itself.
+
+### What does “mean zero, variance one” mean?
+
+Take one token's vector. Normalization calculates statistics **across the coordinates of that vector**, subtracts their mean, and divides by their standard deviation (with a small numerical-stability adjustment in the implementation).
+
+- **Mean zero:** the coordinates are centered around zero; this does not mean each coordinate becomes zero.
+- **Variance one**, or **unit variance:** their spread has a standardized scale; this does not mean every coordinate becomes one.
+- **Same shape:** a vector with 768 coordinates still has 768 coordinates afterward.
+
+<figure markdown="1">
+
+[![A layer produces the activation vector 2, 2, 6, 6. Its mean is 4 and variance is 4. Subtracting 4 and dividing by standard deviation 2 gives minus 1, minus 1, 1, 1, with mean zero and variance one.](../assets/chapter-04/layer-normalization-intuition.svg)](../assets/chapter-04/layer-normalization-intuition.svg)
+
+<figcaption markdown="span">Original companion illustration of the normalization idea in Figure 4.5, using our own four-coordinate example. Variance here divides by the number of coordinates. The drawing isolates standardization before learned scale and shift, and omits the small epsilon term for clean arithmetic. These are illustrative values, not recorded model activations.</figcaption>
+</figure>
+
+Our example starts with `[2, 2, 6, 6]`. Its mean is 4. Subtracting 4 gives `[-2, -2, 2, 2]`; the original vector's standard deviation is 2, so dividing by 2 gives `[-1, -1, 1, 1]`. The values still differ, but their center and spread have changed. We have transformed the representation, not erased it.
+
+For a GPT tensor shaped `[B, T, D]`, **B is the number of examples, T is the number of token positions, and D is vector width**. Layer normalization in this model works along the last axis, D. Each example's token position gets its own mean and variance. It does not pool statistics across tokens or across the batch, as one might initially imagine from familiarity with batch normalization in CNNs.
+
+!!! note "Standardization is the first part of LayerNorm"
+
+    The full layer also applies a learned scale and shift for each coordinate, which we will implement as we continue Section 4.2. Consequently, its final output does not have to retain mean zero and variance one. The small epsilon term used for numerical stability also makes the standardized variance approximately one rather than exactly one; a constant vector is a special case with zero variance.
+
+    The mean and variance are calculated from the current input vector. The scale and shift are stored model parameters learned during training. These are different kinds of numbers.
+
+### Where it sits in our GPT architecture
+
+“Before and after attention” is a useful first orientation, but the residual additions matter. The GPT-2-style block we are building follows this sequence:
+
+```text
+Block input
+    │
+    ├── save as the first residual shortcut
+    ↓
+LayerNorm → masked multi-head attention → dropout
+    ↓
+Add the first shortcut
+    │
+    ├── save as the second residual shortcut
+    ↓
+LayerNorm → feedforward network → dropout
+    ↓
+Add the second shortcut → block output
+```
+
+The second LayerNorm acts on the result **after the first residual addition** and prepares it for the feedforward network. These are two separate LayerNorm instances with their own learned scale and shift parameters. After the whole stack of transformer blocks, one more LayerNorm sits before the vocabulary output projection—the position currently occupied by `DummyLayerNorm` in our outline.
+
+This specifies the architecture we are implementing. Other transformer designs can change the normalization type or its placement. For now, the next step is to calculate the statistics on a small example and turn the identity placeholder into a real operation.
 
 ## 4.3 Implementing a feed forward network with GELU activations
 
