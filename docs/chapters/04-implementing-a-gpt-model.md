@@ -321,6 +321,88 @@ The second LayerNorm acts on the result **after the first residual addition** an
 
 This specifies the architecture we are implementing. Other transformer designs can change the normalization type or its placement. For now, the next step is to calculate the statistics on a small example and turn the identity placeholder into a real operation.
 
+### Inspecting a layer's outputs before normalization
+
+The book now uses a small standalone network to make the statistics visible. This is a demonstration, not a change to GPT's embedding width. We have **two examples with five input features each**, and a linear layer produces **six output features per example**. ReLU then replaces negative values with zero; its outputs are **nonnegative**, including zero.
+
+```python
+import torch
+from torch import nn
+
+torch.manual_seed(123)
+batch_example = torch.randn(2, 5)  # [examples, input features]
+layer = nn.Sequential(nn.Linear(5, 6), nn.ReLU())
+out = layer(batch_example)  # [2,5] -> [2,6] -> [2,6]
+print(out)
+```
+
+```text
+tensor([[0.2260, 0.3470, 0.0000, 0.2216, 0.0000, 0.0000],
+        [0.2133, 0.2394, 0.0000, 0.5198, 0.3297, 0.0000]],
+       grad_fn=<ReluBackward0>)
+```
+
+These are the outputs from running the book's example locally. Each row belongs to one example. `nn.Linear(5, 6)` has learned weights and, by default, a bias; ReLU has no learned parameters. Nothing has been trained here: the layer starts with random parameters, and the seed makes this run reproducible in the same environment. The printed `grad_fn` indicates that PyTorch tracked the operation for backpropagation; it does not mean a backward pass already occurred.
+
+We now calculate statistics from **`out`, the six output activations in each row**, rather than from the five original input features:
+
+```python
+mean = out.mean(dim=-1, keepdim=True)
+var = out.var(dim=-1, keepdim=True)
+print("Mean:\n", mean)
+print("Variance:\n", var)
+```
+
+```text
+Mean:
+ tensor([[0.1324],
+        [0.2170]], grad_fn=<MeanBackward1>)
+Variance:
+ tensor([[0.0231],
+        [0.0398]], grad_fn=<VarBackward0>)
+```
+
+The first mean and variance describe the first row; the second pair describes the second row. Calculating these statistics does not yet normalize or change `out`.
+
+!!! note "Why these variances differ from our earlier example"
+
+    This snippet follows the book and uses `torch.var`'s default correction: with six values, it divides the sum of squared deviations by five. Our earlier illustration divided by the number of coordinates. The final LayerNorm implementation will also divide by the number of coordinates, using `unbiased=False` (equivalently, `correction=0`). With that setting, these rows have variances approximately 0.0192 and 0.0332. Keep the convention consistent when comparing results; the book discusses the choice later in this section.
+
+### `dim` chooses which axis to reduce
+
+For this two-dimensional tensor, axis 0 indexes examples (rows), and axis 1 indexes features (columns). **A reduction collapses the chosen axis** by combining its values:
+
+| Operation on `out`, shape `[2,6]` | Which values are combined? | Result with `keepdim=True` |
+| --- | --- | --- |
+| `out.mean(dim=1, keepdim=True)` | The six features within each row | `[2,1]`: one mean per example |
+| `out.mean(dim=-1, keepdim=True)` | The last axis, also the six features here | `[2,1]`: the same result |
+| `out.mean(dim=0, keepdim=True)` | The two examples within each column | `[1,6]`: one mean per feature across examples |
+
+<figure markdown="1">
+
+[![A two-row, three-column example compares reduction axes. Across each row, dim 1 or minus 1 gives means 3 and 7. Down each column, dim 0 gives means 2, 5, and 8.](../assets/chapter-04/mean-reduction-axes.svg)](../assets/chapter-04/mean-reduction-axes.svg)
+
+<figcaption markdown="span">Original companion illustration of the axis distinction in Figure 4.6, using our own small integer matrix. Both panels start with the same values. Results retain the reduced axis with `keepdim=True`; arrows show which values are averaged.</figcaption>
+</figure>
+
+For GPT's `[B,T,D]` tensors, the last axis is axis 2: **B = batch examples, T = token positions, D = vector width**. `dim=-1` continues to mean “across each token vector's coordinates,” whereas `dim=1` would now combine token positions. This is why the negative index is useful beyond this two-dimensional demonstration.
+
+### `keepdim=True` keeps the shape convenient for subtraction
+
+PyTorch spells the argument **`keepdim`**, singular. It retains the reduced axis with length one; it does not preserve its original length or prevent the reduction.
+
+```text
+Original out:          shape [2,6]
+
+keepdim=False:         shape [2]       [0.1324, 0.2170]
+keepdim=True:          shape [2,1]     [[0.1324],
+                                      [0.2170]]
+```
+
+Both results contain the same two means. A tensor of shape `[2]` is **one-dimensional with two elements**; a tensor of shape `[2,1]` is **two-dimensional with two rows and one column**. “Two numbers” and “two axes” are different ideas.
+
+The practical benefit appears when we subtract: `[2,6] - [2,1]` broadcasts each row's mean across that row's six features. `[2,6] - [2]` fails because broadcasting aligns dimensions from the right, and lengths six and two do not match. Keeping the axis lets the forthcoming normalization formula express exactly which mean belongs to which example.
+
 ## 4.3 Implementing a feed forward network with GELU activations
 
 Notes to come as we read this section.
