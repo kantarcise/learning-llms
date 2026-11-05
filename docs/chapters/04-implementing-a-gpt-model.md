@@ -511,6 +511,73 @@ A LayerNorm with width 768 therefore contributes **768 scales + 768 shifts = 1,5
 
 The learned scale and shift can move the final mean away from zero and the final variance away from one. This is intentional. They also cannot generally undo normalization for every input: they are shared learned values, while each input vector has its own calculated mean and variance.
 
+!!! note "Biased variance: why divide by n?"
+
+    Here **n is the number of coordinates in one vector**, not the batch size. We sum the squared differences from that vector's mean and divide by n. Setting `unbiased=False`, or equivalently `correction=0`, selects that calculation.
+
+    Bessel's correction divides by n − 1 instead. It is useful when estimating an unknown population variance from an independent sample whose mean was also estimated. In LayerNorm, our immediate goal is to rescale the current feature vector, rather than make that statistical estimate. “Biased” is a statistical term here, not a claim that normalization is faulty.
+
+    For `[2, 2, 6, 6]`, the squared deviations sum to 16: dividing by 4 gives variance 4; dividing by 3 gives about 5.3333. With 768 coordinates, the n − 1 result is larger by a factor of 768/767, about 0.13%. The difference shrinks as width grows, but we still match the model's intended computation.
+
+    The original [GPT-2 TensorFlow implementation](https://github.com/openai/gpt-2/blob/master/src/model.py) explicitly averages squared deviations, using the n denominator. [PyTorch LayerNorm](https://docs.pytorch.org/docs/2.15/generated/torch.nn.LayerNorm.html) uses this convention too. Matching it is one requirement for reproducing the computation expected by pretrained weights; matching shapes alone is insufficient. Weight loading is covered in [Section 5.5](05-pretraining-on-unlabeled-data.md#55-loading-pretrained-weights-from-openai).
+
+### Trying the completed LayerNorm module
+
+Apply our class to the same two rows of six activations in `out`. At initialization the scales are ones and the shifts are zeros:
+
+```python
+ln = LayerNorm(emb_dim=6)
+out_ln = ln(out)  # [2,6] -> [2,6]: two examples, six features each.
+mean = out_ln.mean(dim=-1, keepdim=True)
+var = out_ln.var(dim=-1, unbiased=False, keepdim=True)
+print("Mean:\n", mean)
+print("Variance:\n", var)
+```
+
+```text
+Mean:
+ tensor([[-0.0000],
+        [-0.0000]], grad_fn=<MeanBackward1>)
+Variance:
+ tensor([[0.9995],
+        [0.9997]], grad_fn=<VarBackward0>)
+```
+
+These locally verified outputs use the print options set earlier. Each row's mean is approximately zero, and its variance is approximately one. The values **0.9995 and 0.9997 are expected**: epsilon is added to the variance in the denominator. Before the learned scale/shift changes, the resulting population variance is approximately `var / (var + eps)`, which is slightly less than one for a nonconstant vector. This check uses `unbiased=False`, consistently with the class.
+
+!!! note "Layer normalization versus batch normalization"
+
+    In our GPT, LayerNorm normalizes across the features of **one token at a time**. Changing which other examples are in the batch does not change that token's normalization statistics. Training and evaluation use the same input-based rule.
+
+    In a CNN, BatchNorm typically calculates statistics for each channel across **batch examples and spatial locations** during training. With its default running-statistics setting, evaluation uses accumulated statistics instead. Thus “across the batch” is a useful shorthand, but it omits the spatial axes in the CNN case. See [PyTorch BatchNorm2d](https://docs.pytorch.org/docs/2.15/generated/torch.nn.BatchNorm2d.html).
+
+    Both can have learned scale and shift. The distinction is which values contribute to their statistics and how those statistics are handled during training and evaluation.
+
+### Does that reasoning still hold for today's LLMs?
+
+**Yes, but distributed training is one practical benefit rather than the whole explanation.** The useful property is that the normalization operates independently on each token representation.
+
+- **Changing batches:** normalization does not couple a token to unrelated examples, including when training uses small batches per device or serving processes one request at a time.
+- **Autoregressive processing:** token-wise normalization does not aggregate over future positions. Naively applying a batch-normalization operation that pools across the sequence during training could expose future-token information through its statistics. This is a consequence of those axes, not a claim that every possible BatchNorm design must leak information.
+- **Distributed training:** no cross-example statistics need to be synchronized for this operation. BatchNorm can also work in distributed systems; [SyncBatchNorm](https://docs.pytorch.org/docs/2.15/generated/torch.nn.SyncBatchNorm.html) explicitly synchronizes statistics across its process group during training. LayerNorm does not remove the need to synchronize model gradients, and splitting a token's feature dimension across devices can still require communication.
+
+!!! tip "Modern example: RMSNorm keeps the per-token idea"
+
+    As checked in November 2026, the [Qwen3 implementation in Transformers](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3/modeling_qwen3.py) uses RMSNorm for its decoder-block normalization. It scales a token vector using its root mean square and a learned scale, without subtracting the mean or adding a learned shift in that implementation. Thus it does **not** enforce zero mean.
+
+    GPT-2's LayerNorm remains the right implementation for this book. The transferable idea is normalization across each token's coordinates; the exact formula can differ between architectures.
+
+### Two building blocks covered; GELU and feedforward come next
+
+<figure markdown="1">
+
+[![Chapter 4 progress: the GPT placeholder backbone and LayerNorm implementation are covered. Next are GELU and the feedforward network, followed by shortcuts, the transformer block, and full GPT assembly.](../assets/chapter-04/implementation-progress-layernorm.svg)](../assets/chapter-04/implementation-progress-layernorm.svg)
+
+<figcaption markdown="span">Original companion progress diagram corresponding to Figure 4.7. “Covered” refers to the chapter's code walkthrough: the earlier dummy model listing remains an outline, and complete model assembly comes later. These are implementation milestones, not forward-pass operations.</figcaption>
+</figure>
+
+We now have the model outline and a real normalization component. Section 4.3 develops **GELU and the feedforward network** that will go inside each transformer block.
+
 ## 4.3 Implementing a feed forward network with GELU activations
 
 Notes to come as we read this section.
