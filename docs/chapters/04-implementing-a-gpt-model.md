@@ -403,6 +403,114 @@ Both results contain the same two means. A tensor of shape `[2]` is **one-dimens
 
 The practical benefit appears when we subtract: `[2,6] - [2,1]` broadcasts each row's mean across that row's six features. `[2,6] - [2]` fails because broadcasting aligns dimensions from the right, and lengths six and two do not match. Keeping the axis lets the forthcoming normalization formula express exactly which mean belongs to which example.
 
+### Applying the normalization and checking the result
+
+Continue with `out`, `mean`, and `var` from the preceding example. The square root of variance is standard deviation:
+
+```python
+out_norm = (out - mean) / torch.sqrt(var)
+print(out_norm)
+print(out_norm.mean(dim=-1, keepdim=True))
+print(out_norm.var(dim=-1, keepdim=True))
+```
+
+```text
+tensor([[ 0.6159,  1.4126, -0.8719,  0.5872, -0.8719, -0.8719],
+        [-0.0189,  0.1121, -1.0876,  1.5173,  0.5647, -1.0876]],
+       grad_fn=<DivBackward0>)
+tensor([[-5.9605e-08],
+        [ 1.9868e-08]], grad_fn=<MeanBackward1>)
+tensor([[1.0000],
+        [1.0000]], grad_fn=<VarBackward0>)
+```
+
+These outputs were verified locally. Negative values are expected: a coordinate below its row's mean becomes negative when we subtract that mean, even though ReLU's original outputs were nonnegative. The variance check uses the same default correction as the variance used in the denominator.
+
+`-5.9605e-08` means approximately **-0.000000059605**. Floating-point arithmetic has finite precision, so calculations that give exactly zero on paper can leave a tiny remainder. This is why a numerical check normally allows a small tolerance instead of requiring exact equality with zero.
+
+PyTorch also lets us change how tensors are displayed:
+
+```python
+# Formatting only: the stored tensor values do not change.
+torch.set_printoptions(precision=4, sci_mode=False)
+print(out_norm.mean(dim=-1, keepdim=True))
+```
+
+```text
+tensor([[-0.0000],
+        [ 0.0000]], grad_fn=<MeanBackward1>)
+```
+
+The displayed `-0.0000` is the same tiny negative value rounded for printing. Turning scientific notation off does not improve numerical accuracy or make the stored mean exactly zero. The print setting also affects subsequent tensor displays in this Python session; `torch.set_printoptions(profile="default")` restores the defaults.
+
+### Replacing the placeholder with a real `LayerNorm`
+
+This class adapts the book's Listing 4.2 with type hints and comments. It uses **population variance**, dividing by the number of coordinates, as discussed above. That differs from the introductory calculation's default sample correction.
+
+```python title="LayerNorm — standardization followed by learned scale and shift"
+class LayerNorm(nn.Module):
+    """Normalize each vector's last axis, then apply learned scale and shift.
+
+    For floating-point input [B,T,D], B = examples, T = token positions,
+    and D = embedding width. Also accepts [B,D]. The output shape is
+    unchanged, and the last axis must have length emb_dim.
+    """
+
+    def __init__(self, emb_dim: int) -> None:
+        super().__init__()
+        self.eps = 1e-5  # Fixed stability constant, not a learned parameter.
+        # One learned scale and one learned shift per coordinate.
+        self.scale = nn.Parameter(torch.ones(emb_dim))
+        self.shift = nn.Parameter(torch.zeros(emb_dim))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map [B,T,D] to [B,T,D], or [B,D] to [B,D], without mixing rows.
+
+        B = examples, T = positions, D = coordinates. Statistics are
+        recalculated from x; scale and shift are stored learned parameters.
+        """
+        mean = x.mean(dim=-1, keepdim=True)
+        var = x.var(dim=-1, keepdim=True, unbiased=False)
+        # Epsilon goes inside the square root, added to the variance.
+        norm_x = (x - mean) / torch.sqrt(var + self.eps)
+        # [D] broadcasts across every example and token position.
+        return self.scale * norm_x + self.shift
+```
+
+Epsilon prevents division by zero for a constant vector and limits amplification when variance is very small. With epsilon included, standardized variance is generally slightly below one; a constant vector standardizes to zeros.
+
+### Why learn scale and shift after normalizing?
+
+Normalization gives the next computation a controlled starting scale. The learned transformation lets training adjust **how each coordinate should be presented to the next layer**. We preserve a predictable normalization rule while allowing a useful coordinate-wise adjustment.
+
+For a width of four, imagine this example **after standardization**:
+
+```text
+Standardized vector:   [-1,  -1,   1,   1]
+Learned scale:         [ 2,   1, 0.5,   1]
+Learned shift:         [ 0,   1,   0,  -1]
+                       ------------------
+Output:                [-2,   0, 0.5,   0]
+```
+
+Each coordinate gets its own multiplication and addition. For example, the second coordinate becomes `1 × (-1) + 1 = 0`. These scale/shift values are illustrative, not a recorded training result. At initialization, our class uses all-one scales and all-zero shifts, so it initially returns the standardized values without this extra adjustment.
+
+| Quantity | Where does it come from? | When does it change? |
+| --- | --- | --- |
+| Mean and variance | Calculated from the current vector | Every forward pass, according to the input |
+| Scale and shift | Stored `nn.Parameter` vectors | Updated by the optimizer during training |
+| Epsilon | A chosen small constant | Stays fixed in this implementation |
+
+`nn.Parameter` registers scale and shift as trainable members of the module. When the module belongs to the full GPT model, they are included in `model.parameters()`. Backpropagation computes their gradients from the model's loss, and the optimizer uses those gradients to update them, just as it updates attention weights or embeddings. Calling `forward` alone does not update them, and gradient updates do not guarantee that every individual training step improves the loss.
+
+A LayerNorm with width 768 therefore contributes **768 scales + 768 shifts = 1,536 parameters**. Its mean and variance add no stored trainable parameters. The same scale/shift pair is used at every token position and for every example in that layer; a different LayerNorm instance has its own pair.
+
+!!! tip "The bridge to CNN normalization"
+
+    Many batch-normalization layers used in CNNs also have learned scale and shift. The idea may already have been present in the framework's layer even if we did not implement those parameters ourselves. What differs is which values supply the normalization statistics. Our LayerNorm computes them independently for each token vector and uses the same rule during training and evaluation; it does not maintain running batch statistics.
+
+The learned scale and shift can move the final mean away from zero and the final variance away from one. This is intentional. They also cannot generally undo normalization for every input: they are shared learned values, while each input vector has its own calculated mean and variance.
+
 ## 4.3 Implementing a feed forward network with GELU activations
 
 Notes to come as we read this section.
