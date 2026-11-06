@@ -672,6 +672,47 @@ print(out.shape)
 torch.Size([2, 3, 768])
 ```
 
+### What did the wider vector buy us?
+
+Think back to the last character of `job=` in Character Logs. Attention has already given that position information from earlier characters. After the second normalization, the feedforward network receives **32 numbers for that one position**. Each of its 64 hidden units has its own set of 32 weights and a bias, so each can respond to a different combination of those numbers. GELU transforms the 64 responses individually. Each output coordinate then has its own learned way of combining all 64 responses.
+
+That is the sense in which the hidden representation is *richer*: the network has more intermediate features available when constructing its update. Training determines what those features respond to. The final 32 numbers can encode a different representation from the 32 that went in. In this setup, generalization is something we evaluate on held-out examples, as we did with the character logs.
+
+<figure markdown="1">
+
+[![One GPT-2 token vector grows from four tiles to sixteen, stays sixteen through GELU, then returns to four. Each tile represents 192 coordinates.](../assets/chapter-04/feedforward-width.svg)](../assets/chapter-04/feedforward-width.svg)
+
+<figcaption markdown="span">Our companion to Figure 4.10. Bar length shows the number of coordinates at one position. Each hidden coordinate can depend on every input coordinate, and each output coordinate can depend on every activated hidden coordinate.</figcaption>
+</figure>
+
+| Model and architecture drawing | Input width | Hidden width at GELU | Output width |
+| --- | ---: | ---: | ---: |
+| [Character Logs](../preparation/training-comparison.md#model-architecture-drawn-from-the-code) | 32 | 64 | 32 |
+| [Cosmopedia](../preparation/cosmopedia.md#model-architecture-drawn-from-the-code) | 256 | 1,024 | 256 |
+| Book's GPT-2 small | 768 | 3,072 | 768 |
+
+Both experiments use PyTorch's `nn.GELU()` between their linear layers. The book implements the tanh approximation to GELU. You can find the layers in [Character Logs’ model.py](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) and [Cosmopedia’s model.py](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py).
+
+### Finding the shortcut in our experiment drawing
+
+Follow the first block of Character Logs. At the addition on the third line, the shortcut carries **y**, the representation that already includes the attention update:
+
+```text
+x      = token embedding + position embedding
+y      = x + attention(norm1(x))
+z      = y + feedforward(norm2(y))
+logits = vocabulary_projection(final_norm(z))
+```
+
+For each position, `y` has width 32, so the feedforward update must also have width 32 for this addition. Cosmopedia uses the same two additions at width 256 and passes the result to the next block, applying final normalization and vocabulary projection after the fourth block. Returning to the model width makes both residual addition and stacking straightforward.
+
+<figure markdown="1">
+
+[![Chapter 4 progress after Section 4.3. The GPT outline, layer normalization, GELU and feedforward network are covered. Shortcut connections come next, then block and model assembly.](../assets/chapter-04/implementation-progress-feedforward.svg)](../assets/chapter-04/implementation-progress-feedforward.svg)
+
+<figcaption markdown="span">Our companion to Figure 4.11. Section 4.4 takes up the two additions visible in the experiment drawing before the book assembles the transformer block.</figcaption>
+</figure>
+
 ## 4.4 Adding shortcut connections
 
 Notes to come as we read this section.
