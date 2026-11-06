@@ -715,7 +715,54 @@ For each position, `y` has width 32, so the feedforward update must also have wi
 
 ## 4.4 Adding shortcut connections
 
-Notes to come as we read this section.
+The shortcut here is the **residual connection** familiar from ResNet. Consider a layer whose input and output each have three coordinates. Call its learned transformation `F`. The plain layer returns `F(x)`. With a shortcut, it returns `x + F(x)`: each output coordinate receives its original input value plus a learned update. In the [Character Logs block](../preparation/training-comparison.md#model-architecture-drawn-from-the-code), the same pattern appears twice, once around attention and once around the feedforward network.
+
+### Why an addition helps the backward pass
+
+During backpropagation, the chain rule multiplies the local derivatives along a path. When those products become very small, the loss supplies little gradient to weights early in the network. This is the **vanishing gradient** problem. For a hand calculation, imagine five successive scalar operations each with local slope 0.1. A gradient of 1 at the output becomes 0.00001 at the input along that path.
+
+Now take just one scalar stage, `y = x + F(x)`. If a gradient of 1 arrives at `y`, the addition sends 1 back along each branch. At `x`, their contributions add: the direct path contributes 1 and the learned path contributes the local slope of `F`. If that slope is 0.1, the gradient reaching `x` is 1.1. For vectors the direct path likewise passes the incoming gradient back coordinate by coordinate. The learned branch can reinforce or partly cancel it. This explains how shortcuts help gradients reach earlier layers even when the learned path has small derivatives.
+
+### Five layers with a switch for shortcuts
+
+In this companion version of the [book's Listing 4.5](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch04/01_main-chapter-code/ch04.ipynb), each stage is a linear layer followed by the `GELU` class from Section 4.3. The list `[3, 3, 3, 3, 3, 1]` gives six boundary widths and therefore five stages. PyTorch's `ModuleList` registers the stages and their parameters. Writing the loop ourselves lets us decide where to add each shortcut.
+
+```python title="ExampleDeepNeuralNetwork — five stages with optional residual additions"
+class ExampleDeepNeuralNetwork(nn.Module):
+    def __init__(self, layer_sizes: list[int], use_shortcut: bool) -> None:
+        super().__init__()
+        self.use_shortcut = use_shortcut
+        self.layers = nn.ModuleList(
+            nn.Sequential(nn.Linear(in_width, out_width), GELU())
+            for in_width, out_width in zip(layer_sizes, layer_sizes[1:])
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating-point [B,3] to [B,1] for the example widths.
+
+        B counts examples. At each stage x holds that stage's input.
+        """
+        for layer in self.layers:
+            update = layer(x)
+            if self.use_shortcut and x.shape == update.shape:
+                x = x + update
+            else:
+                x = update
+        return x
+```
+
+For the first four stages the widths are 3 → 3, so the corresponding coordinates can be added directly. At the fifth stage, 3 → 1, the shape check selects `x = update`. This preserves the intended single output per example. Each shortcut carries the input to **its own stage**.
+
+<figure markdown="1">
+
+[![Two five-stage networks side by side. In the residual network, a bypass arrow adds each of the first four stage inputs to its output. The fifth stage changes width from three to one.](../assets/chapter-04/five-stage-shortcuts.svg)](../assets/chapter-04/five-stage-shortcuts.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.12. Arrows follow the forward pass from top to bottom. Each number summarizes the magnitude of the loss gradient for that stage’s linear weights, measured in a single backward pass with the book’s settings.</figcaption>
+</figure>
+
+**How to read a gradient label.** Stage 1 has a 3 × 3 weight matrix. Backpropagation produces nine derivatives, one per weight. Taking their absolute values and averaging gives one number for the drawing. Absolute values keep positive and negative derivatives from cancelling in that summary. The direct path described above carries an **activation gradient** back to the stage input. The labels measure **weight gradients**, which also depend on the activations and the loss.
+
+For the comparison we used the same initial weights (seed 123), input `[1, 0, -1]`, and a mean squared error loss against target zero. The shortcut changes the forward output and therefore the loss as well as the backward path. The figure illustrates a single example before an optimizer step. The next calculation in the book is to obtain those labels with `loss.backward()` and `weight.grad.abs().mean()`.
 
 ## 4.5 Connecting attention and linear layers in a transformer block
 
