@@ -580,7 +580,97 @@ We now have the model outline and a real normalization component. Section 4.3 de
 
 ## 4.3 Implementing a feed forward network with GELU activations
 
-Notes to come as we read this section.
+### What the curve changes for one coordinate
+
+The feedforward network uses an activation function between two learned linear layers. From CNNs, we already know ReLU: it keeps positive inputs and sets negative ones to zero. Look at two nearby inputs on the negative side of its curve. Moving from −0.5 to −0.4 leaves the ReLU output at zero. GELU's output moves from about −0.154 to −0.138. **The slope tells us how sensitive the output is to a small change in the input.** Backpropagation multiplies the incoming gradient by that local slope. A single negative input blocks the gradient through that ReLU activation on this pass. GELU usually passes some gradient there, though it can be very small. Smoothness alone does not guarantee better training.
+
+**GELU** stands for *Gaussian Error Linear Unit*. Its exact definition is **GELU(x) = x Φ(x)**. Read Φ(x) as the fraction of a standard normal distribution to the left of x. For x = 1, that fraction is about 0.8413, so GELU(1) is about 0.8413. For x = −1, the fraction is about 0.1587, so GELU(−1) is about −0.1587. The calculation is deterministic. [Original GELU paper](https://arxiv.org/abs/1606.08415)
+
+The book follows GPT-2's tanh approximation to that curve. The constants specify the approximation. Training learns the linear layers on either side of it. This companion version of Listing 4.3 uses a Python scalar for the constant so the calculation also follows the input tensor's device. [GPT-2 reference implementation](https://github.com/openai/gpt-2/blob/master/src/model.py)
+
+```python title="GELU with the GPT-2 tanh approximation"
+import math
+
+import torch
+from torch import nn
+
+
+class GELU(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply GELU to each floating-point coordinate, preserving all axes."""
+        inner = math.sqrt(2 / math.pi) * (x + 0.044715 * x.pow(3))
+        return 0.5 * x * (1 + torch.tanh(inner))
+```
+
+<figure markdown="1">
+
+[![ReLU and GELU on shared axes. Near minus one-half, ReLU is flat at zero while GELU has a small negative output and a positive slope.](../assets/chapter-04/gelu-vs-relu.svg)](../assets/chapter-04/gelu-vs-relu.svg)
+
+<figcaption markdown="span">Companion plot for Figure 4.8. Both curves use the same axes. The dotted guide marks the same negative input on both functions.</figcaption>
+</figure>
+
+To plot the curves yourself with the class above:
+
+```python
+import matplotlib.pyplot as plt
+
+x = torch.linspace(-3, 3, 401)
+plt.plot(x, GELU()(x), label="GELU")
+plt.plot(x, torch.relu(x), "--", label="ReLU")
+plt.xlabel("Input coordinate")
+plt.ylabel("Activation output")
+plt.legend()
+plt.show()
+```
+
+!!! note "Where SwiGLU differs"
+
+    SwiGLU (Swish-Gated Linear Unit) gives the same token vector to **two learned input projections**. Call their outputs `a` and `b`. It applies Swish to `a`, then multiplies corresponding coordinates: `hidden = (a * sigmoid(a)) * b`. A final linear layer projects that result back to the model width. One branch thus modulates how much of the other branch passes through. In this chapter's GPT-2 network, one input projection followed by GELU supplies the hidden features. [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202)
+
+### Follow one token through the feedforward network
+
+Take one token's 768 numbers. The first linear layer learns 3,072 different combinations of them. GELU transforms each of those 3,072 numbers separately. The second linear layer learns how to combine them into 768 output coordinates. The output has the right width for the residual addition we'll meet in Section 4.4. Its values can differ from the input. Without the nonlinear activation, the two linear layers and their biases could be expressed as a single linear layer with a bias.
+
+```python title="FeedForward — companion to Listing 4.4"
+class FeedForward(nn.Module):
+    def __init__(self, cfg: GPTConfig) -> None:
+        super().__init__()
+        width = cfg["emb_dim"]
+        hidden_width = 4 * width
+        self.layers = nn.Sequential(
+            nn.Linear(width, hidden_width),
+            GELU(),
+            nn.Linear(hidden_width, width),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Transform floating-point [B,T,D] to [B,T,D].
+
+        B counts examples, T counts positions, and D is the model width.
+        Each position uses the same weights independently.
+        """
+        return self.layers(x)
+```
+
+<figure markdown="1">
+
+[![For two examples of three tokens, the feature width goes from 768 to 3,072, stays 3,072 through GELU, and returns to 768. All six positions use the same network.](../assets/chapter-04/feedforward-shapes.svg)](../assets/chapter-04/feedforward-shapes.svg)
+
+<figcaption markdown="span">Original shape trace for Figure 4.9. Read down one column to follow a single token or the whole batch. The linear layers mix features within each token. Attention is where different token positions exchange information.</figcaption>
+</figure>
+
+Use the `GPT_CONFIG_124M` dictionary and `GPTConfig` type from Section 4.1. Random vectors stand in for the block's input so we can try the submodule on its own:
+
+```python
+ffn = FeedForward(GPT_CONFIG_124M)
+x = torch.rand(2, 3, 768)  # Two examples, three positions each.
+out = ffn(x)
+print(out.shape)
+```
+
+```text
+torch.Size([2, 3, 768])
+```
 
 ## 4.4 Adding shortcut connections
 

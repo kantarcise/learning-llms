@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="405" viewBox="0 0 780 405" role="img" aria-labelledby="title desc"><title id="title">One network applied to six token positions</title><desc id="desc">The same two linear layers and GELU process every position independently. Only the final coordinate axis changes width.</desc><style>text{font:20px Arial,sans-serif;fill:#203348}.head{font-weight:bold}.code{font:19px monospace}</style><rect width="780" height="405" rx="14" fill="#f8fafc"/><text x="25" y="40" class="head">One network applied to six token positions</text>
+<text x="28" y="90" class="head">Operation</text>
+<text x="342" y="90" class="head">One token</text>
+<text x="516" y="90" class="head">Whole batch</text>
+<rect x="16" y="108" width="748" height="53" rx="9" fill="#dcecfb"/>
+<text x="28" y="141" class="">Input</text>
+<text x="342" y="141" class="code">[768]</text>
+<text x="516" y="141" class="code">[2, 3, 768]</text>
+<rect x="16" y="172" width="748" height="53" rx="9" fill="#e9e5f6"/>
+<text x="28" y="205" class="">Linear · expand</text>
+<text x="342" y="205" class="code">[3072]</text>
+<text x="516" y="205" class="code">[2, 3, 3072]</text>
+<rect x="16" y="236" width="748" height="53" rx="9" fill="#e9e5f6"/>
+<text x="28" y="269" class="">GELU · element by element</text>
+<text x="342" y="269" class="code">[3072]</text>
+<text x="516" y="269" class="code">[2, 3, 3072]</text>
+<rect x="16" y="300" width="748" height="53" rx="9" fill="#dcefe8"/>
+<text x="28" y="333" class="">Linear · project back</text>
+<text x="342" y="333" class="code">[768]</text>
+<text x="516" y="333" class="code">[2, 3, 768]</text>
+<text x="27" y="385">Batch axes read left to right as examples, positions, coordinates.</text></svg>
