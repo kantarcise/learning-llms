@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="700" viewBox="0 0 820 700" role="img" aria-labelledby="title desc">
+<title id="title">Center and scale one activation vector</title>
+<desc id="desc">A preceding layer produces four activations: 2, 2, 6, 6. Their mean is 4, variance 4, and standard deviation 2. Subtract the mean and divide by the standard deviation to obtain minus 1, minus 1, 1, 1. This standardized vector has mean 0 and variance 1. The vector keeps its four coordinates. This illustration omits epsilon and the subsequent learned scale and shift.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#475569"/></marker></defs>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#172b45;font-size:21px}.heading{font-size:27px;font-weight:bold}.small{font-size:18px;fill:#42566d}.number{font-size:26px;font-family:Consolas,monospace}.flow{stroke:#475569;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect width="820" height="700" rx="16" fill="#f8fafc"/>
+<text class="heading" x="30" y="45">Center and scale one activation vector</text>
+<text class="small" x="30" y="78">One token position · four coordinates · the shape stays the same</text>
+<rect x="180" y="107" width="460" height="55" rx="12" fill="#edf3fc" stroke="#8299ba"/>
+<text x="410" y="142" text-anchor="middle">A preceding layer computes activations</text>
+<path class="flow" d="M410 162 V195"/>
+<text class="small" x="40" y="224">Before</text>
+<g fill="#dcecfb" stroke="#8299ba">
+<rect x="170" y="194" width="90" height="58" rx="10"/><rect x="300" y="194" width="90" height="58" rx="10"/><rect x="430" y="194" width="90" height="58" rx="10"/><rect x="560" y="194" width="90" height="58" rx="10"/>
+</g>
+<g class="number" text-anchor="middle"><text x="215" y="232">2</text><text x="345" y="232">2</text><text x="475" y="232">6</text><text x="605" y="232">6</text></g>
+<text class="small" x="410" y="285" text-anchor="middle">Mean = 4 · Variance = 4 · Standard deviation = 2</text>
+<path class="flow" d="M410 299 V330"/>
+<rect x="130" y="332" width="560" height="95" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text x="410" y="367" text-anchor="middle">Subtract the mean, then divide by standard deviation</text>
+<text class="number" x="410" y="404" text-anchor="middle">(each coordinate − 4) / 2</text>
+<path class="flow" d="M410 427 V462"/>
+<text class="small" x="40" y="498">After</text>
+<g fill="#dcefe8" stroke="#8299ba">
+<rect x="170" y="464" width="90" height="58" rx="10"/><rect x="300" y="464" width="90" height="58" rx="10"/><rect x="430" y="464" width="90" height="58" rx="10"/><rect x="560" y="464" width="90" height="58" rx="10"/>
+</g>
+<g class="number" text-anchor="middle"><text x="215" y="502">−1</text><text x="345" y="502">−1</text><text x="475" y="502">1</text><text x="605" y="502">1</text></g>
+<text x="410" y="562" text-anchor="middle">Mean = 0 · Variance = 1</text>
+<text class="small" x="410" y="607" text-anchor="middle">Centered does not mean every value is zero.</text>
+<text class="small" x="410" y="634" text-anchor="middle">Unit variance describes the spread of these four values.</text>
+<text class="small" x="410" y="674" text-anchor="middle">Standardization only: epsilon and learned scale/shift omitted here.</text>
+</svg>

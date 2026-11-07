@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="820" viewBox="0 0 760 820" role="img" aria-labelledby="title desc"><title id="title">Five stages with and without residual additions</title><desc id="desc">Compare mean absolute weight gradients at each stage. Four identity paths bypass width-preserving transformations on the right. Both networks end with a three-to-one projection and GELU.</desc>
+<defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#365670"/></marker></defs>
+<style>text{font:18px Arial,sans-serif;fill:#17344a;text-anchor:middle}.heading{font-size:24px;font-weight:bold}.small{font-size:16px}.flow{fill:none;stroke:#365670;stroke-width:2;marker-end:url(#tip)}</style>
+<rect width="760" height="820" rx="15" fill="#f8fafc"/><text class="heading" x="380" y="38">Adding four paths through the same five stages</text><text x="380" y="70">Each box applies Linear → GELU. Numbers are mean absolute weight gradients.</text>
+<text x="180" y="112" font-weight="bold">Plain network</text><text class="small" x="180" y="140">Input [1, 0, −1]</text>
+<path class="flow" d="M180 145v28"/><rect x="74" y="175" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="180" y="196">Stage 1 · 3 → 3</text><text class="small" x="180" y="218">Gradient 0.00020</text>
+<path d="M180 228V267" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M180 267v28"/><rect x="74" y="297" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="180" y="318">Stage 2 · 3 → 3</text><text class="small" x="180" y="340">Gradient 0.00012</text>
+<path d="M180 350V389" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M180 389v28"/><rect x="74" y="419" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="180" y="440">Stage 3 · 3 → 3</text><text class="small" x="180" y="462">Gradient 0.00072</text>
+<path d="M180 472V511" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M180 511v28"/><rect x="74" y="541" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="180" y="562">Stage 4 · 3 → 3</text><text class="small" x="180" y="584">Gradient 0.00140</text>
+<path d="M180 594V633" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M180 633v28"/><rect x="74" y="663" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="180" y="684">Stage 5 · 3 → 1</text><text class="small" x="180" y="706">Gradient 0.00505</text>
+<path d="M180 716V747" stroke="#365670" stroke-width="2"/>
+<text x="180" y="774">One output</text>
+<text x="530" y="112" font-weight="bold">With shortcuts</text><text class="small" x="530" y="140">Input [1, 0, −1]</text>
+<path class="flow" d="M530 145v28"/><rect x="424" y="175" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="530" y="196">Stage 1 · 3 → 3</text><text class="small" x="530" y="218">Gradient 0.22170</text>
+<path class="flow" d="M530 157h138v94H544"/><circle cx="530" cy="157" r="3" fill="#365670"/><path class="flow" d="M530 228v8"/><circle cx="530" cy="251" r="13" fill="#cceadc" stroke="#365670"/><text x="530" y="257">+</text>
+<path d="M530 264V267" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M530 267v28"/><rect x="424" y="297" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="530" y="318">Stage 2 · 3 → 3</text><text class="small" x="530" y="340">Gradient 0.20694</text>
+<path class="flow" d="M530 279h138v94H544"/><circle cx="530" cy="279" r="3" fill="#365670"/><path class="flow" d="M530 350v8"/><circle cx="530" cy="373" r="13" fill="#cceadc" stroke="#365670"/><text x="530" y="379">+</text>
+<path d="M530 386V389" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M530 389v28"/><rect x="424" y="419" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="530" y="440">Stage 3 · 3 → 3</text><text class="small" x="530" y="462">Gradient 0.32897</text>
+<path class="flow" d="M530 401h138v94H544"/><circle cx="530" cy="401" r="3" fill="#365670"/><path class="flow" d="M530 472v8"/><circle cx="530" cy="495" r="13" fill="#cceadc" stroke="#365670"/><text x="530" y="501">+</text>
+<path d="M530 508V511" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M530 511v28"/><rect x="424" y="541" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="530" y="562">Stage 4 · 3 → 3</text><text class="small" x="530" y="584">Gradient 0.26657</text>
+<path class="flow" d="M530 523h138v94H544"/><circle cx="530" cy="523" r="3" fill="#365670"/><path class="flow" d="M530 594v8"/><circle cx="530" cy="617" r="13" fill="#cceadc" stroke="#365670"/><text x="530" y="623">+</text>
+<path d="M530 630V633" stroke="#365670" stroke-width="2"/>
+<path class="flow" d="M530 633v28"/><rect x="424" y="663" width="212" height="53" rx="9" fill="#deedf7" stroke="#8299ba"/><text x="530" y="684">Stage 5 · 3 → 1</text><text class="small" x="530" y="706">Gradient 1.32585</text>
+<path d="M530 716V747" stroke="#365670" stroke-width="2"/>
+<text x="530" y="774">One output</text>
+<text class="small" x="380" y="803">A plus combines the current stage’s input with its learned update.</text></svg>
