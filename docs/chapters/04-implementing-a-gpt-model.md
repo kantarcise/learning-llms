@@ -762,7 +762,58 @@ For the first four stages the widths are 3 → 3, so the corresponding coordinat
 
 **How to read a gradient label.** Stage 1 has a 3 × 3 weight matrix. Backpropagation produces nine derivatives, one per weight. Taking their absolute values and averaging gives one number for the drawing. Absolute values keep positive and negative derivatives from cancelling in that summary. The direct path described above carries an **activation gradient** back to the stage input. The labels measure **weight gradients**, which also depend on the activations and the loss.
 
-For the comparison we used the same initial weights (seed 123), input `[1, 0, -1]`, and a mean squared error loss against target zero. The shortcut changes the forward output and therefore the loss as well as the backward path. The figure illustrates a single example before an optimizer step. The next calculation in the book is to obtain those labels with `loss.backward()` and `weight.grad.abs().mean()`.
+For the comparison we used the same initial weights (seed 123), input `[1, 0, -1]`, and a mean squared error loss against target zero. The shortcut changes the forward output and therefore the loss as well as the backward path. The figure illustrates a single example before an optimizer step. The following function reproduces those measurements.
+
+### Measuring what reaches each layer
+
+For this single example the network returns one prediction, and the chosen target is zero. Mean squared error therefore reduces to `(prediction - 0) ** 2`. Calling `loss.backward()` runs backpropagation from that scalar loss. PyTorch follows the operations recorded during the forward pass and stores each trainable parameter's derivatives in its `.grad` tensor.
+
+```python
+def print_gradients(model: nn.Module, x: torch.Tensor) -> None:
+    """Print the mean absolute loss gradient for each linear weight matrix.
+
+    x is a floating-point batch [B,3], with B examples and three features.
+    The model predicts one scalar per example, giving shape [B,1].
+    """
+    model.zero_grad(set_to_none=True)  # Make each call a fresh measurement.
+    prediction = model(x)
+    target = torch.zeros_like(prediction)
+    loss = nn.functional.mse_loss(prediction, target)
+    loss.backward()
+
+    for name, parameter in model.named_parameters():
+        if name.endswith(".weight") and parameter.grad is not None:
+            magnitude = parameter.grad.abs().mean().item()
+            print(f"{name}: {magnitude:.5f}")
+
+
+layer_sizes = [3, 3, 3, 3, 3, 1]
+sample_input = torch.tensor([[1.0, 0.0, -1.0]])
+
+for use_shortcut in (False, True):
+    torch.manual_seed(123)  # Both constructors draw identical initial weights.
+    model = ExampleDeepNeuralNetwork(layer_sizes, use_shortcut)
+    print(f"use_shortcut={use_shortcut}")
+    print_gradients(model, sample_input)
+```
+
+Read the table from the output back toward the input, the direction in which the gradient travels. For instance, `layers.0.0.weight` names the linear weight matrix in the first stage.
+
+| Stage | Without shortcuts | With shortcuts |
+| --- | ---: | ---: |
+| 5 · nearest the output | 0.00505 | 1.32585 |
+| 4 | 0.00140 | 0.26657 |
+| 3 | 0.00072 | 0.32897 |
+| 2 | 0.00012 | 0.20694 |
+| 1 · nearest the input | 0.00020 | 0.22170 |
+
+In the plain network the first stage's mean gradient magnitude is about **25 times smaller** than the last stage's. There is a small rise from stage 2 to stage 1. With shortcuts the last stage still has the largest value, and the first four are all between 0.20 and 0.33. This illustrates gradient attenuation for these weights and this input. Measuring how the two networks learn over time would require optimizer steps and repeated measurements. The book points to Appendix A.4 and A.7 for more on gradients and training.
+
+!!! tip "Where we saw this before the book"
+
+    In the Character Logs walkthrough we followed a single entry in the embedding table. After `loss.backward()`, its stored gradient was **−0.016659** and its weight was still **0.501100**. AdamW then used the gradient in `optimizer.step()` to update the weight. Here we pause at that same point after backward and inspect a whole weight matrix. [Character Logs · follow one learned number](../preparation/training-comparison.md#before-training-follow-one-learned-number)
+
+    We also ran the pieces that Section 4.5 will assemble. Look at the middle of either experiment drawing: the first shortcut adds the attention update to the block input. The second adds the GELU feedforward update to that result. Each learned branch starts with its own LayerNorm. Character Logs used one such block and Cosmopedia stacked four. [Character Logs architecture](../preparation/training-comparison.md#model-architecture-drawn-from-the-code) · [Cosmopedia architecture](../preparation/cosmopedia.md#model-architecture-drawn-from-the-code)
 
 ## 4.5 Connecting attention and linear layers in a transformer block
 
