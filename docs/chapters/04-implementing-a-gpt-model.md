@@ -817,7 +817,60 @@ In the plain network the first stage's mean gradient magnitude is about **25 tim
 
 ## 4.5 Connecting attention and linear layers in a transformer block
 
-Notes to come as we read this section.
+GPT-2 small stacks **12 transformer blocks**. Each block has its own parameters, accepts one 768-coordinate vector per input position, and returns one updated vector per position. Inside each block, the 12 attention heads work in parallel. The blocks themselves run in sequence.
+
+### Why does the author contrast attention with the feedforward network?
+
+Take the last token in our toy phrase `money at bank`, treating each word as one token. When updating `bank`, a masked attention head compares its query with the keys for `money`, `at`, and `bank`. Its weights determine how much of each value vector contributes. This is the step where information can travel **between token positions**.
+
+After the attention update is added to the shortcut, call the resulting bank vector `y_bank`. The feedforward network receives the normalized `y_bank` and transforms **features within that one vector**. It can use information about `money` because attention already put that information into the bank row. The same feedforward weights process the other rows independently. You could take the bank row out of the tensor at this point and run the feedforward network on it alone to get the same feedforward update.
+
+<figure markdown="1">
+
+[![One transformer block with two identity paths. The attention branch normalizes the input, applies masked multi-head attention and dropout, then adds the input. The feedforward branch normalizes that sum, expands and contracts each token through GELU, applies dropout, then adds the sum back.](../assets/chapter-04/transformer-block.svg)](../assets/chapter-04/transformer-block.svg)
+
+<figcaption markdown="span">Original companion to Raschka’s Figure 4.13. Follow the left-hand paths to see what each addition carries forward. A batch of two four-token examples enters and leaves with shape <code>[2, 4, 768]</code>. Only the feedforward hidden features temporarily widen to 3,072 in the illustrated feedforward branch.</figcaption>
+</figure>
+
+### Assembling the block in PyTorch
+
+This companion to Listing 4.6 uses the real `MultiHeadAttention` from [Section 3.6.2](03-coding-attention-mechanisms.md#362-implementing-multi-head-attention-with-weight-splits), plus the `GPTConfig`, `LayerNorm`, `GELU`, and `FeedForward` definitions above. Run those definitions before this listing. The book calls this arrangement **Pre-LayerNorm** because the learned branch starts by normalizing its input.
+
+```python title="TransformerBlock — two learned updates and two shortcuts"
+class TransformerBlock(nn.Module):
+    def __init__(self, cfg: GPTConfig) -> None:
+        super().__init__()
+        width = cfg["emb_dim"]
+        self.att = MultiHeadAttention(
+            d_in=width,
+            d_out=width,  # Joined heads produce a width-matched update.
+            context_length=cfg["context_length"],
+            num_heads=cfg["n_heads"],
+            dropout=cfg["drop_rate"],  # Dropout on attention weights.
+            qkv_bias=cfg["qkv_bias"],
+        )
+        self.ff = FeedForward(cfg)
+        # Each LayerNorm learns its own scale and shift.
+        self.norm1 = LayerNorm(width)
+        self.norm2 = LayerNorm(width)
+        self.drop_shortcut = nn.Dropout(cfg["drop_rate"])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Transform floating-point [B,T,D] to [B,T,D].
+
+        B counts examples, T counts token positions, D is the model width.
+        """
+        # First shortcut carries x around the attention branch.
+        attention_update = self.att(self.norm1(x))
+        y = x + self.drop_shortcut(attention_update)
+
+        # Second shortcut carries y, including the attention update.
+        # The feedforward network acts separately on every normalized row.
+        feature_update = self.ff(self.norm2(y))
+        return y + self.drop_shortcut(feature_update)
+```
+
+Despite the name `drop_shortcut` in the listing, look at the argument on each call: dropout acts on the **computed update**. The identity path carries `x` or `y` straight to the addition. You can trace those same two additions in our [Character Logs block drawing](../preparation/training-comparison.md#model-architecture-drawn-from-the-code).
 
 ## 4.6 Coding the GPT model
 
