@@ -268,15 +268,552 @@ The model does not automatically return the word `"forward"` shown in the book's
 
 ## 4.2 Normalizing activations with layer normalization
 
-Notes to come as we read this section.
+The difficulty of training deep networks is familiar from CNNs: gradients can become very small or very large as they propagate through many layers, making useful parameter updates harder. The forward-pass values also need care. **Activations** are the values computed as data passes through the network; they are distinct from the learned parameters used to compute them.
+
+Layer normalization helps control the scale of those activations. It often makes optimization more stable and can help training converge. It is one part of the design, alongside choices such as residual connections, initialization, and the optimizer; it does not guarantee stable training or solve every gradient problem by itself.
+
+### What does “mean zero, variance one” mean?
+
+Take one token's vector. Normalization calculates statistics **across the coordinates of that vector**, subtracts their mean, and divides by their standard deviation (with a small numerical-stability adjustment in the implementation).
+
+- **Mean zero:** the coordinates are centered around zero; this does not mean each coordinate becomes zero.
+- **Variance one**, or **unit variance:** their spread has a standardized scale; this does not mean every coordinate becomes one.
+- **Same shape:** a vector with 768 coordinates still has 768 coordinates afterward.
+
+<figure markdown="1">
+
+[![A layer produces the activation vector 2, 2, 6, 6. Its mean is 4 and variance is 4. Subtracting 4 and dividing by standard deviation 2 gives minus 1, minus 1, 1, 1, with mean zero and variance one.](../assets/chapter-04/layer-normalization-intuition.svg)](../assets/chapter-04/layer-normalization-intuition.svg)
+
+<figcaption markdown="span">Original companion illustration of the normalization idea in Figure 4.5, using our own four-coordinate example. Variance here divides by the number of coordinates. The drawing isolates standardization before learned scale and shift, and omits the small epsilon term for clean arithmetic. These are illustrative values, not recorded model activations.</figcaption>
+</figure>
+
+Our example starts with `[2, 2, 6, 6]`. Its mean is 4. Subtracting 4 gives `[-2, -2, 2, 2]`; the original vector's standard deviation is 2, so dividing by 2 gives `[-1, -1, 1, 1]`. The values still differ, but their center and spread have changed. We have transformed the representation, not erased it.
+
+For a GPT tensor shaped `[B, T, D]`, **B is the number of examples, T is the number of token positions, and D is vector width**. Layer normalization in this model works along the last axis, D. Each example's token position gets its own mean and variance. It does not pool statistics across tokens or across the batch, as one might initially imagine from familiarity with batch normalization in CNNs.
+
+!!! note "Standardization is the first part of LayerNorm"
+
+    The full layer also applies a learned scale and shift for each coordinate, which we will implement as we continue Section 4.2. Consequently, its final output does not have to retain mean zero and variance one. The small epsilon term used for numerical stability also makes the standardized variance approximately one rather than exactly one; a constant vector is a special case with zero variance.
+
+    The mean and variance are calculated from the current input vector. The scale and shift are stored model parameters learned during training. These are different kinds of numbers.
+
+### Where it sits in our GPT architecture
+
+“Before and after attention” is a useful first orientation, but the residual additions matter. The GPT-2-style block we are building follows this sequence:
+
+```text
+Block input
+    │
+    ├── save as the first residual shortcut
+    ↓
+LayerNorm → masked multi-head attention → dropout
+    ↓
+Add the first shortcut
+    │
+    ├── save as the second residual shortcut
+    ↓
+LayerNorm → feedforward network → dropout
+    ↓
+Add the second shortcut → block output
+```
+
+The second LayerNorm acts on the result **after the first residual addition** and prepares it for the feedforward network. These are two separate LayerNorm instances with their own learned scale and shift parameters. After the whole stack of transformer blocks, one more LayerNorm sits before the vocabulary output projection—the position currently occupied by `DummyLayerNorm` in our outline.
+
+This specifies the architecture we are implementing. Other transformer designs can change the normalization type or its placement. For now, the next step is to calculate the statistics on a small example and turn the identity placeholder into a real operation.
+
+### Inspecting a layer's outputs before normalization
+
+The book now uses a small standalone network to make the statistics visible. This is a demonstration, not a change to GPT's embedding width. We have **two examples with five input features each**, and a linear layer produces **six output features per example**. ReLU then replaces negative values with zero; its outputs are **nonnegative**, including zero.
+
+```python
+import torch
+from torch import nn
+
+torch.manual_seed(123)
+batch_example = torch.randn(2, 5)  # [examples, input features]
+layer = nn.Sequential(nn.Linear(5, 6), nn.ReLU())
+out = layer(batch_example)  # [2,5] -> [2,6] -> [2,6]
+print(out)
+```
+
+```text
+tensor([[0.2260, 0.3470, 0.0000, 0.2216, 0.0000, 0.0000],
+        [0.2133, 0.2394, 0.0000, 0.5198, 0.3297, 0.0000]],
+       grad_fn=<ReluBackward0>)
+```
+
+These are the outputs from running the book's example locally. Each row belongs to one example. `nn.Linear(5, 6)` has learned weights and, by default, a bias; ReLU has no learned parameters. Nothing has been trained here: the layer starts with random parameters, and the seed makes this run reproducible in the same environment. The printed `grad_fn` indicates that PyTorch tracked the operation for backpropagation; it does not mean a backward pass already occurred.
+
+We now calculate statistics from **`out`, the six output activations in each row**, rather than from the five original input features:
+
+```python
+mean = out.mean(dim=-1, keepdim=True)
+var = out.var(dim=-1, keepdim=True)
+print("Mean:\n", mean)
+print("Variance:\n", var)
+```
+
+```text
+Mean:
+ tensor([[0.1324],
+        [0.2170]], grad_fn=<MeanBackward1>)
+Variance:
+ tensor([[0.0231],
+        [0.0398]], grad_fn=<VarBackward0>)
+```
+
+The first mean and variance describe the first row; the second pair describes the second row. Calculating these statistics does not yet normalize or change `out`.
+
+!!! note "Why these variances differ from our earlier example"
+
+    This snippet follows the book and uses `torch.var`'s default correction: with six values, it divides the sum of squared deviations by five. Our earlier illustration divided by the number of coordinates. The final LayerNorm implementation will also divide by the number of coordinates, using `unbiased=False` (equivalently, `correction=0`). With that setting, these rows have variances approximately 0.0192 and 0.0332. Keep the convention consistent when comparing results; the book discusses the choice later in this section.
+
+### `dim` chooses which axis to reduce
+
+For this two-dimensional tensor, axis 0 indexes examples (rows), and axis 1 indexes features (columns). **A reduction collapses the chosen axis** by combining its values:
+
+| Operation on `out`, shape `[2,6]` | Which values are combined? | Result with `keepdim=True` |
+| --- | --- | --- |
+| `out.mean(dim=1, keepdim=True)` | The six features within each row | `[2,1]`: one mean per example |
+| `out.mean(dim=-1, keepdim=True)` | The last axis, also the six features here | `[2,1]`: the same result |
+| `out.mean(dim=0, keepdim=True)` | The two examples within each column | `[1,6]`: one mean per feature across examples |
+
+<figure markdown="1">
+
+[![A two-row, three-column example compares reduction axes. Across each row, dim 1 or minus 1 gives means 3 and 7. Down each column, dim 0 gives means 2, 5, and 8.](../assets/chapter-04/mean-reduction-axes.svg)](../assets/chapter-04/mean-reduction-axes.svg)
+
+<figcaption markdown="span">Original companion illustration of the axis distinction in Figure 4.6, using our own small integer matrix. Both panels start with the same values. Results retain the reduced axis with `keepdim=True`; arrows show which values are averaged.</figcaption>
+</figure>
+
+For GPT's `[B,T,D]` tensors, the last axis is axis 2: **B = batch examples, T = token positions, D = vector width**. `dim=-1` continues to mean “across each token vector's coordinates,” whereas `dim=1` would now combine token positions. This is why the negative index is useful beyond this two-dimensional demonstration.
+
+### `keepdim=True` keeps the shape convenient for subtraction
+
+PyTorch spells the argument **`keepdim`**, singular. It retains the reduced axis with length one; it does not preserve its original length or prevent the reduction.
+
+```text
+Original out:          shape [2,6]
+
+keepdim=False:         shape [2]       [0.1324, 0.2170]
+keepdim=True:          shape [2,1]     [[0.1324],
+                                      [0.2170]]
+```
+
+Both results contain the same two means. A tensor of shape `[2]` is **one-dimensional with two elements**; a tensor of shape `[2,1]` is **two-dimensional with two rows and one column**. “Two numbers” and “two axes” are different ideas.
+
+The practical benefit appears when we subtract: `[2,6] - [2,1]` broadcasts each row's mean across that row's six features. `[2,6] - [2]` fails because broadcasting aligns dimensions from the right, and lengths six and two do not match. Keeping the axis lets the forthcoming normalization formula express exactly which mean belongs to which example.
+
+### Applying the normalization and checking the result
+
+Continue with `out`, `mean`, and `var` from the preceding example. The square root of variance is standard deviation:
+
+```python
+out_norm = (out - mean) / torch.sqrt(var)
+print(out_norm)
+print(out_norm.mean(dim=-1, keepdim=True))
+print(out_norm.var(dim=-1, keepdim=True))
+```
+
+```text
+tensor([[ 0.6159,  1.4126, -0.8719,  0.5872, -0.8719, -0.8719],
+        [-0.0189,  0.1121, -1.0876,  1.5173,  0.5647, -1.0876]],
+       grad_fn=<DivBackward0>)
+tensor([[-5.9605e-08],
+        [ 1.9868e-08]], grad_fn=<MeanBackward1>)
+tensor([[1.0000],
+        [1.0000]], grad_fn=<VarBackward0>)
+```
+
+These outputs were verified locally. Negative values are expected: a coordinate below its row's mean becomes negative when we subtract that mean, even though ReLU's original outputs were nonnegative. The variance check uses the same default correction as the variance used in the denominator.
+
+`-5.9605e-08` means approximately **-0.000000059605**. Floating-point arithmetic has finite precision, so calculations that give exactly zero on paper can leave a tiny remainder. This is why a numerical check normally allows a small tolerance instead of requiring exact equality with zero.
+
+PyTorch also lets us change how tensors are displayed:
+
+```python
+# Formatting only: the stored tensor values do not change.
+torch.set_printoptions(precision=4, sci_mode=False)
+print(out_norm.mean(dim=-1, keepdim=True))
+```
+
+```text
+tensor([[-0.0000],
+        [ 0.0000]], grad_fn=<MeanBackward1>)
+```
+
+The displayed `-0.0000` is the same tiny negative value rounded for printing. Turning scientific notation off does not improve numerical accuracy or make the stored mean exactly zero. The print setting also affects subsequent tensor displays in this Python session; `torch.set_printoptions(profile="default")` restores the defaults.
+
+### Replacing the placeholder with a real `LayerNorm`
+
+This class adapts the book's Listing 4.2 with type hints and comments. It uses **population variance**, dividing by the number of coordinates, as discussed above. That differs from the introductory calculation's default sample correction.
+
+```python title="LayerNorm — standardization followed by learned scale and shift"
+class LayerNorm(nn.Module):
+    """Normalize each vector's last axis, then apply learned scale and shift.
+
+    For floating-point input [B,T,D], B = examples, T = token positions,
+    and D = embedding width. Also accepts [B,D]. The output shape is
+    unchanged, and the last axis must have length emb_dim.
+    """
+
+    def __init__(self, emb_dim: int) -> None:
+        super().__init__()
+        self.eps = 1e-5  # Fixed stability constant, not a learned parameter.
+        # One learned scale and one learned shift per coordinate.
+        self.scale = nn.Parameter(torch.ones(emb_dim))
+        self.shift = nn.Parameter(torch.zeros(emb_dim))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map [B,T,D] to [B,T,D], or [B,D] to [B,D], without mixing rows.
+
+        B = examples, T = positions, D = coordinates. Statistics are
+        recalculated from x; scale and shift are stored learned parameters.
+        """
+        mean = x.mean(dim=-1, keepdim=True)
+        var = x.var(dim=-1, keepdim=True, unbiased=False)
+        # Epsilon goes inside the square root, added to the variance.
+        norm_x = (x - mean) / torch.sqrt(var + self.eps)
+        # [D] broadcasts across every example and token position.
+        return self.scale * norm_x + self.shift
+```
+
+Epsilon prevents division by zero for a constant vector and limits amplification when variance is very small. With epsilon included, standardized variance is generally slightly below one; a constant vector standardizes to zeros.
+
+### Why learn scale and shift after normalizing?
+
+Normalization gives the next computation a controlled starting scale. The learned transformation lets training adjust **how each coordinate should be presented to the next layer**. We preserve a predictable normalization rule while allowing a useful coordinate-wise adjustment.
+
+For a width of four, imagine this example **after standardization**:
+
+```text
+Standardized vector:   [-1,  -1,   1,   1]
+Learned scale:         [ 2,   1, 0.5,   1]
+Learned shift:         [ 0,   1,   0,  -1]
+                       ------------------
+Output:                [-2,   0, 0.5,   0]
+```
+
+Each coordinate gets its own multiplication and addition. For example, the second coordinate becomes `1 × (-1) + 1 = 0`. These scale/shift values are illustrative, not a recorded training result. At initialization, our class uses all-one scales and all-zero shifts, so it initially returns the standardized values without this extra adjustment.
+
+| Quantity | Where does it come from? | When does it change? |
+| --- | --- | --- |
+| Mean and variance | Calculated from the current vector | Every forward pass, according to the input |
+| Scale and shift | Stored `nn.Parameter` vectors | Updated by the optimizer during training |
+| Epsilon | A chosen small constant | Stays fixed in this implementation |
+
+`nn.Parameter` registers scale and shift as trainable members of the module. When the module belongs to the full GPT model, they are included in `model.parameters()`. Backpropagation computes their gradients from the model's loss, and the optimizer uses those gradients to update them, just as it updates attention weights or embeddings. Calling `forward` alone does not update them, and gradient updates do not guarantee that every individual training step improves the loss.
+
+A LayerNorm with width 768 therefore contributes **768 scales + 768 shifts = 1,536 parameters**. Its mean and variance add no stored trainable parameters. The same scale/shift pair is used at every token position and for every example in that layer; a different LayerNorm instance has its own pair.
+
+!!! tip "The bridge to CNN normalization"
+
+    Many batch-normalization layers used in CNNs also have learned scale and shift. The idea may already have been present in the framework's layer even if we did not implement those parameters ourselves. What differs is which values supply the normalization statistics. Our LayerNorm computes them independently for each token vector and uses the same rule during training and evaluation; it does not maintain running batch statistics.
+
+The learned scale and shift can move the final mean away from zero and the final variance away from one. This is intentional. They also cannot generally undo normalization for every input: they are shared learned values, while each input vector has its own calculated mean and variance.
+
+!!! note "Biased variance: why divide by n?"
+
+    Here **n is the number of coordinates in one vector**, not the batch size. We sum the squared differences from that vector's mean and divide by n. Setting `unbiased=False`, or equivalently `correction=0`, selects that calculation.
+
+    Bessel's correction divides by n − 1 instead. It is useful when estimating an unknown population variance from an independent sample whose mean was also estimated. In LayerNorm, our immediate goal is to rescale the current feature vector, rather than make that statistical estimate. “Biased” is a statistical term here, not a claim that normalization is faulty.
+
+    For `[2, 2, 6, 6]`, the squared deviations sum to 16: dividing by 4 gives variance 4; dividing by 3 gives about 5.3333. With 768 coordinates, the n − 1 result is larger by a factor of 768/767, about 0.13%. The difference shrinks as width grows, but we still match the model's intended computation.
+
+    The original [GPT-2 TensorFlow implementation](https://github.com/openai/gpt-2/blob/master/src/model.py) explicitly averages squared deviations, using the n denominator. [PyTorch LayerNorm](https://docs.pytorch.org/docs/2.15/generated/torch.nn.LayerNorm.html) uses this convention too. Matching it is one requirement for reproducing the computation expected by pretrained weights; matching shapes alone is insufficient. Weight loading is covered in [Section 5.5](05-pretraining-on-unlabeled-data.md#55-loading-pretrained-weights-from-openai).
+
+### Trying the completed LayerNorm module
+
+Apply our class to the same two rows of six activations in `out`. At initialization the scales are ones and the shifts are zeros:
+
+```python
+ln = LayerNorm(emb_dim=6)
+out_ln = ln(out)  # [2,6] -> [2,6]: two examples, six features each.
+mean = out_ln.mean(dim=-1, keepdim=True)
+var = out_ln.var(dim=-1, unbiased=False, keepdim=True)
+print("Mean:\n", mean)
+print("Variance:\n", var)
+```
+
+```text
+Mean:
+ tensor([[-0.0000],
+        [-0.0000]], grad_fn=<MeanBackward1>)
+Variance:
+ tensor([[0.9995],
+        [0.9997]], grad_fn=<VarBackward0>)
+```
+
+These locally verified outputs use the print options set earlier. Each row's mean is approximately zero, and its variance is approximately one. The values **0.9995 and 0.9997 are expected**: epsilon is added to the variance in the denominator. Before the learned scale/shift changes, the resulting population variance is approximately `var / (var + eps)`, which is slightly less than one for a nonconstant vector. This check uses `unbiased=False`, consistently with the class.
+
+!!! note "Layer normalization versus batch normalization"
+
+    In our GPT, LayerNorm normalizes across the features of **one token at a time**. Changing which other examples are in the batch does not change that token's normalization statistics. Training and evaluation use the same input-based rule.
+
+    In a CNN, BatchNorm typically calculates statistics for each channel across **batch examples and spatial locations** during training. With its default running-statistics setting, evaluation uses accumulated statistics instead. Thus “across the batch” is a useful shorthand, but it omits the spatial axes in the CNN case. See [PyTorch BatchNorm2d](https://docs.pytorch.org/docs/2.15/generated/torch.nn.BatchNorm2d.html).
+
+    Both can have learned scale and shift. The distinction is which values contribute to their statistics and how those statistics are handled during training and evaluation.
+
+### Does that reasoning still hold for today's LLMs?
+
+**Yes, but distributed training is one practical benefit rather than the whole explanation.** The useful property is that the normalization operates independently on each token representation.
+
+- **Changing batches:** normalization does not couple a token to unrelated examples, including when training uses small batches per device or serving processes one request at a time.
+- **Autoregressive processing:** token-wise normalization does not aggregate over future positions. Naively applying a batch-normalization operation that pools across the sequence during training could expose future-token information through its statistics. This is a consequence of those axes, not a claim that every possible BatchNorm design must leak information.
+- **Distributed training:** no cross-example statistics need to be synchronized for this operation. BatchNorm can also work in distributed systems; [SyncBatchNorm](https://docs.pytorch.org/docs/2.15/generated/torch.nn.SyncBatchNorm.html) explicitly synchronizes statistics across its process group during training. LayerNorm does not remove the need to synchronize model gradients, and splitting a token's feature dimension across devices can still require communication.
+
+!!! tip "Modern example: RMSNorm keeps the per-token idea"
+
+    As checked in November 2026, the [Qwen3 implementation in Transformers](https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3/modeling_qwen3.py) uses RMSNorm for its decoder-block normalization. It scales a token vector using its root mean square and a learned scale, without subtracting the mean or adding a learned shift in that implementation. Thus it does **not** enforce zero mean.
+
+    GPT-2's LayerNorm remains the right implementation for this book. The transferable idea is normalization across each token's coordinates; the exact formula can differ between architectures.
+
+### Two building blocks covered; GELU and feedforward come next
+
+<figure markdown="1">
+
+[![Chapter 4 progress: the GPT placeholder backbone and LayerNorm implementation are covered. Next are GELU and the feedforward network, followed by shortcuts, the transformer block, and full GPT assembly.](../assets/chapter-04/implementation-progress-layernorm.svg)](../assets/chapter-04/implementation-progress-layernorm.svg)
+
+<figcaption markdown="span">Original companion progress diagram corresponding to Figure 4.7. “Covered” refers to the chapter's code walkthrough: the earlier dummy model listing remains an outline, and complete model assembly comes later. These are implementation milestones, not forward-pass operations.</figcaption>
+</figure>
+
+We now have the model outline and a real normalization component. Section 4.3 develops **GELU and the feedforward network** that will go inside each transformer block.
 
 ## 4.3 Implementing a feed forward network with GELU activations
 
-Notes to come as we read this section.
+### What the curve changes for one coordinate
+
+The feedforward network uses an activation function between two learned linear layers. From CNNs, we already know ReLU: it keeps positive inputs and sets negative ones to zero. Look at two nearby inputs on the negative side of its curve. Moving from −0.5 to −0.4 leaves the ReLU output at zero. GELU's output moves from about −0.154 to −0.138. **The slope tells us how sensitive the output is to a small change in the input.** Backpropagation multiplies the incoming gradient by that local slope. A single negative input blocks the gradient through that ReLU activation on this pass. GELU usually passes some gradient there, though it can be very small. Smoothness alone does not guarantee better training.
+
+**GELU** stands for *Gaussian Error Linear Unit*. Its exact definition is **GELU(x) = x Φ(x)**. Read Φ(x) as the fraction of a standard normal distribution to the left of x. For x = 1, that fraction is about 0.8413, so GELU(1) is about 0.8413. For x = −1, the fraction is about 0.1587, so GELU(−1) is about −0.1587. The calculation is deterministic. [Original GELU paper](https://arxiv.org/abs/1606.08415)
+
+The book follows GPT-2's tanh approximation to that curve. The constants specify the approximation. Training learns the linear layers on either side of it. This companion version of Listing 4.3 uses a Python scalar for the constant so the calculation also follows the input tensor's device. [GPT-2 reference implementation](https://github.com/openai/gpt-2/blob/master/src/model.py)
+
+```python title="GELU with the GPT-2 tanh approximation"
+import math
+
+import torch
+from torch import nn
+
+
+class GELU(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply GELU to each floating-point coordinate, preserving all axes."""
+        inner = math.sqrt(2 / math.pi) * (x + 0.044715 * x.pow(3))
+        return 0.5 * x * (1 + torch.tanh(inner))
+```
+
+<figure markdown="1">
+
+[![ReLU and GELU on shared axes. Near minus one-half, ReLU is flat at zero while GELU has a small negative output and a positive slope.](../assets/chapter-04/gelu-vs-relu.svg)](../assets/chapter-04/gelu-vs-relu.svg)
+
+<figcaption markdown="span">Companion plot for Figure 4.8. Both curves use the same axes. The dotted guide marks the same negative input on both functions.</figcaption>
+</figure>
+
+To plot the curves yourself with the class above:
+
+```python
+import matplotlib.pyplot as plt
+
+x = torch.linspace(-3, 3, 401)
+plt.plot(x, GELU()(x), label="GELU")
+plt.plot(x, torch.relu(x), "--", label="ReLU")
+plt.xlabel("Input coordinate")
+plt.ylabel("Activation output")
+plt.legend()
+plt.show()
+```
+
+!!! note "Where SwiGLU differs"
+
+    SwiGLU (Swish-Gated Linear Unit) gives the same token vector to **two learned input projections**. Call their outputs `a` and `b`. It applies Swish to `a`, then multiplies corresponding coordinates: `hidden = (a * sigmoid(a)) * b`. A final linear layer projects that result back to the model width. One branch thus modulates how much of the other branch passes through. In this chapter's GPT-2 network, one input projection followed by GELU supplies the hidden features. [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202)
+
+### Follow one token through the feedforward network
+
+Take one token's 768 numbers. The first linear layer learns 3,072 different combinations of them. GELU transforms each of those 3,072 numbers separately. The second linear layer learns how to combine them into 768 output coordinates. The output has the right width for the residual addition we'll meet in Section 4.4. Its values can differ from the input. Without the nonlinear activation, the two linear layers and their biases could be expressed as a single linear layer with a bias.
+
+```python title="FeedForward — companion to Listing 4.4"
+class FeedForward(nn.Module):
+    def __init__(self, cfg: GPTConfig) -> None:
+        super().__init__()
+        width = cfg["emb_dim"]
+        hidden_width = 4 * width
+        self.layers = nn.Sequential(
+            nn.Linear(width, hidden_width),
+            GELU(),
+            nn.Linear(hidden_width, width),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Transform floating-point [B,T,D] to [B,T,D].
+
+        B counts examples, T counts positions, and D is the model width.
+        Each position uses the same weights independently.
+        """
+        return self.layers(x)
+```
+
+<figure markdown="1">
+
+[![For two examples of three tokens, the feature width goes from 768 to 3,072, stays 3,072 through GELU, and returns to 768. All six positions use the same network.](../assets/chapter-04/feedforward-shapes.svg)](../assets/chapter-04/feedforward-shapes.svg)
+
+<figcaption markdown="span">Original shape trace for Figure 4.9. Read down one column to follow a single token or the whole batch. The linear layers mix features within each token. Attention is where different token positions exchange information.</figcaption>
+</figure>
+
+Use the `GPT_CONFIG_124M` dictionary and `GPTConfig` type from Section 4.1. Random vectors stand in for the block's input so we can try the submodule on its own:
+
+```python
+ffn = FeedForward(GPT_CONFIG_124M)
+x = torch.rand(2, 3, 768)  # Two examples, three positions each.
+out = ffn(x)
+print(out.shape)
+```
+
+```text
+torch.Size([2, 3, 768])
+```
+
+### What did the wider vector buy us?
+
+Think back to the last character of `job=` in Character Logs. Attention has already given that position information from earlier characters. After the second normalization, the feedforward network receives **32 numbers for that one position**. Each of its 64 hidden units has its own set of 32 weights and a bias, so each can respond to a different combination of those numbers. GELU transforms the 64 responses individually. Each output coordinate then has its own learned way of combining all 64 responses.
+
+That is the sense in which the hidden representation is *richer*: the network has more intermediate features available when constructing its update. Training determines what those features respond to. The final 32 numbers can encode a different representation from the 32 that went in. In this setup, generalization is something we evaluate on held-out examples, as we did with the character logs.
+
+<figure markdown="1">
+
+[![One GPT-2 token vector grows from four tiles to sixteen, stays sixteen through GELU, then returns to four. Each tile represents 192 coordinates.](../assets/chapter-04/feedforward-width.svg)](../assets/chapter-04/feedforward-width.svg)
+
+<figcaption markdown="span">Our companion to Figure 4.10. Bar length shows the number of coordinates at one position. Each hidden coordinate can depend on every input coordinate, and each output coordinate can depend on every activated hidden coordinate.</figcaption>
+</figure>
+
+| Model and architecture drawing | Input width | Hidden width at GELU | Output width |
+| --- | ---: | ---: | ---: |
+| [Character Logs](../preparation/training-comparison.md#model-architecture-drawn-from-the-code) | 32 | 64 | 32 |
+| [Cosmopedia](../preparation/cosmopedia.md#model-architecture-drawn-from-the-code) | 256 | 1,024 | 256 |
+| Book's GPT-2 small | 768 | 3,072 | 768 |
+
+Both experiments use PyTorch's `nn.GELU()` between their linear layers. The book implements the tanh approximation to GELU. You can find the layers in [Character Logs’ model.py](https://github.com/kantarcise/learning-llms/blob/main/experiments/character-logs/model.py) and [Cosmopedia’s model.py](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py).
+
+### Finding the shortcut in our experiment drawing
+
+Follow the first block of Character Logs. At the addition on the third line, the shortcut carries **y**, the representation that already includes the attention update:
+
+```text
+x      = token embedding + position embedding
+y      = x + attention(norm1(x))
+z      = y + feedforward(norm2(y))
+logits = vocabulary_projection(final_norm(z))
+```
+
+For each position, `y` has width 32, so the feedforward update must also have width 32 for this addition. Cosmopedia uses the same two additions at width 256 and passes the result to the next block, applying final normalization and vocabulary projection after the fourth block. Returning to the model width makes both residual addition and stacking straightforward.
+
+<figure markdown="1">
+
+[![Chapter 4 progress after Section 4.3. The GPT outline, layer normalization, GELU and feedforward network are covered. Shortcut connections come next, then block and model assembly.](../assets/chapter-04/implementation-progress-feedforward.svg)](../assets/chapter-04/implementation-progress-feedforward.svg)
+
+<figcaption markdown="span">Our companion to Figure 4.11. Section 4.4 takes up the two additions visible in the experiment drawing before the book assembles the transformer block.</figcaption>
+</figure>
 
 ## 4.4 Adding shortcut connections
 
-Notes to come as we read this section.
+The shortcut here is the **residual connection** familiar from ResNet. Consider a layer whose input and output each have three coordinates. Call its learned transformation `F`. The plain layer returns `F(x)`. With a shortcut, it returns `x + F(x)`: each output coordinate receives its original input value plus a learned update. In the [Character Logs block](../preparation/training-comparison.md#model-architecture-drawn-from-the-code), the same pattern appears twice, once around attention and once around the feedforward network.
+
+### Why an addition helps the backward pass
+
+During backpropagation, the chain rule multiplies the local derivatives along a path. When those products become very small, the loss supplies little gradient to weights early in the network. This is the **vanishing gradient** problem. For a hand calculation, imagine five successive scalar operations each with local slope 0.1. A gradient of 1 at the output becomes 0.00001 at the input along that path.
+
+Now take just one scalar stage, `y = x + F(x)`. If a gradient of 1 arrives at `y`, the addition sends 1 back along each branch. At `x`, their contributions add: the direct path contributes 1 and the learned path contributes the local slope of `F`. If that slope is 0.1, the gradient reaching `x` is 1.1. For vectors the direct path likewise passes the incoming gradient back coordinate by coordinate. The learned branch can reinforce or partly cancel it. This explains how shortcuts help gradients reach earlier layers even when the learned path has small derivatives.
+
+### Five layers with a switch for shortcuts
+
+In this companion version of the [book's Listing 4.5](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch04/01_main-chapter-code/ch04.ipynb), each stage is a linear layer followed by the `GELU` class from Section 4.3. The list `[3, 3, 3, 3, 3, 1]` gives six boundary widths and therefore five stages. PyTorch's `ModuleList` registers the stages and their parameters. Writing the loop ourselves lets us decide where to add each shortcut.
+
+```python title="ExampleDeepNeuralNetwork — five stages with optional residual additions"
+class ExampleDeepNeuralNetwork(nn.Module):
+    def __init__(self, layer_sizes: list[int], use_shortcut: bool) -> None:
+        super().__init__()
+        self.use_shortcut = use_shortcut
+        self.layers = nn.ModuleList(
+            nn.Sequential(nn.Linear(in_width, out_width), GELU())
+            for in_width, out_width in zip(layer_sizes, layer_sizes[1:])
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Map floating-point [B,3] to [B,1] for the example widths.
+
+        B counts examples. At each stage x holds that stage's input.
+        """
+        for layer in self.layers:
+            update = layer(x)
+            if self.use_shortcut and x.shape == update.shape:
+                x = x + update
+            else:
+                x = update
+        return x
+```
+
+For the first four stages the widths are 3 → 3, so the corresponding coordinates can be added directly. At the fifth stage, 3 → 1, the shape check selects `x = update`. This preserves the intended single output per example. Each shortcut carries the input to **its own stage**.
+
+<figure markdown="1">
+
+[![Two five-stage networks side by side. In the residual network, a bypass arrow adds each of the first four stage inputs to its output. The fifth stage changes width from three to one.](../assets/chapter-04/five-stage-shortcuts.svg)](../assets/chapter-04/five-stage-shortcuts.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.12. Arrows follow the forward pass from top to bottom. Each number summarizes the magnitude of the loss gradient for that stage’s linear weights, measured in a single backward pass with the book’s settings.</figcaption>
+</figure>
+
+**How to read a gradient label.** Stage 1 has a 3 × 3 weight matrix. Backpropagation produces nine derivatives, one per weight. Taking their absolute values and averaging gives one number for the drawing. Absolute values keep positive and negative derivatives from cancelling in that summary. The direct path described above carries an **activation gradient** back to the stage input. The labels measure **weight gradients**, which also depend on the activations and the loss.
+
+For the comparison we used the same initial weights (seed 123), input `[1, 0, -1]`, and a mean squared error loss against target zero. The shortcut changes the forward output and therefore the loss as well as the backward path. The figure illustrates a single example before an optimizer step. The following function reproduces those measurements.
+
+### Measuring what reaches each layer
+
+For this single example the network returns one prediction, and the chosen target is zero. Mean squared error therefore reduces to `(prediction - 0) ** 2`. Calling `loss.backward()` runs backpropagation from that scalar loss. PyTorch follows the operations recorded during the forward pass and stores each trainable parameter's derivatives in its `.grad` tensor.
+
+```python
+def print_gradients(model: nn.Module, x: torch.Tensor) -> None:
+    """Print the mean absolute loss gradient for each linear weight matrix.
+
+    x is a floating-point batch [B,3], with B examples and three features.
+    The model predicts one scalar per example, giving shape [B,1].
+    """
+    model.zero_grad(set_to_none=True)  # Make each call a fresh measurement.
+    prediction = model(x)
+    target = torch.zeros_like(prediction)
+    loss = nn.functional.mse_loss(prediction, target)
+    loss.backward()
+
+    for name, parameter in model.named_parameters():
+        if name.endswith(".weight") and parameter.grad is not None:
+            magnitude = parameter.grad.abs().mean().item()
+            print(f"{name}: {magnitude:.5f}")
+
+
+layer_sizes = [3, 3, 3, 3, 3, 1]
+sample_input = torch.tensor([[1.0, 0.0, -1.0]])
+
+for use_shortcut in (False, True):
+    torch.manual_seed(123)  # Both constructors draw identical initial weights.
+    model = ExampleDeepNeuralNetwork(layer_sizes, use_shortcut)
+    print(f"use_shortcut={use_shortcut}")
+    print_gradients(model, sample_input)
+```
+
+Read the table from the output back toward the input, the direction in which the gradient travels. For instance, `layers.0.0.weight` names the linear weight matrix in the first stage.
+
+| Stage | Without shortcuts | With shortcuts |
+| --- | ---: | ---: |
+| 5 · nearest the output | 0.00505 | 1.32585 |
+| 4 | 0.00140 | 0.26657 |
+| 3 | 0.00072 | 0.32897 |
+| 2 | 0.00012 | 0.20694 |
+| 1 · nearest the input | 0.00020 | 0.22170 |
+
+In the plain network the first stage's mean gradient magnitude is about **25 times smaller** than the last stage's. There is a small rise from stage 2 to stage 1. With shortcuts the last stage still has the largest value, and the first four are all between 0.20 and 0.33. This illustrates gradient attenuation for these weights and this input. Measuring how the two networks learn over time would require optimizer steps and repeated measurements. The book points to Appendix A.4 and A.7 for more on gradients and training.
+
+!!! tip "Where we saw this before the book"
+
+    In the Character Logs walkthrough we followed a single entry in the embedding table. After `loss.backward()`, its stored gradient was **−0.016659** and its weight was still **0.501100**. AdamW then used the gradient in `optimizer.step()` to update the weight. Here we pause at that same point after backward and inspect a whole weight matrix. [Character Logs · follow one learned number](../preparation/training-comparison.md#before-training-follow-one-learned-number)
+
+    We also ran the pieces that Section 4.5 will assemble. Look at the middle of either experiment drawing: the first shortcut adds the attention update to the block input. The second adds the GELU feedforward update to that result. Each learned branch starts with its own LayerNorm. Character Logs used one such block and Cosmopedia stacked four. [Character Logs architecture](../preparation/training-comparison.md#model-architecture-drawn-from-the-code) · [Cosmopedia architecture](../preparation/cosmopedia.md#model-architecture-drawn-from-the-code)
 
 ## 4.5 Connecting attention and linear layers in a transformer block
 
