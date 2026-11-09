@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="850" viewBox="0 0 760 850" role="img" aria-labelledby="title desc"><title id="title">Inside GPTModel for a four-token prompt</title><desc id="desc">From bottom to top, add token and position embeddings, apply dropout, run twelve distinct blocks, normalize the last block output and project each position to vocabulary logits.</desc>
+<defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#34556b"/></marker></defs><style>text{font:20px Arial,sans-serif;fill:#19364a;text-anchor:middle}.title{font-size:25px;font-weight:bold}.small{font-size:17px}.path{fill:none;stroke:#34556b;stroke-width:2;marker-end:url(#tip)}</style><rect width="760" height="850" rx="16" fill="#f8fafc"/><text class="title" x="380" y="38">One prompt through GPT-2 small</text>
+<rect x="63" y="64" width="634" height="65" rx="12" fill="#dcefe8" stroke="#8299ba"/>
+<text x="380.0" y="90.5">4 rows × 50,257 scores</text>
+<text x="380.0" y="116.5">Read the last row to choose a continuation.</text>
+<rect x="138" y="156" width="484" height="55" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text x="380.0" y="190.5">Vocabulary projection · 768 → 50,257</text>
+<path class="path" d="M380 156V131"/>
+<rect x="138" y="237" width="484" height="47" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text x="380.0" y="267.5">Final LayerNorm</text>
+<path class="path" d="M380 237V213"/>
+<rect x="63" y="313" width="634" height="170" rx="12" fill="#e9e5f6" stroke="#8299ba"/>
+<text x="380.0" y="353.0">12 successive blocks · width 768</text>
+<text x="380.0" y="379.0">Within each block, in forward order:</text>
+<text x="380.0" y="405.0">1. Normalize → causal attention → dropout → add input</text>
+<text x="380.0" y="431.0">2. Normalize → linear → GELU → linear → dropout</text>
+<text x="380.0" y="457.0">     → add the result of step 1</text>
+<path class="path" d="M380 313V286"/>
+<rect x="138" y="513" width="484" height="52" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text x="380.0" y="546.0">Embedding dropout · [1, 4, 768]</text>
+<path class="path" d="M380 513V485"/>
+<rect x="220" y="594" width="320" height="45" rx="12" fill="#dcecfb" stroke="#8299ba"/>
+<text x="380.0" y="623.5">Add corresponding rows</text>
+<path class="path" d="M380 594V567"/>
+<rect x="30" y="675" width="332" height="66" rx="12" fill="#e3eef5" stroke="#8299ba"/>
+<text x="196.0" y="702.0">Token embeddings</text>
+<text x="196.0" y="728.0">Four rows of width 768</text>
+<rect x="398" y="675" width="332" height="66" rx="12" fill="#e3eef5" stroke="#8299ba"/>
+<text x="564.0" y="702.0">Position embeddings</text>
+<text x="564.0" y="728.0">Positions 0, 1, 2, 3</text>
+<path class="path" d="M196 675V654H292V641"/>
+<path class="path" d="M564 675V654H468V641"/>
+<rect x="30" y="770" width="332" height="52" rx="12" fill="#fff" stroke="#8299ba"/>
+<text x="196.0" y="803.0">IDs: 6109, 3626, 6100, 345</text>
+<path class="path" d="M196 770V743"/>
+<rect x="398" y="770" width="332" height="52" rx="12" fill="#fff" stroke="#8299ba"/>
+<text x="564.0" y="803.0">Position IDs from arange(4)</text>
+<path class="path" d="M564 770V743"/>
+<text class="small" x="380" y="843">Start here ↑   “Every effort moves you”</text></svg>

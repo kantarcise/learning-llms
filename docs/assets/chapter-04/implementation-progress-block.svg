@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="498" viewBox="0 0 720 498" role="img" aria-labelledby="title desc"><title id="title">Chapter 4 roadmap after Section 4.5</title><desc id="desc">Steps one through six are complete. The next step is to use the block in the full GPT model.</desc><style>text{font:20px Arial,sans-serif;fill:#172b45}.status{font-size:17px;font-weight:bold}</style><rect width="720" height="498" rx="16" fill="#f8fafc"/><text x="28" y="43" style="font-size:26px;font-weight:bold">From a working block to a full model</text>
+<rect x="25" y="67" width="670" height="47" rx="10" fill="#dcefe8"/><text x="45" y="97">1 · GPT placeholder backbone</text><text class="status" x="670" y="97" text-anchor="end">Covered</text>
+<rect x="25" y="127" width="670" height="47" rx="10" fill="#dcefe8"/><text x="45" y="157">2 · Layer normalization</text><text class="status" x="670" y="157" text-anchor="end">Covered</text>
+<rect x="25" y="187" width="670" height="47" rx="10" fill="#dcefe8"/><text x="45" y="217">3 · GELU activation</text><text class="status" x="670" y="217" text-anchor="end">Covered</text>
+<rect x="25" y="247" width="670" height="47" rx="10" fill="#dcefe8"/><text x="45" y="277">4 · Feedforward network</text><text class="status" x="670" y="277" text-anchor="end">Covered</text>
+<rect x="25" y="307" width="670" height="47" rx="10" fill="#dcefe8"/><text x="45" y="337">5 · Shortcut connections</text><text class="status" x="670" y="337" text-anchor="end">Covered</text>
+<rect x="25" y="367" width="670" height="47" rx="10" fill="#dcefe8"/><text x="45" y="397">6 · Transformer block</text><text class="status" x="670" y="397" text-anchor="end">Covered</text>
+<rect x="25" y="427" width="670" height="47" rx="10" fill="#fff0d6"/><text x="45" y="457">7 · Assemble the GPT model</text><text class="status" x="670" y="457" text-anchor="end">Next · 4.6</text>
+</svg>

@@ -817,11 +817,159 @@ In the plain network the first stage's mean gradient magnitude is about **25 tim
 
 ## 4.5 Connecting attention and linear layers in a transformer block
 
-Notes to come as we read this section.
+GPT-2 small stacks **12 transformer blocks**. Each block has its own parameters, accepts one 768-coordinate vector per input position, and returns one updated vector per position. Inside each block, the 12 attention heads work in parallel. The blocks themselves run in sequence.
+
+### Why does the author contrast attention with the feedforward network?
+
+Take the last token in our toy phrase `money at bank`, treating each word as one token. **Attention lets `bank` gather information from earlier positions. The feedforward network then transforms the resulting `bank` vector on its own.**
+
+To compute the attention update for `bank`, we need the keys and values from all three rows. Now pause after the first residual addition and cover the `money` and `at` rows. We can still compute the feedforward update for `bank`: everything its LayerNorm and feedforward network read is in that one updated row.
+
+<figure markdown="1">
+
+[![One transformer block with two identity paths. The attention branch normalizes the input, applies masked multi-head attention and dropout, then adds the input. The feedforward branch normalizes that sum, expands and contracts each token through GELU, applies dropout, then adds the sum back.](../assets/chapter-04/transformer-block.svg)](../assets/chapter-04/transformer-block.svg)
+
+<figcaption markdown="span">Original companion to Raschka’s Figure 4.13. Follow the left-hand paths to see what each addition carries forward. A batch of two four-token examples enters and leaves with shape <code>[2, 4, 768]</code>. Only the feedforward hidden features temporarily widen to 3,072 in the illustrated feedforward branch.</figcaption>
+</figure>
+
+### Assembling the block in PyTorch
+
+This companion to Listing 4.6 uses the real `MultiHeadAttention` from [Section 3.6.2](03-coding-attention-mechanisms.md#362-implementing-multi-head-attention-with-weight-splits), plus the `GPTConfig`, `LayerNorm`, `GELU`, and `FeedForward` definitions above. Run those definitions before this listing. The book calls this arrangement **Pre-LayerNorm** because the learned branch starts by normalizing its input.
+
+```python title="TransformerBlock — two learned updates and two shortcuts"
+class TransformerBlock(nn.Module):
+    def __init__(self, cfg: GPTConfig) -> None:
+        super().__init__()
+        width = cfg["emb_dim"]
+        self.att = MultiHeadAttention(
+            d_in=width,
+            d_out=width,  # Joined heads produce a width-matched update.
+            context_length=cfg["context_length"],
+            num_heads=cfg["n_heads"],
+            dropout=cfg["drop_rate"],  # Dropout on attention weights.
+            qkv_bias=cfg["qkv_bias"],
+        )
+        self.ff = FeedForward(cfg)
+        # Each LayerNorm learns its own scale and shift.
+        self.norm1 = LayerNorm(width)
+        self.norm2 = LayerNorm(width)
+        self.drop_shortcut = nn.Dropout(cfg["drop_rate"])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Transform floating-point [B,T,D] to [B,T,D].
+
+        B counts examples, T counts token positions, D is the model width.
+        """
+        # First shortcut carries x around the attention branch.
+        attention_update = self.att(self.norm1(x))
+        y = x + self.drop_shortcut(attention_update)
+
+        # Second shortcut carries y, including the attention update.
+        # The feedforward network acts separately on every normalized row.
+        feature_update = self.ff(self.norm2(y))
+        return y + self.drop_shortcut(feature_update)
+```
+
+Despite the name `drop_shortcut` in the listing, look at the argument on each call: dropout acts on the **computed update**. The identity path carries `x` or `y` straight to the addition. You can trace those same two additions in our [Character Logs block drawing](../preparation/training-comparison.md#model-architecture-drawn-from-the-code).
+
+### Where does LayerNorm sit relative to the shortcut?
+
+Follow one sublayer, with dropout omitted here to make the ordering visible. Let `F` be attention or the feedforward network, and `x` the input to that particular sublayer.
+
+| Design | One sublayer | What gets normalized? |
+| --- | --- | --- |
+| Pre-LayerNorm (our GPT-2 block) | `x + F(norm(x))` | The input to the learned branch |
+| Post-LayerNorm (original Transformer) | `norm(x + F(x))` | The sum of the shortcut and the learned update |
+
+In our block the first addition carries the block input around attention. The second carries the **result of the first addition** around the feedforward network. On the backward pass, each addition gives the gradient a direct path to that sublayer’s input.
+
+Pre-LayerNorm can make optimization easier at initialization. Xiong and colleagues found that Post-LayerNorm can produce large gradients near the output at initialization, making early updates sensitive to the learning rate. Pre-LayerNorm gave better-behaved initial gradients in their analysis. This gives “better” a specific meaning here: ease of starting training. Final model quality also depends on the training setup. [On Layer Normalization in the Transformer Architecture](https://proceedings.mlr.press/v119/xiong20b.html)
+
+### Running one configured block
+
+Use the configuration and classes above. The random input stands in for the vectors supplied by the embedding layer or the preceding block.
+
+```python
+torch.manual_seed(123)
+x = torch.rand(2, 4, 768)  # Two examples, four positions, 768 features.
+block = TransformerBlock(GPT_CONFIG_124M)
+output = block(x)
+print("Input shape:", x.shape)
+print("Output shape:", output.shape)
+```
+
+```text
+Input shape: torch.Size([2, 4, 768])
+Output shape: torch.Size([2, 4, 768])
+```
+
+Why keep the same shape? Both residual additions need coordinate-aligned vectors, and the next block expects the same three axes. Internally, the feedforward branch can still expand to 3,072 features per position. Its second linear layer returns those rows to width 768 before the addition.
+
+**One output row per input position** tells us where to find the updated representation. In our example, the output row for `at` can carry information from `money at`. The output row for `bank` can carry information from `money at bank`. Only the last position has access to the entire input in a causal block.
+
+<figure markdown="1">
+
+[![Chapter 4 implementation progress. Steps one through six, from the GPT outline to the transformer block, are covered. Step seven assembles the full GPT model.](../assets/chapter-04/implementation-progress-block.svg)](../assets/chapter-04/implementation-progress-block.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.14. The block is ready to use. Section 4.6 puts twelve instances inside GPT-2 small and connects the stack to the embedding and output layers.</figcaption>
+</figure>
 
 ## 4.6 Coding the GPT model
 
-Notes to come as we read this section.
+In Section 4.1, `DummyGPTModel` already accepted token IDs and returned vocabulary scores. Its transformer blocks simply passed their inputs along. We now give each block the implementation from Section 4.5 and put our learned LayerNorm from Section 4.2 after the stack. This is the architecture into which we can later load pretrained parameters. Calling `GPTModel(cfg)` creates a fresh instance. In Python, `__new__` creates the instance and `__init__` initializes it. Raymond Hettinger illustrates this distinction with `Circle.__init__` assigning `self.radius` in [slide 10 of his PyCon 2013 talk](https://speakerdeck.com/pyconslides/pythons-class-development-toolkit-by-raymond-hettinger?slide=10). Here the initializer calls `super().__init__()` to set up PyTorch’s module machinery, then assigns the embedding tables, blocks, final normalization, and output head as child modules. [Python data model](https://docs.python.org/3/reference/datamodel.html#object.__init__)
+
+<figure markdown="1">
+
+[![Read upward from four token IDs and four position IDs. Their embedding rows are added, then pass through dropout, twelve transformer blocks, final normalization and a vocabulary projection. Each of the four rows receives 50,257 logits.](../assets/chapter-04/assembled-gpt.svg)](../assets/chapter-04/assembled-gpt.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.15. Follow one prompt from the bottom up. The middle panel opens one of the twelve blocks. Each block receives the previous block’s output and owns its own weights.</figcaption>
+</figure>
+
+### Which row predicts “forward”?
+
+Our GPT-2 tokenizer splits `Every effort moves you` into four tokens. Follow the row for ` you`. It starts as a token embedding plus the embedding for position 3. After twelve causal transformer blocks, that row can carry information from all four tokens. Final LayerNorm preserves its width of 768. The linear output layer turns those 768 coordinates into **50,257 logits**, one score for each possible next token in the vocabulary.
+
+The book’s **4 × 50,257** view shows the four rows for one prompt. In PyTorch we keep the batch axis, so this prompt produces shape `[1, 4, 50257]`. The first row predicts what follows `Every`. The fourth row, `logits[0, -1]`, predicts what follows the whole prompt. With greedy selection, the index of the largest score in that row is the next token ID. For sampling, softmax turns the scores into probabilities from which we draw an ID. The tokenizer decodes the resulting IDs into text. The book illustrates the desired continuation with ` forward`, including the leading space. A freshly initialized model still needs training or pretrained weights to produce useful predictions.
+
+### The assembled model
+
+This companion to Listing 4.7 uses `GPTConfig` from Section 4.1 and the real `TransformerBlock` and `LayerNorm` classes defined above. The GPT-2 small configuration sets `n_layers=12`; the largest GPT-2 variant stacks 48 blocks. Within the small model, `n_heads=12` is a separate setting for attention inside each block. [Author’s Chapter 4 implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch04/01_main-chapter-code/ch04.ipynb)
+
+```python title="GPTModel — from token IDs to next-token scores"
+class GPTModel(nn.Module):
+    def __init__(self, cfg: GPTConfig) -> None:
+        super().__init__()
+        width = cfg["emb_dim"]
+        self.tok_emb = nn.Embedding(cfg["vocab_size"], width)
+        self.pos_emb = nn.Embedding(cfg["context_length"], width)
+        self.drop_emb = nn.Dropout(cfg["drop_rate"])
+
+        # Each call constructs a separate block with its own parameters.
+        self.trf_blocks = nn.Sequential(
+            *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])]
+        )
+        self.final_norm = LayerNorm(width)
+        self.out_head = nn.Linear(width, cfg["vocab_size"], bias=False)
+
+    def forward(self, in_idx: torch.Tensor) -> torch.Tensor:
+        """Map torch.long IDs [B,T] to floating-point logits [B,T,V].
+
+        B counts examples, T positions per example, V vocabulary entries.
+        IDs must be valid vocabulary indices and T must fit the context window.
+        """
+        positions = torch.arange(in_idx.shape[1], device=in_idx.device)
+        # Add the position rows [T,D] to each example's token rows [B,T,D].
+        # D is the model width, 768 for GPT-2 small.
+        x = self.tok_emb(in_idx) + self.pos_emb(positions)
+        x = self.drop_emb(x)
+
+        # Sequential passes each block's [B,T,D] result into the next block.
+        x = self.trf_blocks(x)
+        x = self.final_norm(x)
+        return self.out_head(x)  # One vocabulary score vector per position.
+```
+
+On a call to `model(in_idx)`, token IDs select rows from the token table and position indices select rows from the position table. After adding those vectors and applying embedding dropout, `self.trf_blocks(x)` runs the twelve blocks in sequence. Inside each block the attention branch starts with its own LayerNorm. After the twelfth block, `self.final_norm(x)` normalizes each row once more. The bias-free `self.out_head` maps that row to raw vocabulary scores. This is where `forward` ends and generation can use the result.
 
 ## 4.7 Generating text
 

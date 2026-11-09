@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="720" viewBox="0 0 740 720" role="img" aria-labelledby="title desc"><title id="title">Inside one GPT-2 block</title><desc id="desc">Two residual branches, each beginning with normalization and ending with dropout and an addition. Attention mixes token positions and the feedforward network transforms each row independently.</desc><defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#34556b"/></marker></defs><style>text{font:20px Arial,sans-serif;fill:#19364a;text-anchor:middle}.small{font-size:17px}.title{font-weight:bold;font-size:25px}.path{fill:none;stroke:#34556b;stroke-width:2;marker-end:url(#tip)}</style><rect width="740" height="720" rx="16" fill="#f8fafc"/><text class="title" x="370" y="41">Inside one GPT-2 block</text><text x="400" y="88">Input x · [2, 4, 768]</text>
+<path class="path" d="M400 95V122"/>
+<rect x="174" y="124" width="452" height="154" rx="12" fill="#e0edf6" stroke="#8197a8"/><text x="400" y="156">LayerNorm 1</text><text x="400" y="193" font-weight="bold">Masked multi-head attention</text><text class="small" x="400" y="218">Mix accessible token positions</text><text x="400" y="257">Dropout on update</text>
+<path class="path" d="M400 278v26"/>
+<path class="path" d="M400 102H95V325H378"/>
+<circle cx="400" cy="102" r="3" fill="#34556b"/><circle cx="400" cy="325" r="19" fill="#cfebda" stroke="#34556b"/><text x="400" y="332">+</text><text class="small" x="49" y="210">carry x</text>
+<path class="path" d="M400 344v18"/>
+<text x="400" y="388">y · attention-updated rows</text>
+<path class="path" d="M400 395V422"/>
+<rect x="174" y="424" width="452" height="154" rx="12" fill="#e0edf6" stroke="#8197a8"/><text x="400" y="456">LayerNorm 2</text><text x="400" y="493" font-weight="bold">Feedforward network</text><text class="small" x="400" y="518">Linear 768 → 3,072 · GELU · Linear 3,072 → 768</text><text x="400" y="557">Dropout on update</text>
+<path class="path" d="M400 578v26"/>
+<path class="path" d="M400 402H95V625H378"/>
+<circle cx="400" cy="402" r="3" fill="#34556b"/><circle cx="400" cy="625" r="19" fill="#cfebda" stroke="#34556b"/><text x="400" y="632">+</text><text class="small" x="49" y="510">carry y</text>
+<path class="path" d="M400 644v18"/>
+<text x="400" y="688">Block output · [2, 4, 768]</text>
+</svg>
