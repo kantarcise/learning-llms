@@ -872,6 +872,48 @@ class TransformerBlock(nn.Module):
 
 Despite the name `drop_shortcut` in the listing, look at the argument on each call: dropout acts on the **computed update**. The identity path carries `x` or `y` straight to the addition. You can trace those same two additions in our [Character Logs block drawing](../preparation/training-comparison.md#model-architecture-drawn-from-the-code).
 
+### Where does LayerNorm sit relative to the shortcut?
+
+Follow one sublayer, with dropout omitted here to make the ordering visible. Let `F` be attention or the feedforward network, and `x` the input to that particular sublayer.
+
+| Design | One sublayer | What gets normalized? |
+| --- | --- | --- |
+| Pre-LayerNorm (our GPT-2 block) | `x + F(norm(x))` | The input to the learned branch |
+| Post-LayerNorm (original Transformer) | `norm(x + F(x))` | The sum of the shortcut and the learned update |
+
+In our block the first addition carries the block input around attention. The second carries the **result of the first addition** around the feedforward network. On the backward pass, each addition gives the gradient a direct path to that sublayer’s input.
+
+Pre-LayerNorm can make optimization easier at initialization. Xiong and colleagues found that Post-LayerNorm can produce large gradients near the output at initialization, making early updates sensitive to the learning rate. Pre-LayerNorm gave better-behaved initial gradients in their analysis. This gives “better” a specific meaning here: ease of starting training. Final model quality also depends on the training setup. [On Layer Normalization in the Transformer Architecture](https://proceedings.mlr.press/v119/xiong20b.html)
+
+### Running one configured block
+
+Use the configuration and classes above. The random input stands in for the vectors supplied by the embedding layer or the preceding block.
+
+```python
+torch.manual_seed(123)
+x = torch.rand(2, 4, 768)  # Two examples, four positions, 768 features.
+block = TransformerBlock(GPT_CONFIG_124M)
+output = block(x)
+print("Input shape:", x.shape)
+print("Output shape:", output.shape)
+```
+
+```text
+Input shape: torch.Size([2, 4, 768])
+Output shape: torch.Size([2, 4, 768])
+```
+
+Why keep the same shape? Both residual additions need coordinate-aligned vectors, and the next block expects the same three axes. Internally, the feedforward branch can still expand to 3,072 features per position. Its second linear layer returns those rows to width 768 before the addition.
+
+**One output row per input position** tells us where to find the updated representation. In our example, the output row for `at` can carry information from `money at`. The output row for `bank` can carry information from `money at bank`. Only the last position has access to the entire input in a causal block.
+
+<figure markdown="1">
+
+[![Chapter 4 implementation progress. Steps one through six, from the GPT outline to the transformer block, are covered. Step seven assembles the full GPT model.](../assets/chapter-04/implementation-progress-block.svg)](../assets/chapter-04/implementation-progress-block.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.14. The block is ready to use. Section 4.6 puts twelve instances inside GPT-2 small and connects the stack to the embedding and output layers.</figcaption>
+</figure>
+
 ## 4.6 Coding the GPT model
 
 Notes to come as we read this section.
