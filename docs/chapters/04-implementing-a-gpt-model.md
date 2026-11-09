@@ -916,7 +916,7 @@ Why keep the same shape? Both residual additions need coordinate-aligned vectors
 
 ## 4.6 Coding the GPT model
 
-In Section 4.1, `DummyGPTModel` already accepted token IDs and returned vocabulary scores. Its transformer blocks simply passed their inputs along. We now give each block the implementation from Section 4.5 and put our learned LayerNorm from Section 4.2 after the stack. This is the architecture into which we can later load pretrained parameters. The constructor below creates a fresh model with its own initial parameter values.
+In Section 4.1, `DummyGPTModel` already accepted token IDs and returned vocabulary scores. Its transformer blocks simply passed their inputs along. We now give each block the implementation from Section 4.5 and put our learned LayerNorm from Section 4.2 after the stack. This is the architecture into which we can later load pretrained parameters. Calling `GPTModel(cfg)` creates a fresh instance. In Python, `__new__` creates the instance and `__init__` initializes it. Here the initializer calls `super().__init__()` to set up PyTorch’s module machinery, then assigns the embedding tables, blocks, final normalization, and output head as child modules. [Python data model](https://docs.python.org/3/reference/datamodel.html#object.__init__)
 
 <figure markdown="1">
 
@@ -929,7 +929,7 @@ In Section 4.1, `DummyGPTModel` already accepted token IDs and returned vocabula
 
 Our GPT-2 tokenizer splits `Every effort moves you` into four tokens. Follow the row for ` you`. It starts as a token embedding plus the embedding for position 3. After twelve causal transformer blocks, that row can carry information from all four tokens. Final LayerNorm preserves its width of 768. The linear output layer turns those 768 coordinates into **50,257 logits**, one score for each possible next token in the vocabulary.
 
-The book’s **4 × 50,257** view shows the four rows for one prompt. In PyTorch we keep the batch axis, so this prompt produces shape `[1, 4, 50257]`. The first row predicts what follows `Every`. The fourth row, `logits[0, -1]`, predicts what follows the whole prompt. Generation selects a token ID from those last-row scores and decodes it. The book illustrates the desired continuation with ` forward`, including the leading space. A freshly initialized model still needs training or pretrained weights to produce useful predictions.
+The book’s **4 × 50,257** view shows the four rows for one prompt. In PyTorch we keep the batch axis, so this prompt produces shape `[1, 4, 50257]`. The first row predicts what follows `Every`. The fourth row, `logits[0, -1]`, predicts what follows the whole prompt. With greedy selection, the index of the largest score in that row is the next token ID. For sampling, softmax turns the scores into probabilities from which we draw an ID. The tokenizer decodes the resulting IDs into text. The book illustrates the desired continuation with ` forward`, including the leading space. A freshly initialized model still needs training or pretrained weights to produce useful predictions.
 
 ### The assembled model
 
@@ -969,7 +969,7 @@ class GPTModel(nn.Module):
         return self.out_head(x)  # One vocabulary score vector per position.
 ```
 
-The line `x = self.trf_blocks(x)` is where the earlier work pays off. Each `TransformerBlock.forward` already handles attention, feedforward, dropout, both normalizations, and both residual additions. The outer class only needs to connect the stack to the embeddings and the output head.
+On a call to `model(in_idx)`, token IDs select rows from the token table and position indices select rows from the position table. After adding those vectors and applying embedding dropout, `self.trf_blocks(x)` runs the twelve blocks in sequence. Inside each block the attention branch starts with its own LayerNorm. After the twelfth block, `self.final_norm(x)` normalizes each row once more. The bias-free `self.out_head` maps that row to raw vocabulary scores. This is where `forward` ends and generation can use the result.
 
 ## 4.7 Generating text
 
