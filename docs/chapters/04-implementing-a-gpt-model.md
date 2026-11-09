@@ -916,7 +916,60 @@ Why keep the same shape? Both residual additions need coordinate-aligned vectors
 
 ## 4.6 Coding the GPT model
 
-Notes to come as we read this section.
+In Section 4.1, `DummyGPTModel` already accepted token IDs and returned vocabulary scores. Its transformer blocks simply passed their inputs along. We now give each block the implementation from Section 4.5 and put our learned LayerNorm from Section 4.2 after the stack. This is the architecture into which we can later load pretrained parameters. The constructor below creates a fresh model with its own initial parameter values.
+
+<figure markdown="1">
+
+[![Read upward from four token IDs and four position IDs. Their embedding rows are added, then pass through dropout, twelve transformer blocks, final normalization and a vocabulary projection. Each of the four rows receives 50,257 logits.](../assets/chapter-04/assembled-gpt.svg)](../assets/chapter-04/assembled-gpt.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.15. Follow one prompt from the bottom up. The middle panel opens one of the twelve blocks. Each block receives the previous block’s output and owns its own weights.</figcaption>
+</figure>
+
+### Which row predicts “forward”?
+
+Our GPT-2 tokenizer splits `Every effort moves you` into four tokens. Follow the row for ` you`. It starts as a token embedding plus the embedding for position 3. After twelve causal transformer blocks, that row can carry information from all four tokens. Final LayerNorm preserves its width of 768. The linear output layer turns those 768 coordinates into **50,257 logits**, one score for each possible next token in the vocabulary.
+
+The book’s **4 × 50,257** view shows the four rows for one prompt. In PyTorch we keep the batch axis, so this prompt produces shape `[1, 4, 50257]`. The first row predicts what follows `Every`. The fourth row, `logits[0, -1]`, predicts what follows the whole prompt. Generation selects a token ID from those last-row scores and decodes it. The book illustrates the desired continuation with ` forward`, including the leading space. A freshly initialized model still needs training or pretrained weights to produce useful predictions.
+
+### The assembled model
+
+This companion to Listing 4.7 uses `GPTConfig` from Section 4.1 and the real `TransformerBlock` and `LayerNorm` classes defined above. The GPT-2 small configuration sets `n_layers=12`; the largest GPT-2 variant stacks 48 blocks. Within the small model, `n_heads=12` is a separate setting for attention inside each block. [Author’s Chapter 4 implementation](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch04/01_main-chapter-code/ch04.ipynb)
+
+```python title="GPTModel — from token IDs to next-token scores"
+class GPTModel(nn.Module):
+    def __init__(self, cfg: GPTConfig) -> None:
+        super().__init__()
+        width = cfg["emb_dim"]
+        self.tok_emb = nn.Embedding(cfg["vocab_size"], width)
+        self.pos_emb = nn.Embedding(cfg["context_length"], width)
+        self.drop_emb = nn.Dropout(cfg["drop_rate"])
+
+        # Each call constructs a separate block with its own parameters.
+        self.trf_blocks = nn.Sequential(
+            *[TransformerBlock(cfg) for _ in range(cfg["n_layers"])]
+        )
+        self.final_norm = LayerNorm(width)
+        self.out_head = nn.Linear(width, cfg["vocab_size"], bias=False)
+
+    def forward(self, in_idx: torch.Tensor) -> torch.Tensor:
+        """Map torch.long IDs [B,T] to floating-point logits [B,T,V].
+
+        B counts examples, T positions per example, V vocabulary entries.
+        IDs must be valid vocabulary indices and T must fit the context window.
+        """
+        positions = torch.arange(in_idx.shape[1], device=in_idx.device)
+        # Add the position rows [T,D] to each example's token rows [B,T,D].
+        # D is the model width, 768 for GPT-2 small.
+        x = self.tok_emb(in_idx) + self.pos_emb(positions)
+        x = self.drop_emb(x)
+
+        # Sequential passes each block's [B,T,D] result into the next block.
+        x = self.trf_blocks(x)
+        x = self.final_norm(x)
+        return self.out_head(x)  # One vocabulary score vector per position.
+```
+
+The line `x = self.trf_blocks(x)` is where the earlier work pays off. Each `TransformerBlock.forward` already handles attention, feedforward, dropout, both normalizations, and both residual additions. The outer class only needs to connect the stack to the embeddings and the output head.
 
 ## 4.7 Generating text
 
