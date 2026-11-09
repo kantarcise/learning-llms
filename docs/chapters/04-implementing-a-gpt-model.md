@@ -821,9 +821,9 @@ GPT-2 small stacks **12 transformer blocks**. Each block has its own parameters,
 
 ### Why does the author contrast attention with the feedforward network?
 
-Take the last token in our toy phrase `money at bank`, treating each word as one token. When updating `bank`, a masked attention head compares its query with the keys for `money`, `at`, and `bank`. Its weights determine how much of each value vector contributes. This is the step where information can travel **between token positions**.
+Take the last token in our toy phrase `money at bank`, treating each word as one token. **Attention lets `bank` gather information from earlier positions. The feedforward network then transforms the resulting `bank` vector on its own.**
 
-After the attention update is added to the shortcut, call the resulting bank vector `y_bank`. The feedforward network receives the normalized `y_bank` and transforms **features within that one vector**. It can use information about `money` because attention already put that information into the bank row. The same feedforward weights process the other rows independently. You could take the bank row out of the tensor at this point and run the feedforward network on it alone to get the same feedforward update.
+To compute the attention update for `bank`, we need the keys and values from all three rows. Now pause after the first residual addition and cover the `money` and `at` rows. We can still compute the feedforward update for `bank`: everything its LayerNorm and feedforward network read is in that one updated row.
 
 <figure markdown="1">
 
