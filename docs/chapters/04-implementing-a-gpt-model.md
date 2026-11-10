@@ -971,6 +971,145 @@ class GPTModel(nn.Module):
 
 On a call to `model(in_idx)`, token IDs select rows from the token table and position indices select rows from the position table. After adding those vectors and applying embedding dropout, `self.trf_blocks(x)` runs the twelve blocks in sequence. Inside each block the attention branch starts with its own LayerNorm. After the twelfth block, `self.final_norm(x)` normalizes each row once more. The bias-free `self.out_head` maps that row to raw vocabulary scores. This is where `forward` ends and generation can use the result.
 
+### Run the assembled model and count its parameters
+
+Reuse the two texts from Section 4.1. Each row of `batch` holds four GPT-2 token IDs. The seed makes the random initialization reproducible in this environment.
+
+```python
+torch.manual_seed(123)
+model = GPTModel(GPT_CONFIG_124M)
+logits = model(batch)
+print(batch.shape)   # torch.Size([2, 4])
+print(logits.shape)  # torch.Size([2, 4, 50257])
+```
+
+For one example, `logits[0]` has shape `[4, 50257]`. Its four rows correspond to the four input positions. Each row contains the scores for the token that follows that position.
+
+`numel()` means *number of elements*. A weight tensor of shape `[3, 2]` contains six scalar parameters. Summing this count over the parameter tensors gives the total. We used the same expression to print **10,848** at the start of our [Character Logs training run](../preparation/training-comparison.md).
+
+```python
+total = sum(p.numel() for p in model.parameters())
+print(f"{total:,}")                 # 163,009,536
+print(model.tok_emb.weight.shape)  # torch.Size([50257, 768])
+print(model.out_head.weight.shape) # torch.Size([50257, 768])
+```
+
+### Why the 124M configuration gives 163M parameters
+
+Follow row 345, the token for ` you` in our example. At the input, the embedding lookup **reads** that row to get 768 coordinates. At the output, the last hidden vector takes a **dot product** with row 345 of the output matrix to produce the score for choosing ` you` next. It does this for every candidate in the vocabulary.
+
+The chapter model gives these two jobs separate matrices. **Weight tying** gives them the same parameter tensor, so a training update to row 345 affects both jobs. The original GPT-2 uses this arrangement, as does our Cosmopedia model through `F.linear(x, self.token_embedding.weight)`. [Cosmopedia implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py)
+
+| Count for this configuration | Parameters |
+| --- | ---: |
+| Model with separate input and output weights | 163,009,536 |
+| One vocabulary matrix (50,257 × 768) | 38,597,376 |
+| Model if the two uses share that matrix | 124,412,160 |
+
+Subtracting the matrix size answers a counting question. Actually sharing the weights in this PyTorch class would require assigning `model.out_head.weight = model.tok_emb.weight`. The chapter keeps the separate matrices for its implementation. Sharing reduces weight storage and the number of independent parameters to update. The dense output projection still computes all 50,257 scores. Whether separate weights help prediction quality is an empirical question for a given training setup.
+
+Modern checkpoints make different choices even within one family. Qwen3-0.6B enables embedding tying, while Qwen3-32B disables it. We are tracking the implementation and memory implications in [the weight-tying follow-up](https://github.com/kantarcise/learning-llms/issues/46). [0.6B configuration](https://huggingface.co/Qwen/Qwen3-0.6B/blob/main/config.json) · [32B configuration](https://huggingface.co/Qwen/Qwen3-32B/blob/main/config.json)
+
+### Exercise 4.1 — Feedforward versus multi-head attention
+
+Count **one transformer block** first. For every `nn.Linear`, multiply the input width by the output width for its weights, then add one bias per output coordinate if enabled. Here the model width is 768, the feedforward hidden width is 3,072, and `qkv_bias=False`.
+
+| Module and layer | Weights | Biases | Total |
+| --- | ---: | ---: | ---: |
+| Feedforward expansion | 768 × 3,072 | 3,072 | 2,362,368 |
+| Feedforward contraction | 3,072 × 768 | 768 | 2,360,064 |
+| **Feedforward total** | | | **4,722,432** |
+| Query, key, and value projections together | 3 × 768 × 768 | 0 | 1,769,472 |
+| Attention output projection | 768 × 768 | 768 | 590,592 |
+| **Multi-head attention total** | | | **2,360,064** |
+
+Why do twelve heads fit into that count? Each projection produces 768 coordinates in total and splits them into twelve heads of 64 coordinates each. The attention mixing weights are calculated from the current input. GELU also introduces zero trainable parameters.
+
+```python
+# Select the first transformer block. Its attention and feedforward modules
+# have separate parameters, so we can count one module at a time.
+block = model.trf_blocks[0]
+
+
+def count_parameters(module: nn.Module) -> int:
+    """Print each parameter tensor's shape and return the total scalar count."""
+    total = 0
+    for name, parameter in module.named_parameters():
+        # Example: the expansion weight has 3,072 rows and 768 columns.
+        elements = parameter.numel()
+        print(f"{name}: {tuple(parameter.shape)} -> {elements:,}")
+        total += elements
+    return total
+
+
+feedforward_count = count_parameters(block.ff)
+attention_count = count_parameters(block.att)
+print(f"Feedforward: {feedforward_count:,}")  # 4,722,432 in one block
+print(f"Attention:   {attention_count:,}")    # 2,360,064 in one block
+```
+
+The feedforward module has **about twice** as many parameters here. Ignoring biases makes the arithmetic especially clear: its two projections each hold four 768 × 768 matrices’ worth of weights, while attention uses four such matrices overall. Across all twelve blocks, the respective totals are **56,669,184** and **28,320,768**. The normalization layers, embeddings and vocabulary head sit outside this two-module comparison.
+
+### How much memory holds the parameters?
+
+Start with the **untied** model from Listing 4.7. A float32 scalar occupies 32 bits, or 4 bytes. Multiply the number of independent scalars by their storage size:
+
+```python
+weight_bytes = sum(
+    parameter.numel() * parameter.element_size()  # scalar count × bytes per scalar
+    for parameter in model.parameters()
+)
+print(f"{weight_bytes:,} bytes")            # 652,038,144 bytes
+print(f"{weight_bytes / (1024 ** 2):.2f} MiB")  # 621.83 MiB
+```
+
+The book labels the result MB. Dividing by 1,048,576 gives **MiB**. Using decimal MB gives **652.04 MB** for the same bytes. At two bytes per scalar, float16 or bfloat16 weights occupy **310.92 MiB**. Using each tensor’s actual element size also handles a mixture of floating-point types.
+
+This is the **parameter storage** portion of the budget. Inference additionally uses memory for buffers such as causal masks, temporary activations, and a KV cache in models that implement caching. Training also stores gradients, activations needed by backward, and optimizer state. Batch size, sequence length, precision and runtime allocation affect the peak. For the same shapes and dtype, the raw parameter-byte calculation applies in PyTorch and JAX alike.
+
+!!! note "PyTorch on Google's TPUs"
+
+    A TPU is an accelerator. TorchTPU is the PyTorch-native backend for Google Cloud TPU workloads. It integrates PyTorch operations with the TPU compiler and runtime. That choice can affect supported operations, temporary allocations and performance. [Google Cloud’s PyTorch on TPU guide](https://docs.cloud.google.com/tpu/docs/pytorch-on-tpu)
+
+### Exercise 4.2 — Initialize the larger GPT-2 configurations
+
+The model class already reads its width, depth, and head count from the dictionary. For Medium, change the width to 1,024, create 24 blocks, and give each block 16 heads. Each head receives 1,024 ÷ 16 = 64 coordinates. Large and XL use the same idea. Run this after defining the chapter’s classes and configuration:
+
+```python
+# Each row gives (name, coordinates per token, number of blocks, heads per block).
+variants = [
+    ("Small",   768, 12, 12),
+    ("Medium", 1024, 24, 16),
+    ("Large",  1280, 36, 20),
+    ("XL",     1600, 48, 25),
+]
+
+for name, width, blocks, heads in variants:
+    # Start with the chapter settings, including the vocabulary and context length.
+    cfg = GPT_CONFIG_124M.copy()
+    cfg.update(emb_dim=width, n_layers=blocks, n_heads=heads)
+
+    # For this counting exercise PyTorch only needs tensor shapes. The meta
+    # device constructs the full module tree without allocating weight storage.
+    with torch.device("meta"):
+        variant = GPTModel(cfg)
+
+    # Listing 4.7 creates two independent vocabulary matrices. If tied, one
+    # matrix serves both roles, so subtract one copy for the comparison.
+    independent = sum(parameter.numel() for parameter in variant.parameters())
+    shared = independent - variant.out_head.weight.numel()
+    print(f"{name:6}  {independent:>14,}  {shared:>14,}")
+```
+
+| Variant | Width | Blocks | Heads per block | Listing 4.7 parameters | Parameters if tied |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Small | 768 | 12 | 12 | 163,009,536 | 124,412,160 |
+| Medium | 1,024 | 24 | 16 | 406,212,608 | 354,749,440 |
+| Large | 1,280 | 36 | 20 | 838,220,800 | 773,891,840 |
+| XL | 1,600 | 48 | 25 | 1,637,792,000 | 1,557,380,800 |
+
+These are exact counts for the chapter configuration, including `qkv_bias=False`. To initialize actual random weights for computation on a machine with enough memory, use `variant = GPTModel(cfg)` on the desired device outside the meta context. The XL untied model alone needs about 6.10 GiB of float32 weight storage before runtime allocations.
+
 ## 4.7 Generating text
 
 Notes to come as we read this section.
