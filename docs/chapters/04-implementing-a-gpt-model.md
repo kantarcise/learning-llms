@@ -1265,6 +1265,14 @@ During training, the attention and feedforward updates each pass through `drop_s
 
 ## End of chapter
 
-Start with the four IDs for `Hello, I am`. Token and position embeddings give each position a 768-coordinate vector. Twelve blocks update those rows in sequence. Within each block, normalization prepares each learned branch, causal attention gathers information from accessible positions, and the GELU feedforward network transforms each updated row. The two shortcuts carry the running representation around the branches and provide direct paths for gradients.
+These seven points follow the order of Raschka’s Chapter 4 summary (printed page 127).
 
-Final LayerNorm and the vocabulary head turn each row into 50,257 scores. During generation, the last row supplies the scores for one new ID. Appending it turns one forward pass into an iterative text generator. The configuration controls the size of that model, while precision and weight sharing affect its parameter storage. The next step is to **learn the weights** by measuring next-token loss and updating the parameters. [Chapter 5 — Pretraining on unlabeled data](05-pretraining-on-unlabeled-data.md)
+1. **Layer normalization helps stabilize training.** For each token, LayerNorm centers and scales the coordinates in its vector, then applies a learned scale and shift. In our GPT block, each learned branch receives a normalized input.
+2. **Shortcut connections give gradients a direct path.** In `y = x + F(x)`, the addition carries the input forward and lets a gradient travel back along the identity path. In our five-layer example, the first layer received a larger weight gradient with shortcuts enabled.
+3. **A transformer block combines two kinds of updates.** Masked attention lets the row for `bank` gather information from earlier tokens. The feedforward network then expands that updated row, applies GELU, and projects it back to the model width.
+4. **GPT gains depth by stacking blocks.** GPT-2 small passes the sequence through 12 successive blocks. Each accepts and returns a 768-coordinate vector per position and has its own learned weights. Across GPT sizes, those weights and the other model parameters add up to millions or billions of numbers.
+5. **One model class supports several sizes.** In Exercise 4.2 we used the same `GPTModel` for Small, Medium, Large, and XL. Changing the configuration took us from 12 blocks of width 768 to 48 blocks of width 1,600.
+6. **Generation appends one token ID per step.** The vocabulary head produces scores at every input position. Our greedy loop takes the highest-scoring ID from the last position, appends it, and runs the model again. The tokenizer decodes the resulting sequence into text.
+7. **Fluent generation depends on learned weights.** Our randomly initialized model took the four IDs for `Hello, I am` and generated six more. They decoded to `Hello, I am Featureiman Byeswickattribute argue`. The loop worked. Pretraining will teach the model which continuations fit a given context.
+
+Continue with [Chapter 5 — Pretraining on unlabeled data](05-pretraining-on-unlabeled-data.md).
