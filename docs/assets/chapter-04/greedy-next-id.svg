@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="770" height="638" viewBox="0 0 770 638" role="img" aria-labelledby="title desc"><title id="title">One call, from vocabulary scores to an ID</title><desc id="desc">One prompt, four positions, and 50,257 candidate tokens per position.</desc><style>text{font:19px Arial,sans-serif;fill:#17344a}.heading{font-size:25px;font-weight:bold}.code{font:18px monospace}</style><rect width="770" height="638" rx="16" fill="#f8fafc"/><text class="heading" x="24" y="40">One call, from vocabulary scores to an ID</text>
+<rect x="20" y="62" width="730" height="78" rx="9" fill="#e2edf8"/>
+<text x="38" y="92" class="">1   Encode the prompt</text>
+<text x="72" y="121" class="">“Hello, I am” → [15496, 11, 314, 716]</text>
+<rect x="20" y="154" width="730" height="78" rx="9" fill="#e2edf8"/>
+<text x="38" y="184" class="">2   Run GPT on all four positions</text>
+<text x="72" y="213" class="">[1, 4] input IDs → [1, 4, 50257] logits</text>
+<rect x="20" y="246" width="730" height="78" rx="9" fill="#e2edf8"/>
+<text x="38" y="276" class="">3   Read the last position</text>
+<text x="72" y="305" class="">logits[:, -1, :] → [1, 50257] next-token scores</text>
+<rect x="20" y="338" width="730" height="78" rx="9" fill="#e2edf8"/>
+<text x="38" y="368" class="">4   Apply softmax across the vocabulary</text>
+<text x="72" y="397" class="">One probability per ID, summing to 1 for this example.</text>
+<rect x="20" y="430" width="730" height="78" rx="9" fill="#ceebe1"/>
+<text x="38" y="460" class="">5   Select the largest probability</text>
+<text x="72" y="489" class="">If column 257 wins, the selected ID is 257 (text: “ a”).</text>
+<rect x="20" y="522" width="730" height="78" rx="9" fill="#ceebe1"/>
+<text x="38" y="552" class="">6   Append the ID for the next call</text>
+<text x="72" y="581" class="">[15496, 11, 314, 716] → [15496, 11, 314, 716, 257]</text>
+<text x="25" y="625" class="">Result: five input IDs available for the second iteration.</text>
+</svg>

@@ -1112,12 +1112,159 @@ These are exact counts for the chapter configuration, including `qkv_bias=False`
 
 ## 4.7 Generating text
 
-Notes to come as we read this section.
+The tokenizer gives us both directions of a lookup: `encode` maps text to IDs and `decode` maps IDs back to text. The model returns a score for **every** vocabulary ID at every input position. Between the model and `decode` we therefore need a **selection rule**. The book starts with greedy decoding: pick the ID with the highest score at the last input position.
 
-## Questions to bring to the chapter
+### One new token becomes part of the next input
 
-<!-- Add actual questions during reading. -->
+<figure markdown="1">
+
+[![Six generation steps starting with Hello, I am. Each step appends one token to the prompt, ending with the period in Hello, I am a model ready to help.](../assets/chapter-04/generation-iterations.svg)](../assets/chapter-04/generation-iterations.svg)
+
+<figcaption markdown="span">Companion to Figure 4.16. Read each row as one call to the model. The middle column shows the text represented by the IDs before that call. The right column shows the one token appended afterward. The continuation is illustrative.</figcaption>
+</figure>
+
+The first call sees the IDs for `Hello, I am`. Suppose it selects the token ` a`, including its leading space. The second call now sees the IDs for `Hello, I am a` and can use that extra position to predict what follows. Six iterations add six IDs to the original four. The period counts as one token here.
+
+### Zoom in on the first iteration
+
+<figure markdown="1">
+
+[![Four token IDs enter GPT. The last position supplies a row of 50,257 logits. Softmax gives a probability per vocabulary ID, argmax picks an ID, and concatenation appends it to the input.](../assets/chapter-04/greedy-next-id.svg)](../assets/chapter-04/greedy-next-id.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.17. The prompt IDs and the decoding of ID 257 use the GPT-2 tokenizer. The highlighted choice illustrates what happens if ID 257 wins. These are example steps, not a prediction recorded from our initialized model.</figcaption>
+</figure>
+
+There are two indexing operations here. First, choose the **last position** in the input. Its score row uses the entire available prompt. Then, within that row, find the **vocabulary index** with the largest probability. That index is already the token ID. For example, if index 257 wins, append the integer 257. The tokenizer can display it as ` a`. The next model call consumes the integer sequence directly.
+
+### A commented generation loop
+
+This companion to Listing 4.8 uses the `GPTModel` above. **B** counts examples, **T** counts positions fed to the model on this iteration, and **V** is vocabulary size. Use `model.eval()` for generation so dropout is disabled. The `no_grad` context below saves the work of tracking gradients during the forward pass.
+
+```python title="generate_text_simple — one greedy token per example per iteration"
+def generate_text_simple(
+    model: GPTModel,
+    idx: torch.Tensor,
+    max_new_tokens: int,
+    context_size: int,
+) -> torch.Tensor:
+    """Extend torch.long prompt IDs [B,P] to [B,P + max_new_tokens].
+
+    B counts examples and P is their nonempty prompt length. Use a positive
+    context_size within the model's position-table capacity and a nonnegative
+    max_new_tokens. The model and IDs must be on the same device.
+    """
+    for _ in range(max_new_tokens):
+        # Keep every example (:), then take its most recent context_size IDs.
+        # idx keeps the full history. Only this model call receives the crop.
+        idx_cond = idx[:, -context_size:]
+
+        with torch.no_grad():
+            logits = model(idx_cond)  # [B,T,V]: a score row at every position.
+
+        # Keep every example and vocabulary entry, selecting the last position.
+        next_scores = logits[:, -1, :]  # [B,V]
+
+        # Normalize across the vocabulary separately for each example.
+        probabilities = torch.softmax(next_scores, dim=-1)
+
+        # The winning column is a token ID. keepdim=True gives one column
+        # per batch row, so it can be joined to the two-dimensional ID tensor.
+        next_ids = torch.argmax(probabilities, dim=-1, keepdim=True)  # [B,1]
+
+        # Join along positions (axis 1). With a four-ID prompt the first
+        # iteration builds five IDs, which the next iteration can read.
+        idx = torch.cat((idx, next_ids), dim=1)
+
+    return idx  # Original prompt followed by all the generated IDs.
+```
+
+The softmax step lets us inspect probabilities. For greedy selection, taking the maximum directly over the logits gives the same ordering mathematically. The loop stops after the requested number of new tokens. To display its result for the first example, pass the completed sequence of IDs to `tokenizer.decode(result[0].tolist())`.
+
+### Why softmax is optional for greedy decoding
+
+Suppose a tiny vocabulary has three IDs and their logits are `[1, 3, 2]`. Softmax gives probabilities of about `[0.090, 0.665, 0.245]`. Column 1 wins both times. Exponentiation preserves the order of the scores, and every entry in the row is divided by the same positive sum. For greedy selection, we can therefore write:
+
+```python
+# Inside generate_text_simple, next_scores holds one row per example.
+next_ids = next_scores.argmax(dim=-1, keepdim=True)
+```
+
+The highest-scoring ID is a **local choice for this step**. Sampling, which the book revisits in Chapter 5, draws an ID from a distribution. In the example above, it could also select ID 0 or ID 2.
+
+### From four prompt IDs to ten output IDs
+
+```python
+# Use the GPT-2 tokenizer from Section 4.1.
+prompt_ids = tokenizer.encode("Hello, I am")  # [15496, 11, 314, 716]
+idx = torch.tensor(prompt_ids, dtype=torch.long).unsqueeze(0)
+# unsqueeze(0) adds the batch axis: four IDs [4] become one example [1,4].
+```
+
+<figure markdown="1">
+
+[![Four initial IDs encode Hello, I am. Six illustrated selections append IDs 257, 2746, 3492, 284, 1037 and 13, forming the continuation “ a model ready to help.”](../assets/chapter-04/token-id-trace.svg)](../assets/chapter-04/token-id-trace.svg)
+
+<figcaption markdown="span">Companion to Figure 4.18. Read downward to see the growing ID sequence after each append. The text column decodes only the newly added ID, with its leading space visible inside quotes. This is the book’s illustrative continuation.</figcaption>
+</figure>
+
+Now try the same loop with the chapter model’s actual weights. A fresh initialization makes the example reproducible. Evaluation mode disables dropout. Inside the loop, `torch.no_grad()` lets PyTorch omit the gradient-tracking work.
+
+```python
+torch.manual_seed(123)
+model = GPTModel(GPT_CONFIG_124M)
+model.eval()
+
+result = generate_text_simple(
+    model=model,
+    idx=idx,
+    max_new_tokens=6,
+    context_size=GPT_CONFIG_124M["context_length"],
+)
+# Select the single batch row, then convert its integers to a Python list.
+ids = result[0].tolist()
+print(ids)
+print(tokenizer.decode(ids))
+```
+
+Locally reproduced CPU output:
+
+```text
+[15496, 11, 314, 716, 27018, 24086, 47843, 30961, 42348, 7267]
+Hello, I am Featureiman Byeswickattribute argue
+```
+
+The first four IDs reproduce the prompt. Look at the fifth ID: the model ranked **27018** highest where the illustration used **257**. Decoding faithfully displays what the model chose. The architecture can already generate IDs, but its randomly initialized weights have yet to learn which continuations fit English text.
+
+### Exercise 4.3 — Give each dropout site its own setting
+
+With one `drop_rate`, changing embedding dropout also changes attention and residual-branch dropout. The exercise asks us to make those choices independent. In the `GPTConfig` type, replace `drop_rate: float` with three float fields named `embedding_dropout`, `attention_dropout`, and `residual_dropout`. Make the corresponding edit in the configuration dictionary. These example values are deliberately distinct so we can check the wiring:
+
+```python
+# Entries inside the edited GPT_CONFIG_124M dictionary
+"embedding_dropout": 0.10,
+"attention_dropout": 0.20,
+"residual_dropout": 0.30,
+```
+
+| In the earlier listings | Use this setting | What dropout acts on during training |
+| --- | --- | --- |
+| `GPTModel.__init__`: `self.drop_emb = nn.Dropout(cfg["embedding_dropout"])` | 0.10 | The sum of token and position embeddings |
+| `TransformerBlock.__init__`: pass `dropout=cfg["attention_dropout"]` to `MultiHeadAttention` | 0.20 | Attention weights after masked softmax, before they mix the values |
+| `TransformerBlock.__init__`: `self.drop_shortcut = nn.Dropout(cfg["residual_dropout"])` | 0.30 | Each computed update immediately before its residual addition |
+
+Build a fresh model **after** making those edits. The first block lets us inspect the two dropout modules nested inside the stack:
+
+```python
+model = GPTModel(GPT_CONFIG_124M)
+block = model.trf_blocks[0]
+print(model.drop_emb.p, block.att.dropout.p, block.drop_shortcut.p)
+# 0.1 0.2 0.3
+```
+
+During training, the attention and feedforward updates each pass through `drop_shortcut` on a separate call. The saved shortcut vector goes straight to the addition. During generation, `model.eval()` disables dropout throughout the stack. Comparing the effect of these rates on learning would require training runs and validation results.
 
 ## End of chapter
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Start with the four IDs for `Hello, I am`. Token and position embeddings give each position a 768-coordinate vector. Twelve blocks update those rows in sequence. Within each block, normalization prepares each learned branch, causal attention gathers information from accessible positions, and the GELU feedforward network transforms each updated row. The two shortcuts carry the running representation around the branches and provide direct paths for gradients.
+
+Final LayerNorm and the vocabulary head turn each row into 50,257 scores. During generation, the last row supplies the scores for one new ID. Appending it turns one forward pass into an iterative text generator. The configuration controls the size of that model, while precision and weight sharing affect its parameter storage. The next step is to **learn the weights** by measuring next-token loss and updating the parameters. [Chapter 5 — Pretraining on unlabeled data](05-pretraining-on-unlabeled-data.md)
