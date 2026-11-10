@@ -1112,7 +1112,73 @@ These are exact counts for the chapter configuration, including `qkv_bias=False`
 
 ## 4.7 Generating text
 
-Notes to come as we read this section.
+The tokenizer gives us both directions of a lookup: `encode` maps text to IDs and `decode` maps IDs back to text. The model returns a score for **every** vocabulary ID at every input position. Between the model and `decode` we therefore need a **selection rule**. The book starts with greedy decoding: pick the ID with the highest score at the last input position.
+
+### One new token becomes part of the next input
+
+<figure markdown="1">
+
+[![Six generation steps starting with Hello, I am. Each step appends one token to the prompt, ending with the period in Hello, I am a model ready to help.](../assets/chapter-04/generation-iterations.svg)](../assets/chapter-04/generation-iterations.svg)
+
+<figcaption markdown="span">Companion to Figure 4.16. Read each row as one call to the model. The middle column shows the text represented by the IDs before that call. The right column shows the one token appended afterward. The continuation is illustrative.</figcaption>
+</figure>
+
+The first call sees the IDs for `Hello, I am`. Suppose it selects the token ` a`, including its leading space. The second call now sees the IDs for `Hello, I am a` and can use that extra position to predict what follows. Six iterations add six IDs to the original four. The period counts as one token here.
+
+### Zoom in on the first iteration
+
+<figure markdown="1">
+
+[![Four token IDs enter GPT. The last position supplies a row of 50,257 logits. Softmax gives a probability per vocabulary ID, argmax picks an ID, and concatenation appends it to the input.](../assets/chapter-04/greedy-next-id.svg)](../assets/chapter-04/greedy-next-id.svg)
+
+<figcaption markdown="span">Original companion to Figure 4.17. The prompt IDs and the decoding of ID 257 use the GPT-2 tokenizer. The highlighted choice illustrates what happens if ID 257 wins. These are example steps, not a prediction recorded from our initialized model.</figcaption>
+</figure>
+
+There are two indexing operations here. First, choose the **last position** in the input. Its score row uses the entire available prompt. Then, within that row, find the **vocabulary index** with the largest probability. That index is already the token ID. For example, if index 257 wins, append the integer 257. The tokenizer can display it as ` a`. The next model call consumes the integer sequence directly.
+
+### A commented generation loop
+
+This companion to Listing 4.8 uses the `GPTModel` above. **B** counts examples, **T** counts positions fed to the model on this iteration, and **V** is vocabulary size. Use `model.eval()` for generation so dropout is disabled. The `no_grad` context below saves the work of tracking gradients during the forward pass.
+
+```python title="generate_text_simple — one greedy token per example per iteration"
+def generate_text_simple(
+    model: GPTModel,
+    idx: torch.Tensor,
+    max_new_tokens: int,
+    context_size: int,
+) -> torch.Tensor:
+    """Extend torch.long prompt IDs [B,P] to [B,P + max_new_tokens].
+
+    B counts examples and P is their nonempty prompt length. Use a positive
+    context_size within the model's position-table capacity and a nonnegative
+    max_new_tokens. The model and IDs must be on the same device.
+    """
+    for _ in range(max_new_tokens):
+        # Keep every example (:), then take its most recent context_size IDs.
+        # idx keeps the full history. Only this model call receives the crop.
+        idx_cond = idx[:, -context_size:]
+
+        with torch.no_grad():
+            logits = model(idx_cond)  # [B,T,V]: a score row at every position.
+
+        # Keep every example and vocabulary entry, selecting the last position.
+        next_scores = logits[:, -1, :]  # [B,V]
+
+        # Normalize across the vocabulary separately for each example.
+        probabilities = torch.softmax(next_scores, dim=-1)
+
+        # The winning column is a token ID. keepdim=True gives one column
+        # per batch row, so it can be joined to the two-dimensional ID tensor.
+        next_ids = torch.argmax(probabilities, dim=-1, keepdim=True)  # [B,1]
+
+        # Join along positions (axis 1). With a four-ID prompt the first
+        # iteration builds five IDs, which the next iteration can read.
+        idx = torch.cat((idx, next_ids), dim=1)
+
+    return idx  # Original prompt followed by all the generated IDs.
+```
+
+The softmax step lets us inspect probabilities. For greedy selection, taking the maximum directly over the logits gives the same ordering mathematically. The loop stops after the requested number of new tokens. To display its result for the first example, pass the completed sequence of IDs to `tokenizer.decode(result[0].tolist())`.
 
 ## Questions to bring to the chapter
 
