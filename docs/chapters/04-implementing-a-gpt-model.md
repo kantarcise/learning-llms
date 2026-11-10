@@ -971,6 +971,66 @@ class GPTModel(nn.Module):
 
 On a call to `model(in_idx)`, token IDs select rows from the token table and position indices select rows from the position table. After adding those vectors and applying embedding dropout, `self.trf_blocks(x)` runs the twelve blocks in sequence. Inside each block the attention branch starts with its own LayerNorm. After the twelfth block, `self.final_norm(x)` normalizes each row once more. The bias-free `self.out_head` maps that row to raw vocabulary scores. This is where `forward` ends and generation can use the result.
 
+### Run the assembled model and count its parameters
+
+Reuse the two texts from Section 4.1. Each row of `batch` holds four GPT-2 token IDs. The seed makes the random initialization reproducible in this environment.
+
+```python
+torch.manual_seed(123)
+model = GPTModel(GPT_CONFIG_124M)
+logits = model(batch)
+print(batch.shape)   # torch.Size([2, 4])
+print(logits.shape)  # torch.Size([2, 4, 50257])
+```
+
+For one example, `logits[0]` has shape `[4, 50257]`. Its four rows correspond to the four input positions. Each row contains the scores for the token that follows that position.
+
+`numel()` means *number of elements*. A weight tensor of shape `[3, 2]` contains six scalar parameters. Summing this count over the parameter tensors gives the total. We used the same expression to print **10,848** at the start of our [Character Logs training run](../preparation/training-comparison.md).
+
+```python
+total = sum(p.numel() for p in model.parameters())
+print(f"{total:,}")                 # 163,009,536
+print(model.tok_emb.weight.shape)  # torch.Size([50257, 768])
+print(model.out_head.weight.shape) # torch.Size([50257, 768])
+```
+
+### Why the 124M configuration gives 163M parameters
+
+Follow row 345, the token for ` you` in our example. At the input, the embedding lookup **reads** that row to get 768 coordinates. At the output, the last hidden vector takes a **dot product** with row 345 of the output matrix to produce the score for choosing ` you` next. It does this for every candidate in the vocabulary.
+
+The chapter model gives these two jobs separate matrices. **Weight tying** gives them the same parameter tensor, so a training update to row 345 affects both jobs. The original GPT-2 uses this arrangement, as does our Cosmopedia model through `F.linear(x, self.token_embedding.weight)`. [Cosmopedia implementation](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/model.py)
+
+| Count for this configuration | Parameters |
+| --- | ---: |
+| Model with separate input and output weights | 163,009,536 |
+| One vocabulary matrix (50,257 × 768) | 38,597,376 |
+| Model if the two uses share that matrix | 124,412,160 |
+
+Subtracting the matrix size answers a counting question. Actually sharing the weights in this PyTorch class would require assigning `model.out_head.weight = model.tok_emb.weight`. The chapter keeps the separate matrices for its implementation. Sharing reduces weight storage and the number of independent parameters to update. The dense output projection still computes all 50,257 scores. Whether separate weights help prediction quality is an empirical question for a given training setup.
+
+### Exercise 4.1 — Feedforward versus multi-head attention
+
+Count **one transformer block** first. For every `nn.Linear`, multiply the input width by the output width for its weights, then add one bias per output coordinate if enabled. Here the model width is 768, the feedforward hidden width is 3,072, and `qkv_bias=False`.
+
+| Module and layer | Weights | Biases | Total |
+| --- | ---: | ---: | ---: |
+| Feedforward expansion | 768 × 3,072 | 3,072 | 2,362,368 |
+| Feedforward contraction | 3,072 × 768 | 768 | 2,360,064 |
+| **Feedforward total** | | | **4,722,432** |
+| Query, key, and value projections together | 3 × 768 × 768 | 0 | 1,769,472 |
+| Attention output projection | 768 × 768 | 768 | 590,592 |
+| **Multi-head attention total** | | | **2,360,064** |
+
+Why do twelve heads fit into that count? Each projection produces 768 coordinates in total and splits them into twelve heads of 64 coordinates each. The attention mixing weights are calculated from the current input. GELU also introduces zero trainable parameters.
+
+```python
+block = model.trf_blocks[0]
+print(f"{sum(p.numel() for p in block.ff.parameters()):,}")   # 4,722,432
+print(f"{sum(p.numel() for p in block.att.parameters()):,}")  # 2,360,064
+```
+
+The feedforward module has **about twice** as many parameters here. Ignoring biases makes the arithmetic especially clear: its two projections each hold four 768 × 768 matrices’ worth of weights, while attention uses four such matrices overall. Across all twelve blocks, the respective totals are **56,669,184** and **28,320,768**. The normalization layers, embeddings and vocabulary head sit outside this two-module comparison.
+
 ## 4.7 Generating text
 
 Notes to come as we read this section.
