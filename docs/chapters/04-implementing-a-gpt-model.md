@@ -1180,10 +1180,91 @@ def generate_text_simple(
 
 The softmax step lets us inspect probabilities. For greedy selection, taking the maximum directly over the logits gives the same ordering mathematically. The loop stops after the requested number of new tokens. To display its result for the first example, pass the completed sequence of IDs to `tokenizer.decode(result[0].tolist())`.
 
-## Questions to bring to the chapter
+### Why softmax is optional for greedy decoding
 
-<!-- Add actual questions during reading. -->
+Suppose a tiny vocabulary has three IDs and their logits are `[1, 3, 2]`. Softmax gives probabilities of about `[0.090, 0.665, 0.245]`. Column 1 wins both times. Exponentiation preserves the order of the scores, and every entry in the row is divided by the same positive sum. For greedy selection, we can therefore write:
+
+```python
+# Inside generate_text_simple, next_scores holds one row per example.
+next_ids = next_scores.argmax(dim=-1, keepdim=True)
+```
+
+The highest-scoring ID is a **local choice for this step**. Sampling, which the book revisits in Chapter 5, draws an ID from a distribution. In the example above, it could also select ID 0 or ID 2.
+
+### From four prompt IDs to ten output IDs
+
+```python
+# Use the GPT-2 tokenizer from Section 4.1.
+prompt_ids = tokenizer.encode("Hello, I am")  # [15496, 11, 314, 716]
+idx = torch.tensor(prompt_ids, dtype=torch.long).unsqueeze(0)
+# unsqueeze(0) adds the batch axis: four IDs [4] become one example [1,4].
+```
+
+<figure markdown="1">
+
+[![Four initial IDs encode Hello, I am. Six illustrated selections append IDs 257, 2746, 3492, 284, 1037 and 13, forming the continuation “ a model ready to help.”](../assets/chapter-04/token-id-trace.svg)](../assets/chapter-04/token-id-trace.svg)
+
+<figcaption markdown="span">Companion to Figure 4.18. Read downward to see the growing ID sequence after each append. The text column decodes only the newly added ID, with its leading space visible inside quotes. This is the book’s illustrative continuation.</figcaption>
+</figure>
+
+Now try the same loop with the chapter model’s actual weights. A fresh initialization makes the example reproducible. Evaluation mode disables dropout. Inside the loop, `torch.no_grad()` lets PyTorch omit the gradient-tracking work.
+
+```python
+torch.manual_seed(123)
+model = GPTModel(GPT_CONFIG_124M)
+model.eval()
+
+result = generate_text_simple(
+    model=model,
+    idx=idx,
+    max_new_tokens=6,
+    context_size=GPT_CONFIG_124M["context_length"],
+)
+# Select the single batch row, then convert its integers to a Python list.
+ids = result[0].tolist()
+print(ids)
+print(tokenizer.decode(ids))
+```
+
+Locally reproduced CPU output:
+
+```text
+[15496, 11, 314, 716, 27018, 24086, 47843, 30961, 42348, 7267]
+Hello, I am Featureiman Byeswickattribute argue
+```
+
+The first four IDs reproduce the prompt. Look at the fifth ID: the model ranked **27018** highest where the illustration used **257**. Decoding faithfully displays what the model chose. The architecture can already generate IDs, but its randomly initialized weights have yet to learn which continuations fit English text.
+
+### Exercise 4.3 — Give each dropout site its own setting
+
+With one `drop_rate`, changing embedding dropout also changes attention and residual-branch dropout. The exercise asks us to make those choices independent. In the `GPTConfig` type, replace `drop_rate: float` with three float fields named `embedding_dropout`, `attention_dropout`, and `residual_dropout`. Make the corresponding edit in the configuration dictionary. These example values are deliberately distinct so we can check the wiring:
+
+```python
+# Entries inside the edited GPT_CONFIG_124M dictionary
+"embedding_dropout": 0.10,
+"attention_dropout": 0.20,
+"residual_dropout": 0.30,
+```
+
+| In the earlier listings | Use this setting | What dropout acts on during training |
+| --- | --- | --- |
+| `GPTModel.__init__`: `self.drop_emb = nn.Dropout(cfg["embedding_dropout"])` | 0.10 | The sum of token and position embeddings |
+| `TransformerBlock.__init__`: pass `dropout=cfg["attention_dropout"]` to `MultiHeadAttention` | 0.20 | Attention weights after masked softmax, before they mix the values |
+| `TransformerBlock.__init__`: `self.drop_shortcut = nn.Dropout(cfg["residual_dropout"])` | 0.30 | Each computed update immediately before its residual addition |
+
+Build a fresh model **after** making those edits. The first block lets us inspect the two dropout modules nested inside the stack:
+
+```python
+model = GPTModel(GPT_CONFIG_124M)
+block = model.trf_blocks[0]
+print(model.drop_emb.p, block.att.dropout.p, block.drop_shortcut.p)
+# 0.1 0.2 0.3
+```
+
+During training, the attention and feedforward updates each pass through `drop_shortcut` on a separate call. The saved shortcut vector goes straight to the addition. During generation, `model.eval()` disables dropout throughout the stack. Comparing the effect of these rates on learning would require training runs and validation results.
 
 ## End of chapter
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Start with the four IDs for `Hello, I am`. Token and position embeddings give each position a 768-coordinate vector. Twelve blocks update those rows in sequence. Within each block, normalization prepares each learned branch, causal attention gathers information from accessible positions, and the GELU feedforward network transforms each updated row. The two shortcuts carry the running representation around the branches and provide direct paths for gradients.
+
+Final LayerNorm and the vocabulary head turn each row into 50,257 scores. During generation, the last row supplies the scores for one new ID. Appending it turns one forward pass into an iterative text generator. The configuration controls the size of that model, while precision and weight sharing affect its parameter storage. The next step is to **learn the weights** by measuring next-token loss and updating the parameters. [Chapter 5 — Pretraining on unlabeled data](05-pretraining-on-unlabeled-data.md)
