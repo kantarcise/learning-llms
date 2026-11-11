@@ -30,6 +30,51 @@ Reading a generated sample tells us something about that particular continuation
 
 We saw this distinction in Character Logs. Generated text began to resemble log entries, while the validation loss helped us choose the epoch 8 checkpoint. Here we will build the evaluation code that produces those measurements. [Character Logs results](../preparation/training-comparison.md#reading-the-curves-together)
 
+### 5.1.1 Using GPT to generate text
+
+Chapter 4 gave us two pieces we can reuse: `GPTModel` maps IDs to logits, and `generate_text_simple` takes the last position’s logits, chooses the highest-scoring ID, and appends it to the prompt. For this walkthrough, use those [Chapter 4 definitions](04-implementing-a-gpt-model.md#47-generating-text) and make a copy of the configuration:
+
+```python
+cfg = GPT_CONFIG_124M.copy()
+cfg["context_length"] = 256
+torch.manual_seed(123)
+model = GPTModel(cfg)
+model.eval()  # Disable dropout while inspecting this initial model.
+```
+
+The width stays at 768, with 12 heads in each of 12 blocks. What changes is how many positions a training example can contain. With full-length examples and the same batch size, one attention head now forms a 256 × 256 score matrix instead of 1,024 × 1,024: one sixteenth as many score entries. This reduces memory and computation for the laptop exercise. A four-token prompt still occupies just four positions.
+
+The new position embedding table has 256 rows. Later, to use GPT-2’s pretrained weights, we will construct a model with the original 1,024-position configuration and load the matching weights. Editing the dictionary after an instance exists does not resize that instance’s table.
+
+#### Two helpers around the generation loop
+
+<figure markdown="1">
+
+[![A single example passes from a string to four IDs, through GPT to four rows of scores, then through greedy selection to five IDs and back to text.](../assets/chapter-05/text-id-helpers.svg)](../assets/chapter-05/text-id-helpers.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.3. This trace shows one verified greedy step with the chapter’s randomly initialized, 256-position model in evaluation mode. The output helper decodes the entire sequence, including the prompt.</figcaption>
+</figure>
+
+The two helpers in Listing 5.1 handle the boundary between a **Python string** and the **batch of integer IDs** that the generation loop accepts and returns. Both use the same GPT-2 tokenizer. The argument `allowed_special` lets the tokenizer recognize the literal end-of-text marker if present in the input.
+
+```python title="Listing 5.1 companion — conversion for a single example"
+import tiktoken
+
+
+def text_to_token_ids(text: str, tokenizer: tiktoken.Encoding) -> torch.Tensor:
+    """Encode one string as torch.long IDs [1,T], where T counts tokens."""
+    ids = tokenizer.encode(text, allowed_special={"<|endoftext|>"})
+    return torch.tensor(ids, dtype=torch.long).unsqueeze(0)  # [T] -> [1,T]
+
+
+def token_ids_to_text(token_ids: torch.Tensor, tokenizer: tiktoken.Encoding) -> str:
+    """Decode one sequence of integer IDs [1,T] into a string."""
+    ids = token_ids.squeeze(0)  # [1,T] -> [T]: remove the single batch axis.
+    return tokenizer.decode(ids.tolist())
+```
+
+For `Every effort moves you`, encoding produces the list `[6109, 3626, 6100, 345]`. Adding the batch axis gives `[[6109, 3626, 6100, 345]]`, shape `[1, 4]`. GPT returns shape `[1, 4, 50257]`. The generation loop reads the fourth row and appends its chosen ID. Only then does `token_ids_to_text` remove the outer axis and decode the resulting list. With several examples, decode each batch row separately.
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
