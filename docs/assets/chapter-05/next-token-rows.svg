@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 496" width="720" height="496" role="img" aria-labelledby="title desc">
+  <title id="title">Three input positions, one next-token prediction per row</title>
+  <desc id="desc">The toy vocabulary assigns cats, chase, red and dots IDs zero through three. The three prefixes predict chase, red and cats. In the last row cats wins with probability 0.50, while the actual next token dots receives 0.30.</desc>
+  <style>
+    text {font: 19px Arial, sans-serif; fill: #19364a}
+    .heading {font-weight: bold}
+    .number {font: 19px monospace; text-anchor: middle}
+    .center {text-anchor: middle}
+    .win {fill: #c1e8da}
+  </style>
+  <rect width="720" height="496" rx="14" fill="#f8fafc"/>
+  <g transform="translate(24 0)">
+    <text y="36" class="heading">1 · Encode the prompt</text>
+    <text y="69">cats chase red → [0, 1, 2]</text>
+    <text y="119" class="heading">2 · Convert each row of logits to probabilities with softmax</text>
+    <text y="154">Prefix visible</text>
+    <g class="center">
+      <text x="260" y="154">0 · cats</text><text x="372" y="154">1 · chase</text>
+      <text x="484" y="154">2 · red</text><text x="596" y="154">3 · dots</text>
+    </g>
+    <path d="M0 165H672" stroke="#9bacb8"/>
+    <g class="win">
+      <rect x="329" y="173" width="86" height="34" rx="6"/>
+      <rect x="441" y="217" width="86" height="34" rx="6"/>
+      <rect x="217" y="261" width="86" height="34" rx="6"/>
+    </g>
+    <text y="197">cats</text><text y="241">cats chase</text><text y="285">cats chase red</text>
+    <g class="number">
+      <text x="260" y="197">0.10</text><text x="372" y="197" font-weight="bold">0.60</text><text x="484" y="197">0.20</text><text x="596" y="197">0.10</text>
+      <text x="260" y="241">0.10</text><text x="372" y="241">0.15</text><text x="484" y="241" font-weight="bold">0.55</text><text x="596" y="241">0.20</text>
+      <text x="260" y="285" font-weight="bold">0.50</text><text x="372" y="285">0.10</text><text x="484" y="285">0.10</text><text x="596" y="285">0.30</text>
+    </g>
+    <text y="343" class="heading">3 · Find the highest probability in each row (argmax)</text>
+    <text y="373">The highlighted entries win. Read their column IDs from the top.</text>
+    <text y="420" class="heading">4 · Collect those IDs</text>
+    <text y="457">[1, 2, 0]</text>
+    <text x="330" y="420" class="heading">5 · Decode each prediction</text>
+    <text x="330" y="457">chase, red, cats</text>
+  </g>
+</svg>
