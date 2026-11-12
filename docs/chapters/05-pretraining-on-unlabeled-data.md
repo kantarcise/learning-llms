@@ -184,6 +184,58 @@ tensor([1.0337e-05, 5.6776e-05, 4.7559e-06])
 
 The last value is the probability assigned to `" chocolate"` after `I really like`. Raising that probability lowers the loss for this example’s last position. Greedy decoding will select `" chocolate"` once it has the highest score.
 
+#### Turn six target probabilities into one loss
+
+!!! note "Where backpropagation fits"
+
+    During evaluation, the forward pass gives us a loss we can read. During training, we run the forward pass with gradient tracking enabled. Then `loss.backward()` computes how the loss changes with each trainable parameter, and the optimizer uses those gradients to update the weights.
+
+<figure markdown="1">
+
+[![Six steps from logits through the target probabilities and their logarithms to a mean loss of 10.7940.](../assets/chapter-05/batch-cross-entropy.svg)](../assets/chapter-05/batch-cross-entropy.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.7. Follow the count down the right side. Choosing each observed token leaves six numbers. Taking logs preserves that count. Averaging turns the six values into one measurement.</figcaption>
+</figure>
+
+Why take logs? The likelihood of a sequence multiplies the probabilities assigned to its successive tokens given their prefixes. Products of small probabilities quickly become tiny. Taking the natural log turns that product into a sum, and dividing by the number of targets gives a per-token average. A confident correct prediction contributes little loss: at probability 0.9, its negative log is about 0.105. At 0.01, the penalty is about 4.605.
+
+```python
+target_probs = probabilities.gather(-1, targets.unsqueeze(-1)).squeeze(-1)
+# One selected probability per observed token, still arranged as two rows of three.
+log_probs = target_probs.log()
+manual_loss = -log_probs.mean()
+print(manual_loss)  # tensor(10.7940)
+```
+
+!!! note "Cross-entropy loss"
+
+    A single observed target gives all the label probability to one vocabulary entry. Cross-entropy therefore reads the model’s log probability at that entry and changes its sign. With one target ID per position and equal weight for all six positions, batch cross-entropy is exactly their mean negative log probability.
+
+**Where does flattening come from?** Think of the CNN classification case: PyTorch can take a table with one row of class scores per image and a list with one class ID per image. Here, **each token position is one classification example**. The model has already computed its contextual representation and its logits. For the loss we can lay those predictions out as six rows:
+
+| Flat row | Prefix that produced the scores | Target token | Target ID |
+| ---: | --- | --- | ---: |
+| 0 | every | ` effort` | 3626 |
+| 1 | every effort | ` moves` | 6100 |
+| 2 | every effort moves | ` you` | 345 |
+| 3 | I | ` really` | 1107 |
+| 4 | I really | ` like` | 588 |
+| 5 | I really like | ` chocolate` | 11311 |
+
+```python
+# Merge the example and position axes. Keep all vocabulary scores in each row.
+scores = logits.flatten(0, 1)  # [2, 3, 50257] → [6, 50257]
+labels = targets.flatten()     # [2, 3] → [6], in the same row order
+loss = torch.nn.functional.cross_entropy(scores, labels)
+torch.testing.assert_close(loss, manual_loss)
+```
+
+For example, `scores[3]` contains exactly the logits from `logits[1, 0]`, and `labels[3]` still holds 1107. Flattening keeps that prediction paired with its target. It changes the layout after attention has finished. Give the function the raw logits so it can compute log probabilities in a numerically stable way.
+
+!!! tip "An optional detour into Appendix B"
+
+    Appendix B is a chapter-by-chapter reading list. For **why we take logarithms**, go to the Chapter 5 entry on printed page 293. For **why a single class ID is enough to compute cross-entropy**, the lecture and code example follow on page 294. [Logistic Regression Loss Function](https://www.youtube.com/watch?v=GxJe0DZvydM) · [OneHot Encoding and Multi-category Cross Entropy](https://www.youtube.com/watch?v=4n71-tZ94yk)
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
