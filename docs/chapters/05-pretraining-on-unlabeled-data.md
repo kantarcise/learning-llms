@@ -128,6 +128,31 @@ Both outputs have shape `[2, 3, 50257]`. The first two axes tell us **which exam
 
 For example, `probabilities[1, 2]` contains all the next-token probabilities after `I really like`. The target at that position is ID 11311, so `probabilities[1, 2, 11311]` is the single probability assigned to `" chocolate"`. The leading space belongs to the token.
 
+#### Read the predictions, then score the targets
+
+Figure 5.4 ends by selecting an ID and decoding it. Here we do that at all six positions in one batch. Each position has its own row of 50,257 probabilities. `argmax` gives the column index of the largest probability in that row, and that index is a token ID.
+
+```python
+predicted_ids = probabilities.argmax(dim=-1, keepdim=True)  # [2, 3, 1]
+rows = predicted_ids.squeeze(-1)  # [2, 3]: one winning ID per position
+print(rows.tolist())  # [[16657, 339, 42826], [49906, 29669, 41751]]
+
+# Take the first example, keeping the batch axis our decoding helper expects.
+print(repr(token_ids_to_text(rows[:1], tokenizer)))     # ' Armed heNetflix'
+print(repr(token_ids_to_text(targets[:1], tokenizer)))  # ' effort moves you'
+```
+
+Read the first prediction as “given `every`, the model chose ` Armed`.” For the second prediction it saw the supplied prefix `every effort` and chose ` he`. The three decoded pieces sit next to each other for inspection. Each came from a different position in the same forward pass.
+
+<figure markdown="1">
+
+[![Seven-step Chapter 5 roadmap. Generation is complete and evaluating next-token predictions is the current step.](../assets/chapter-05/evaluation-roadmap.svg)](../assets/chapter-05/evaluation-roadmap.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.5. Step 1 gave us text to inspect. In step 2 we keep the probabilities so we can measure how well each prediction fits its target.</figcaption>
+</figure>
+
+For the first position, the correct next token was ` effort`. The untrained model assigned it a probability of about **0.0000745**. If training raises that probability, the loss for this position falls, even if ` Armed` still wins. This is why the training loop will compute loss from the model’s scores and the known target IDs. During evaluation we record that loss. During training we also backpropagate through it so the optimizer can update the weights.
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
