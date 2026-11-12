@@ -153,6 +153,37 @@ Read the first prediction as “given `every`, the model chose ` Armed`.” For 
 
 For the first position, the correct next token was ` effort`. The untrained model assigned it a probability of about **0.0000745**. If training raises that probability, the loss for this position falls, even if ` Armed` still wins. This is why the training loop will compute loss from the model’s scores and the known target IDs. During evaluation we record that loss. During training we also backpropagate through it so the optimizer can update the weights.
 
+#### Read one target probability per position
+
+Think of a CNN classifying an image labeled “cat.” The label tells us which class probability to inspect, even when the highest score goes to “dog.” In language modeling, the source text supplies a label at **each token position**. That label is an ID we use as a column index. The numerical distance between two IDs has no bearing on the loss.
+
+<figure markdown="1">
+
+[![The target tokens chase, red and dots select probabilities 0.60, 0.55 and 0.30 from three successive rows.](../assets/chapter-05/target-probabilities.svg)](../assets/chapter-05/target-probabilities.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.6. Compare the last row with our Figure 5.4. The probabilities are identical. The highlight moves from the model’s top choice, `cats`, to the observed next token, `dots`.</figcaption>
+</figure>
+
+The book illustrates this with seven tokens. If probability were spread evenly, each token would receive `1 / 7 ≈ 0.14`. With GPT-2’s 50,257 tokens the corresponding baseline is **about 0.0000199**. This is also the mean across vocabulary entries in each probability row, since they sum to one. Individual probabilities from a randomly initialized model vary around that scale.
+
+Here is the same lookup for the batch above. Each list of three target IDs pairs up with the three positions in its example:
+
+```python
+positions = [0, 1, 2]
+for example in range(len(targets)):
+    target_ids = targets[example]
+    # Pair position 0 with target_ids[0], position 1 with target_ids[1],
+    # and position 2 with target_ids[2].
+    print(probabilities[example, positions, target_ids])
+```
+
+```text
+tensor([7.4541e-05, 3.1061e-05, 1.1563e-05])
+tensor([1.0337e-05, 5.6776e-05, 4.7559e-06])
+```
+
+The last value is the probability assigned to `" chocolate"` after `I really like`. Raising that probability lowers the loss for this example’s last position. Greedy decoding will select `" chocolate"` once it has the highest score.
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
