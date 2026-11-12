@@ -236,6 +236,14 @@ For example, `scores[3]` contains exactly the logits from `logits[1, 0]`, and `l
 
     Appendix B is a chapter-by-chapter reading list. For **why we take logarithms**, go to the Chapter 5 entry on printed page 293. For **why a single class ID is enough to compute cross-entropy**, the lecture and code example follow on page 294. [Logistic Regression Loss Function](https://www.youtube.com/watch?v=GxJe0DZvydM) · [OneHot Encoding and Multi-category Cross Entropy](https://www.youtube.com/watch?v=4n71-tZ94yk)
 
+!!! note "Perplexity gives the same loss a different scale"
+
+    Imagine the model gives the observed next token a probability of ¼ at every position. Its mean cross-entropy is `−ln(¼) ≈ 1.386`. Exponentiating that loss gives a perplexity of **4**. Its predictions score as well on this text as a uniform guess among four choices that include the correct token.
+
+    In our actual batch the six target probabilities differ. Perplexity is the reciprocal of their **geometric mean**. Run `torch.exp(loss).item()` on the full-precision loss tensor and you get **48,725.82**. A uniform prediction over the GPT-2 vocabulary would give **50,257**. On these six targets, the untrained model scored a little better than that baseline. The number describes average performance across those positions. It does not count how many candidate tokens the model considered at any single position.
+
+    Exponentiation preserves order, so a lower mean cross-entropy always gives a lower perplexity on the same evaluation tokens. Section 5.1.3 takes that measurement beyond our six predictions to the training and validation sets.
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
