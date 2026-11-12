@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="400" viewBox="0 0 780 400" role="img" aria-labelledby="title desc">
+<title id="title">From six predictions to one cross-entropy loss</title><desc id="desc">Softmax transforms the vocabulary scores. Select each target probability, take its natural logarithm, average the six values and negate the mean.</desc>
+<style>text{font:19px Arial,sans-serif;fill:#19364a}.heading{font-weight:bold;font-size:24px}</style><rect width="780" height="400" rx="12" fill="#f8fafc"/><text x="22" y="38" class="heading">From six predictions to one loss</text>
+<g transform="translate(18 55)"><rect width="744" height="48" rx="8" fill="#dcecfb"/><text x="12" y="31">1</text><text x="48" y="31">Model logits</text><text x="337" y="31">2 examples × 3 positions × 50,257 scores</text></g>
+<g transform="translate(18 111)"><rect width="744" height="48" rx="8" fill="#dcecfb"/><text x="12" y="31">2</text><text x="48" y="31">Softmax over vocabulary</text><text x="337" y="31">6 distributions, each summing to 1</text></g>
+<g transform="translate(18 167)"><rect width="744" height="48" rx="8" fill="#dcecfb"/><text x="12" y="31">3</text><text x="48" y="31">Read each target column</text><text x="337" y="31">6 probabilities · first ≈ 0.00007454</text></g>
+<g transform="translate(18 223)"><rect width="744" height="48" rx="8" fill="#dcefe8"/><text x="12" y="31">4</text><text x="48" y="31">Take the natural log</text><text x="337" y="31">6 log probabilities · first ≈ −9.5042</text></g>
+<g transform="translate(18 279)"><rect width="744" height="48" rx="8" fill="#dcefe8"/><text x="12" y="31">5</text><text x="48" y="31">Average the six values</text><text x="337" y="31">1 mean log probability: −10.7940</text></g>
+<g transform="translate(18 335)"><rect width="744" height="48" rx="8" fill="#dcefe8"/><text x="12" y="31">6</text><text x="48" y="31">Change the sign</text><text x="337" y="31">1 loss for this batch: 10.7940</text></g>
+</svg>
