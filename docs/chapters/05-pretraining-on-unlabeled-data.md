@@ -105,6 +105,29 @@ Suppose our source sentence is **cats chase red dots**. Give GPT the first three
 
 **For loss**, the source sentence tells us the next tokens were `chase`, `red`, and `dots`. Read those columns in their respective rows and you get 0.60, 0.55, and **0.30**. That last number is the probability the model gave the actual next token, even though it would have generated `cats`. These three probabilities give us the starting point for the loss calculation.
 
+#### Two examples, three next-token predictions each
+
+The book uses seven vocabulary entries in Figure 5.4. In the code, the GPT-2 tokenizer has **50,257 tokens**, with IDs from 0 through 50,256. Take two four-token passages and slice each one twice, just as we did with the sliding windows in Chapter 2. The first three tokens are the input. The last three are the targets.
+
+```python
+inputs = torch.tensor([
+    [16833, 3626, 6100],  # "every effort moves"
+    [   40, 1107,  588],  # "I really like"
+])
+targets = torch.tensor([
+    [3626, 6100,   345],  # " effort moves you"
+    [1107,  588, 11311],  # " really like chocolate"
+])
+
+with torch.no_grad():
+    logits = model(inputs)
+    probabilities = torch.softmax(logits, dim=-1)
+```
+
+Both outputs have shape `[2, 3, 50257]`. The first two axes tell us **which example** and **which input position**. Inside the transformer, each of those six positions has 768 coordinates. The output head turns those coordinates into 50,257 logits, one score per possible next token. Softmax works across that last axis, so each position gets its own distribution that sums to one.
+
+For example, `probabilities[1, 2]` contains all the next-token probabilities after `I really like`. The target at that position is ID 11311, so `probabilities[1, 2, 11311]` is the single probability assigned to `" chocolate"`. The leading space belongs to the token.
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
