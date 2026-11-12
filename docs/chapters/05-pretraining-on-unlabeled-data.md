@@ -75,6 +75,21 @@ def token_ids_to_text(token_ids: torch.Tensor, tokenizer: tiktoken.Encoding) -> 
 
 For `Every effort moves you`, encoding produces the list `[6109, 3626, 6100, 345]`. Adding the batch axis gives `[[6109, 3626, 6100, 345]]`, shape `[1, 4]`. GPT returns shape `[1, 4, 50257]`. The generation loop reads the fourth row and appends its chosen ID. Only then does `token_ids_to_text` remove the outer axis and decode the resulting list. With several examples, decode each batch row separately.
 
+Now run ten greedy steps with the model initialized above. At each step, the last position has one logit (an unnormalized score) per vocabulary entry. Softmax would turn those scores into probabilities. For greedy generation, the highest score already identifies the token ID to append.
+
+```python
+tokenizer = tiktoken.get_encoding("gpt2")
+prompt_ids = text_to_token_ids("Every effort moves you", tokenizer)
+result = generate_text_simple(model, prompt_ids, 10, cfg["context_length"])
+print(token_ids_to_text(result, tokenizer))  # Four prompt IDs plus ten new IDs.
+```
+
+```text
+Every effort moves you rentingetic wasnم refres RexMeCHicular stren
+```
+
+The tokenizer can decode every ID the model chose. The continuation reads like gibberish because the randomly initialized model has yet to learn which tokens tend to follow this prompt. To measure learning, we can give the model a passage with a known next token. Even if its top choice stays the same, raising the probability of the actual next token lowers the loss for that prediction. Section 5.1.2 develops that calculation.
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
