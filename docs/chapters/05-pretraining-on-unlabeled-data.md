@@ -401,6 +401,95 @@ Suppose we have **1,000 sentences**. How many updates make one epoch? We need to
 
     **Learning-rate warmup** starts the optimizer with a small learning rate and raises it during the opening steps. **Cosine annealing** then lowers the rate along a smooth curve toward a chosen minimum. **Gradient clipping** fits between steps 5 and 6. If the combined gradient norm exceeds a threshold, clipping scales the gradients down before the optimizer uses them. You can follow Listing 5.3 first and return to Appendix D to see where each change belongs. [Author’s Appendix D notebook](https://github.com/rasbt/LLMs-from-scratch/tree/main/appendix-D)
 
+### Reading Listing 5.3 one batch at a time
+
+Follow three clocks in `train_model_simple`: **update** on every training batch, **measure loss** at selected updates, and **generate text** at the end of each epoch. The indentation shows which clock each line follows. This companion uses the loss and token conversion helpers from §5.1. [Author’s Chapter 5 implementation](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch05/01_main-chapter-code)
+
+```python title="Listing 5.3 companion — train_model_simple"
+def train_model_simple(
+    model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+    optimizer: torch.optim.Optimizer, device: torch.device, num_epochs: int,
+    eval_freq: int, eval_iter: int, start_context: str, tokenizer: tiktoken.Encoding,
+) -> tuple[list[float], list[float], list[int]]:
+    """Return training loss, validation loss and tokens seen at each evaluation."""
+    train_losses, val_losses, tokens_at_eval = [], [], []
+    tokens_seen = 0
+    global_step = -1  # The book labels the first completed update step 0.
+
+    for epoch in range(num_epochs):
+        model.train()  # Enable training behavior, including dropout.
+        for inputs, targets in train_loader:
+            # Gradients accumulate in PyTorch. Start this batch with a clean slate.
+            optimizer.zero_grad()
+            loss = calc_loss_batch(inputs, targets, model, device)
+            loss.backward()   # Compute the gradient for each participating parameter.
+            optimizer.step()  # AdamW uses those gradients to change the weights.
+
+            # For this unpadded loader: 2 windows × 256 positions = 512 tokens.
+            tokens_seen += inputs.numel()
+            global_step += 1
+
+            # eval_freq controls WHEN to measure. eval_iter limits HOW MANY
+            # batches from each loader go into that measurement.
+            if global_step % eval_freq == 0:
+                train_loss, val_loss = evaluate_model(
+                    model, train_loader, val_loader, device, eval_iter
+                )
+                train_losses.append(train_loss)
+                val_losses.append(val_loss)
+                tokens_at_eval.append(tokens_seen)
+                print(f"Epoch {epoch + 1}, step {global_step}: "
+                      f"train {train_loss:.3f}, validation {val_loss:.3f}")
+
+        # Outside the batch loop: one continuation per completed epoch.
+        generate_and_print_sample(model, tokenizer, device, start_context)
+
+    return train_losses, val_losses, tokens_at_eval
+```
+
+With nine batches and `eval_freq=5`, epoch one updates the weights nine times, at steps 0 through 8. The loop prints losses after steps **0 and 5**, then prints a sample after step **8**. The next epoch starts at step **9**. With `eval_iter=5`, each measurement uses five training batches and the one available validation batch.
+
+```python title="Step 7 — evaluate_model"
+def evaluate_model(
+    model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+    device: torch.device, eval_iter: int,
+) -> tuple[float, float]:
+    """Measure the current weights on both splits during training."""
+    model.eval()  # Switch off dropout for both measurements.
+    with torch.no_grad():  # Save memory by skipping the backward graph.
+        train_loss = calc_loss_loader(train_loader, model, device, eval_iter)
+        val_loss = calc_loss_loader(val_loader, model, device, eval_iter)
+    model.train()  # The next training batch needs dropout again.
+    return train_loss, val_loss  # The caller records and prints these numbers.
+```
+
+```python title="Step 8 — generate_and_print_sample"
+def generate_and_print_sample(
+    model: nn.Module, tokenizer: tiktoken.Encoding, device: torch.device,
+    start_context: str,
+) -> None:
+    """Print the same prompt and its greedy continuation after each epoch."""
+    model.eval()
+    # Each row in the position table corresponds to one supported input position.
+    context_size = model.pos_emb.weight.shape[0]
+    prompt_ids = text_to_token_ids(start_context, tokenizer).to(device)
+    with torch.no_grad():
+        output_ids = generate_text_simple(model, prompt_ids, 50, context_size)
+    text = token_ids_to_text(output_ids, tokenizer)
+    print(text.replace("\n", " "))  # Keep one epoch's sample on one log line.
+    model.train()
+```
+
+The sample is a **sneak peek**. Keep the prompt and greedy decoding fixed, and you can see when the model starts forming words or repeating phrases. Validation loss answers a broader question by scoring every target position in the held-out batches. A fluent continuation from one prompt can coexist with worsening validation loss.
+
+!!! note "What AdamW does at optimizer.step()"
+
+    `loss.backward()` supplies a fresh gradient. AdamW keeps a running average of each parameter’s gradients and another of its squared gradients. The first tracks direction across batches. The second helps scale the update to the typical gradient magnitude. This history is why our resumable checkpoints save optimizer state alongside model weights.
+
+    The **W** refers to *decoupled weight decay*. AdamW nudges a weight toward zero separately from the adaptive gradient calculation. With the book’s `lr=0.0004` and `weight_decay=0.1`, the decay part alone multiplies a weight by `1 − 0.0004 × 0.1 = 0.99996`. A weight of 1.0 therefore becomes 0.99996 before the gradient-driven adjustment. The full update can still make that weight larger. Decay is one way to regularize training, and validation loss lets us check how well the resulting model generalizes. [Original AdamW paper](https://arxiv.org/abs/1711.05101)
+
+    AdamW is a common choice for language-model pretraining. DeepSeek-V3 is a documented example. The loop accepts an optimizer object, so its choice is independent of the GPT architecture. [DeepSeek-V3 training hyperparameters](https://arxiv.org/html/2412.19437v2#S4.SS2)
+
 ## 5.3 Decoding strategies to control randomness
 
 Notes to come as we read this section.
