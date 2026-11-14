@@ -9,12 +9,32 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import matplotlib.pyplot as plt
 from events import Events, estimated_training_flops
 from monitor import cpu_percent, cpu_ticks, gpu_snapshot, number
-from monitor_plot import board_energy, read_jsonl, spans
+from monitor_plot import COLORS, board_energy, draw_phases, read_jsonl, spans
 
 
 class MonitorTests(unittest.TestCase):
+    def test_long_phase_timeline_batches_artists_without_dropping_updates(self) -> None:
+        intervals = [
+            {"phase": "train_step", "start_s": i * 0.02, "end_s": i * 0.02 + 0.01}
+            for i in range(10000)
+        ]
+        fig, axes = plt.subplots(2, 1)
+        try:
+            draw_phases(list(axes), intervals)
+            self.assertEqual(len(axes[0].collections), len(COLORS))
+            self.assertEqual(
+                sum(len(collection.get_paths()) for collection in axes[0].collections),
+                10000,
+            )
+            self.assertTrue(
+                all(collection.get_rasterized() for collection in axes[0].collections)
+            )
+        finally:
+            plt.close(fig)
+
     def test_cpu_guest_iowait_and_missing_counters(self) -> None:
         old = cpu_ticks("cpu 100 0 0 100 50 0 0 0 20 0\ncpu0 100 0 0 100 50 0 0 0 20 0")
         new = cpu_ticks(

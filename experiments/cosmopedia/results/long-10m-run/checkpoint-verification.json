@@ -1,0 +1,12 @@
+{
+  "best_update": 89000,
+  "latest_update": 500000,
+  "adamw_update_counts_verified": true,
+  "inference_export_matches_best_snapshot": true,
+  "checkpoint_sha256": {
+    "best.pt": "e28681493049c333d3d64d9b4bf057ffa05e24072c1140b4e54a8dfcbe69ed57",
+    "latest.pt": "95588a05ac8a924b350c82d079fd608a3a74dcf4e86f1043a763290ea6c288af",
+    "best-weights.pt": "364fcacf5f365df73c2209a0438614b5756eeda925e72154efd126e4905da368"
+  },
+  "note": "Weights remain in ignored artifacts; fingerprints identify the retained files."
+}

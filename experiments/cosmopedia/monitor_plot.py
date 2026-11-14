@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.collections import PolyCollection
 from matplotlib.patches import Patch
 
 COLORS = {
@@ -85,6 +86,46 @@ def board_energy(samples: list[dict]) -> float | None:
     return energy if valid else None
 
 
+def draw_phases(axes: list[plt.Axes], intervals: list[dict]) -> None:
+    """Batch phase markers so artist count stays bounded for long runs."""
+    phase_names = list(COLORS)
+    # One collection per phase, rather than one artist per optimizer update.
+    # Rasterize dense collections so long-run SVGs remain practical to open.
+    for phase in phase_names:
+        selected = [item for item in intervals if item["phase"] == phase]
+        axes[0].broken_barh(
+            [
+                (item["start_s"], max(0.001, item["end_s"] - item["start_s"]))
+                for item in selected
+            ],
+            (phase_names.index(phase) - 0.35, 0.7),
+            facecolors=COLORS[phase],
+            rasterized=True,
+        )
+        if phase in ["checkpoint", "checkpoint_read", "cooldown"]:
+            vertices = [
+                [
+                    (item["start_s"], 0),
+                    (item["start_s"], 1),
+                    (item["end_s"], 1),
+                    (item["end_s"], 0),
+                ]
+                for item in selected
+            ]
+            for axis in axes[1:]:
+                axis.add_collection(
+                    PolyCollection(
+                        vertices,
+                        transform=axis.get_xaxis_transform(),
+                        facecolors=COLORS[phase],
+                        alpha=0.09,
+                        linewidth=0,
+                        rasterized=True,
+                    )
+                )
+    axes[0].set_ylim(-0.5, len(phase_names) - 0.5)
+
+
 def render(directory: Path) -> None:
     """Build PNG/SVG, a portable HTML report and machine-readable summary."""
     metadata = json.loads((directory / "metadata.json").read_text())
@@ -122,23 +163,7 @@ def render(directory: Path) -> None:
         return [row.get("gpu", {}).get(key) for row in samples]
 
     phase_names = list(COLORS)
-    for item in intervals:
-        phase = item["phase"]
-        if phase in phase_names:
-            axes[0].broken_barh(
-                [(item["start_s"], max(0.001, item["end_s"] - item["start_s"]))],
-                (phase_names.index(phase) - 0.35, 0.7),
-                facecolors=COLORS[phase],
-            )
-        if phase in ["checkpoint", "checkpoint_read", "cooldown"]:
-            for axis in axes[1:]:
-                axis.axvspan(
-                    item["start_s"],
-                    item["end_s"],
-                    color=COLORS[phase],
-                    alpha=0.09,
-                    linewidth=0,
-                )
+    draw_phases(list(axes), intervals)
     axes[0].set_yticks(range(len(phase_names)), phase_names)
     axes[0].set_title(
         "Phase boundaries from the trainer; command lifetime includes interpreter startup and teardown",
@@ -190,6 +215,7 @@ def render(directory: Path) -> None:
             vmax=100,
             cmap="YlGnBu",
             shading="flat",
+            rasterized=True,
         )
         axes[3].set_yticks(np.arange(len(cores)) + 0.5, cores, fontsize=7)
     axes[3].set_ylabel("Logical CPUs\n0–100% busy")
@@ -286,6 +312,7 @@ def render(directory: Path) -> None:
             [row["estimated_flops"] / row["duration_ns"] / 1000 for row in updates],
             label="Estimated matmul training TFLOP/s",
             s=8,
+            rasterized=True,
         )
         tokens_axis = axes[10].twinx()
         tokens_axis.scatter(
@@ -295,6 +322,7 @@ def render(directory: Path) -> None:
             alpha=0.5,
             label="Non-padding targets/s (step)",
             s=7,
+            rasterized=True,
         )
         tokens_axis.set_ylabel("Targets/s")
         tokens_axis.legend(loc="upper right", fontsize=7)

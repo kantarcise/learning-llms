@@ -212,6 +212,10 @@ The step-100 recent-training loss differs from the 100-step check because that c
 
 Linux follow-up: [issue #14](https://github.com/kantarcise/learning-llms/issues/14) tracks checkpoint support, resource checks, and a bounded two-hour experiment. Book reading can proceed now.
 
+## Completed longer run
+
+The 10M-token experiment completed 500,000 updates. Validation was best at update 89,000 (4.0308) and worsened to 4.3837 by the final update while training loss kept falling. See the [complete loss curves, power/activity graphs and retained-checkpoint verification](results/long-10m-run/README.md).
+
 ## Checks
 
 For continuous GPU/CPU telemetry, phase-aligned graphs, idle/cooldown capture and an optional one-step kernel trace, see [Observe a training run](MONITORING.md). The wrapper saves raw samples and a portable report using the existing experiment dependencies.

@@ -1,0 +1,16 @@
+{
+  "source_commit_before_results": "27308d8",
+  "raw_event_log": "experiments/cosmopedia/artifacts/long-10m-20261114/training-observation/events.jsonl",
+  "raw_events_sha256": "44a3aa620122ecb665cc66b854e5b790712f98ea5246dcba36fa9aff63d5ca36",
+  "raw_samples_sha256": "bbe3dc55b89af7a3bafb15d7dc417c57d3432a7a54a764a8a663b7266b8f24d5",
+  "full_event_log_kept_ignored": true,
+  "best_weights_not_committed": true,
+  "latest_checkpoint_step": 500000,
+  "best_checkpoint_step": 89000,
+  "notes": [
+    "Original training reports were copied unchanged.",
+    "Renderer was stopped after training had completed and raw recording/cooldown had ended. It was rerun with batched phase artists and dense SVG rasterization.",
+    "Chart rolling means are for display only; peaks and energy use original samples.",
+    "Phase durations use host markers, not isolated GPU kernel time."
+  ]
+}
