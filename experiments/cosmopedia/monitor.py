@@ -278,6 +278,10 @@ def main() -> None:
         parser.error(
             "Provide a command, interval >= 0.1s, and nonnegative pre/post durations"
         )
+    if not all(Path(name).is_file() for name in ("/proc/stat", "/proc/meminfo")):
+        parser.error(
+            "Hardware monitoring requires Linux with /proc/stat and /proc/meminfo"
+        )
     if args.output.exists():
         parser.error("Choose a fresh output directory")
     args.output.mkdir(parents=True)
