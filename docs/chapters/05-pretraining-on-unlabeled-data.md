@@ -244,9 +244,162 @@ For example, `scores[3]` contains exactly the logits from `logits[1, 0]`, and `l
 
     Exponentiation preserves order, so a lower mean cross-entropy always gives a lower perplexity on the same evaluation tokens. Section 5.1.3 takes that measurement beyond our six predictions to the training and validation sets.
 
+### 5.1.3 Calculating the training and validation set losses
+
+We already know how to score six next-token predictions. Now we want two measurements from the same model. **Training loss** asks how well it predicts the text used to fit its weights. **Validation loss** asks how well those same weights predict held-out text. Both use the same cross-entropy calculation. The choice of text gives each number its meaning.
+
+<figure markdown="1">
+
+[![Chapter roadmap with generation and evaluation complete and training and validation losses highlighted as step three.](../assets/chapter-05/dataset-loss-roadmap.svg)](../assets/chapter-05/dataset-loss-roadmap.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.8. Step 3 takes the loss we worked out for one batch and applies it separately to each split. The training loop comes in step 4.</figcaption>
+</figure>
+
+Think back to our Character Logs checkpoint. Its epoch 8 validation loss was 1.9086. Exponentiating gives a perplexity of about **6.74**. That means its predictions on the held-out characters scored like uniform guessing among roughly seven choices containing the correct character. By epoch 30, validation loss reached 2.4473, or **11.56** effective choices. The optimizer used cross-entropy during training. Perplexity lets us read that same outcome on a different scale. [Character Logs comparison](../preparation/training-comparison.md#reading-the-curves-together)
+
+#### Count the story before splitting it
+
+We return to Edith Wharton’s public-domain short story *The Verdict* from Chapter 2. Download the author’s copy as `the-verdict.txt` in the directory where you run this snippet. The count depends on the exact text and tokenizer. [Story file](https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/ch02/01_main-chapter-code/the-verdict.txt)
+
+```python
+from pathlib import Path
+import tiktoken
+
+text_data = Path("the-verdict.txt").read_text(encoding="utf-8")
+tokenizer = tiktoken.get_encoding("gpt2")
+print(len(text_data))                    # 20,479 characters
+print(len(tokenizer.encode(text_data)))  # 5,145 tokens
+```
+
+One story keeps the training loop practical to run on a laptop. Later in this chapter we will load pretrained GPT-2 weights into our model implementation. For a larger corpus, Appendix D and the author’s supplement describe preparing Project Gutenberg books. [Project Gutenberg training supplement](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch05/03_bonus_pretraining_on_gutenberg)
+
+!!! note "What does a pretraining run cost?"
+
+    The book’s Llama 2 7B example processed **2 trillion tokens** using **184,320 A100 GPU-hours**. At its historical assumption of $30 per hour for an eight-GPU server, the arithmetic is `184,320 ÷ 8 × $30 = $691,200`. Dividing by eight converts GPU-hours to server-hours. [Llama 2 report](https://arxiv.org/abs/2307.09288)
+
+    A later open-weight example is **DeepSeek-V3** (December 2024). Its team reports **14.8 trillion tokens** and **2,664,000 H800 GPU-hours** for pretraining. They used their HAI-LLM framework with FP8 mixed precision and distributed the mixture-of-experts model across a cluster of 2,048 GPUs. Their assumed rate was already per GPU-hour, so the estimate is `2,664,000 × $2 = $5,328,000` for pretraining alone. This excludes later training stages and earlier research experiments. The models, hardware and accounting assumptions differ, so the two estimates show scale rather than relative efficiency. [DeepSeek-V3 technical report, Table 1 and §3](https://arxiv.org/abs/2412.19437)
+
+#### Split the story, then build two loaders
+
+<figure markdown="1">
+
+[![The story splits into training and validation text. Each side becomes input windows paired with next-token targets, then batches of two.](../assets/chapter-05/story-to-batches.svg)](../assets/chapter-05/story-to-batches.svg)
+
+<figcaption markdown="span">Companion to Figure 5.9. Follow one training window through the middle panel. The letters stand for consecutive token IDs. The validation loader applies the same shift to its own portion of the story.</figcaption>
+</figure>
+
+Split the **original string** at 90% of its characters. Then tokenize each piece separately. The training loader can shuffle whole examples safely because every target stays paired with its input. Validation keeps the windows in story order. Here we reuse the [Chapter 2 dataset class](02-working-with-text-data.md#26-data-sampling-with-a-sliding-window) directly with PyTorch’s loader, the two components inside the book’s helper.
+
+```python
+from torch.utils.data import DataLoader
+
+cut = int(0.9 * len(text_data))
+width = cfg["context_length"]  # 256 positions in our Chapter 5 model
+train_set = GPTDatasetV1(text_data[:cut], tokenizer, max_length=width, stride=width)
+val_set = GPTDatasetV1(text_data[cut:], tokenizer, max_length=width, stride=width)
+
+torch.manual_seed(123)
+train_loader = DataLoader(train_set, batch_size=2, shuffle=True, drop_last=True)
+val_loader = DataLoader(val_set, batch_size=2, shuffle=False, drop_last=False)
+
+for name, loader in [("training", train_loader), ("validation", val_loader)]:
+    print(name, len(loader), "batches")
+    for inputs, targets in loader:
+        assert inputs.shape == targets.shape == (2, 256)  # True for this story.
+        assert torch.equal(inputs[:, 1:], targets[:, :-1])
+```
+
+The training loader yields **9 batches**, each with 2 windows × 256 positions, so we score **4,608 next tokens**. The validation loader yields **1 batch** with **512 next tokens**. These counts reflect the complete windows available in each split.
+
+!!! tip "Why keep windows the same length?"
+
+    Equal lengths let PyTorch stack windows into a single rectangular tensor. A causal model already sees short prefixes within each window. Training on examples of varying lengths can also expose it to the length patterns it will encounter in use. To batch unequal lengths, one option is to pad each batch and exclude padded targets from the loss.
+
+#### Measure a batch, then average across a loader
+
+```python title="Listing 5.2 companion — batch and loader loss"
+from itertools import islice
+
+
+def calc_loss_batch(
+    inputs: torch.Tensor, targets: torch.Tensor, model: nn.Module, device: torch.device
+) -> torch.Tensor:
+    """Return scalar mean loss for integer IDs [batch, positions]."""
+    logits = model(inputs.to(device))  # One vocabulary score row per position.
+    return torch.nn.functional.cross_entropy(
+        logits.flatten(0, 1), targets.to(device).flatten()
+    )
+
+
+def calc_loss_loader(
+    loader: DataLoader, model: nn.Module, device: torch.device,
+    num_batches: int | None = None,
+) -> float:
+    """Average the scalar batch losses over all batches or a positive limit."""
+    if num_batches is not None and num_batches < 1:
+        raise ValueError("num_batches must be positive")
+    count = len(loader) if num_batches is None else min(num_batches, len(loader))
+    if count == 0:
+        return float("nan")  # An empty loader has no measured loss.
+
+    total = 0.0
+    for inputs, targets in islice(loader, count):
+        total += calc_loss_batch(inputs, targets, model, device).item()
+    return total / count
+```
+
+Each batch here contributes 512 targets, so averaging the nine training batch means gives each scored token equal weight. With unequal-sized batches, a token-level mean needs to weight each batch by its number of scored targets. Setting `num_batches=2` gives a quicker estimate from the first two available batches.
+
+```python
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+model.eval()  # Disable dropout so both splits measure the same fixed model.
+with torch.no_grad():  # Evaluation only needs forward passes.
+    train_loss = calc_loss_loader(train_loader, model, device)
+    val_loss = calc_loss_loader(val_loader, model, device)
+print(f"Training {train_loss:.4f} | Validation {val_loss:.4f}")
+```
+
+The seeded, untrained GPT gives **10.9876 training loss** and **10.9811 validation loss**. For scale, a uniform guess among 50,257 tokens has loss about 10.825. We now have a baseline to measure against when the optimizer starts updating weights.
+
+<figure markdown="1">
+
+[![The seven-step chapter roadmap marks generation, evaluation and dataset losses complete. Training the model is next.](../assets/chapter-05/training-loop-roadmap.svg)](../assets/chapter-05/training-loop-roadmap.svg)
+
+<figcaption markdown="span">Companion to Figure 5.10. Step 3 measured the starting weights on both splits. In step 4, training batches supply gradients and held-out batches let us track how those updates affect validation loss.</figcaption>
+</figure>
+
 ## 5.2 Training an LLM
 
-Notes to come as we read this section.
+Section 5.1.3 gave us nine training batches from *The Verdict*. What changes when we train the GPT model from Chapter 4? Take the first batch. The model scores 512 next-token targets, and cross-entropy averages those predictions into one loss. Calling `loss.backward()` computes how that loss changes with each trainable parameter. Then `optimizer.step()` uses the gradients to update the weights. The second batch sees those updated weights. With this loader, **one epoch means nine optimizer steps**.
+
+<figure markdown="1">
+
+[![One epoch contains nine batches. Each batch clears gradients, computes a loss, backpropagates and updates weights. Loss checks happen periodically and a text sample follows each epoch.](../assets/chapter-05/one-training-update.svg)](../assets/chapter-05/one-training-update.svg)
+
+<figcaption markdown="span">Original companion to Raschka’s Figure 5.11 (p. 146). Steps 3–6 repeat for every training batch. Steps 7 and 8 let us inspect what the updates accomplished. Validation measures the current weights without updating them.</figcaption>
+</figure>
+
+### What counts as one training example?
+
+Suppose we have **1,000 sentences**. How many updates make one epoch? We need to tokenize the sentences, decide how to cut the token stream into windows, and decide how many windows to put in a batch. A single window can span a sentence boundary.
+
+1. **Start with tokens.** For a small example, suppose tokenization gives us nine tokens in order. Call them `A B C D E F G H I`. Each letter stands for one token.
+2. **Build windows.** Choose a window length of four and a stride of four. Each row below is one training example. At `D`, the model predicts which token follows `A B C D`. The target is `E` because that is what actually follows in the source text. That same `E` starts the next input window.
+
+    | Example | Input tokens | Next-token targets |
+    | --- | --- | --- |
+    | 1 | A B C D | B C D E |
+    | 2 | E F G H | F G H I |
+
+3. **Batch the rows.** With batch size two, the loader returns both rows together. Cross-entropy averages eight next-token losses, and the optimizer updates the model once. Those nine source tokens supplied **two windows, one batch, one update**.
+4. **Scale up the same arithmetic.** Suppose we start with **256,001 tokens**, use 256-token windows and a stride of 256, and keep only full windows. We get exactly **1,000 training examples**. The extra token supplies the final target. At 100 windows per batch, each step scores 25,600 targets and one epoch takes ten steps.
+
+**One DeepSeek-V3 update.** First picture one row containing **4,096 token positions**. During the main pretraining run, the global batch grew from 3,072 rows to **15,360 rows**. At that later setting, the devices together processed **15,360 × 4,096 = 62,914,560 token positions** per optimizer update. “Global” counts the rows across the whole training cluster. The **8** in our toy batch and the **62,914,560** in DeepSeek’s larger batch count the same thing: token positions processed for one optimizer step. DeepSeek reports progress in tokens processed, which captures the fivefold increase in tokens per step as the batch grew. [DeepSeek-V3 Technical Report, §4.2](https://arxiv.org/html/2412.19437v2#S4.SS2)
+
+!!! tip "Where Appendix D fits"
+
+    **Learning-rate warmup** starts the optimizer with a small learning rate and raises it during the opening steps. **Cosine annealing** then lowers the rate along a smooth curve toward a chosen minimum. **Gradient clipping** fits between steps 5 and 6. If the combined gradient norm exceeds a threshold, clipping scales the gradients down before the optimizer uses them. You can follow Listing 5.3 first and return to Appendix D to see where each change belongs. [Author’s Appendix D notebook](https://github.com/rasbt/LLMs-from-scratch/tree/main/appendix-D)
 
 ## 5.3 Decoding strategies to control randomness
 
