@@ -95,6 +95,9 @@ class MonitorTests(unittest.TestCase):
             with self.assertRaises(json.JSONDecodeError):
                 read_jsonl(path)
 
+    @unittest.skipUnless(
+        Path("/proc/stat").is_file(), "requires Linux procfs telemetry"
+    )
     def test_failed_command_preserves_report_and_exit_code(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "monitor"
