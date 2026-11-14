@@ -56,6 +56,24 @@ Raw documents, tokenizer files, token tensors, and checkpoints stay in ignored `
 
 ## Train
 
+### Linux RTX 3090 environment
+
+For [issue #51](https://github.com/kantarcise/learning-llms/issues/51), Linux x86-64 uses the official **PyTorch 2.14.1 CUDA 12.6 build** through the explicit `pytorch-cu126` uv index. Install the locked environment with:
+
+```bash
+uv sync --locked --group experiments --group cosmopedia
+```
+
+The previous lock selected PyTorch's CUDA 13 dependencies from PyPI; CUDA 13 was not an experiment requirement. The local RTX 3090 host has NVIDIA driver 560.35.03, which supports CUDA 12. CUDA 13 requires driver 580 or newer. Selecting the CUDA 12.6 build keeps the same PyTorch release and works with the installed driver. See [PyTorch's published builds](https://pytorch.org/get-started/previous-versions/) and [NVIDIA's driver compatibility table](https://docs.nvidia.com/deploy/cuda-compatibility/latest/595/minor-version-compatibility.html).
+
+The CUDA version shown by `nvidia-smi` describes driver support; `torch.version.cuda` identifies the runtime used to build PyTorch. Installing this wheel supplies its runtime libraries in the Python environment. It does not upgrade the system driver. macOS continues to resolve PyTorch from PyPI and use MPS when available.
+
+The November 14 Linux [preflight record](results/rtx3090-preflight.json) captures the starting commit, hardware/software inventory, a successful CUDA tensor operation, and one synthetic update of the full 15.8M-parameter model. The synthetic check used random token IDs; it is not a Cosmopedia baseline.
+
+The sample was then regenerated on Linux using the pinned revisions above. Its manifest matches the original byte for byte, including the ordered document hashes: 1,393 training documents and 89 validation documents. Verification recomputed every text hash, checked split assignment and deduplication, and retokenized every selected document to reconstruct and compare all saved input/target tensors. The five prepared files total **29,481,912 bytes**, matching the original file sizes. The [data verification record](results/rtx3090-data-verification.json) includes file SHA256 fingerprints for later transfers and the 32 fixed validation-window indices selected by the existing training script with seed 7. Original tensor-file hashes were not recorded, so the new fingerprints identify this regenerated copy.
+
+### Training commands
+
 A short check (already completed by the assistant):
 
 ```bash
@@ -95,6 +113,24 @@ The loop took approximately 12.8 seconds, including periodic validation and chec
 Generation began `Once upon a time, and the the the ...` and kept repeating. Loss decreased, but this short run does not demonstrate fluent language. It processed only about 86,000 training targets, sampled with replacement, from the million-token sample. The next run tests whether longer training helps; it is not promised to become conversational.
 
 The full unmodified samples and measurements are in [run.json](results/smoke-100steps/run.json). Data provenance is in [data-manifest.json](results/smoke-100steps/data-manifest.json). Model weights are not committed. A tokenizer provides reusable text segmentation; it does not transfer the pretrained model's language ability.
+
+## RTX 3090 baseline: 100 updates
+
+On November 14, the assistant ran the same 100-update workload on the Linux RTX 3090 using PyTorch 2.14.1+cu126. Seed 7, batch size 4, context 256, learning rate 0.0003, the data-manifest hash, and all 32 validation indices match the original MPS check. The run processed the same **85,926 non-padding training targets**, sampled with replacement.
+
+| Step | Recent training loss | Validation loss |
+| --- | ---: | ---: |
+| 0 | — | 10.8452 |
+| 25 | 9.8804 | 9.0234 |
+| 50 | 8.3737 | 8.0052 |
+| 75 | 7.7016 | 7.7780 |
+| 100 | 7.6274 | 7.6613 |
+
+The synchronized training loop took **9.82 seconds**, or approximately **8,750 non-padding target tokens/second**, including periodic validation and checkpoint saving. Download, setup, initial evaluation and generated samples are outside that timer. Peak PyTorch allocated GPU memory was **840.1 MiB**, with **902 MiB** reserved, across setup, training, evaluation and generation. These allocator measurements exclude other processes and non-allocator GPU memory; the desktop shared the GPU during the run.
+
+The best checkpoint was step 100. The fixed-prompt continuation again began `Once upon a time, and the the the ...`; lower loss still does not demonstrate fluent generation. CUDA and MPS losses were close and the generated strings matched in this check. This is one short configuration-specific observation, not a general hardware ranking or a steady-state training benchmark.
+
+The unchanged [CUDA run report](results/rtx3090-100steps/run.json) preserves full samples, losses, timing and memory measurements. The [provenance record](results/rtx3090-100steps/provenance.json) records the command, base commit and source/lockfile hashes. The inference-only checkpoint remains under ignored `artifacts/rtx3090-100steps-20261114/`. Before a longer run, [issue #14](https://github.com/kantarcise/learning-llms/issues/14) still requires resumable checkpoints and an interrupted-versus-uninterrupted check.
 
 ## How much data did we actually use? 📦
 

@@ -127,6 +127,8 @@ def main() -> None:
             else "cpu"
         )
     device = torch.device(device_name)
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     torch.manual_seed(args.seed)
     torch.set_num_threads(4)
     manifest_bytes = (args.data / "manifest.json").read_bytes()
@@ -258,6 +260,14 @@ def main() -> None:
         "loss_note": "Training is recent sampled batches at changing weights; validation is fixed windows at current weights. Not directly identical measurement procedures.",
         "checkpoint_note": "best.pt is an inference-only state_dict; architecture and tokenizer provenance in report/data manifest. No optimizer state for resuming.",
     }
+    if device.type == "cuda":
+        report["cuda"] = {
+            "device_name": torch.cuda.get_device_name(device),
+            "build_version": torch.version.cuda,
+            "peak_allocated_bytes": torch.cuda.max_memory_allocated(device),
+            "peak_reserved_bytes": torch.cuda.max_memory_reserved(device),
+            "memory_scope": "PyTorch allocator across setup, training, evaluation and generation; excludes other processes and non-allocator GPU memory.",
+        }
     (args.output / "run.json").write_text(json.dumps(report, indent=2) + "\n")
     print(
         f"Before training:\n{before}\nBest checkpoint (step {best_step}):\n{after}",

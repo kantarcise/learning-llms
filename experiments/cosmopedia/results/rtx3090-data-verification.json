@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-14",
+  "issue": "https://github.com/kantarcise/learning-llms/issues/51",
+  "reference_manifest": "results/smoke-100steps/data-manifest.json",
+  "manifest_matches_reference_byte_for_byte": true,
+  "document_hashes_match_reference_in_order": true,
+  "document_hashes_recomputed_and_unique": true,
+  "splits_disjoint_and_hash_assignments_verified": true,
+  "all_saved_tensors_match_retokenized_document_windows": true,
+  "file_sizes_match_original_measurement": true,
+  "torch": "2.14.1+cu126",
+  "splits": {
+    "train": {
+      "documents": 1393,
+      "tokens_including_eos": 1000000,
+      "source_text_utf8_bytes": 5234080,
+      "tensor_shape": [
+        4587,
+        256
+      ],
+      "dtype": "torch.int64",
+      "non_padding_targets": 998607
+    },
+    "validation": {
+      "documents": 89,
+      "tokens_including_eos": 65536,
+      "source_text_utf8_bytes": 347717,
+      "tensor_shape": [
+        300,
+        256
+      ],
+      "dtype": "torch.int64",
+      "non_padding_targets": 65447
+    }
+  },
+  "prepared_files": {
+    "documents.jsonl": {
+      "bytes": 5828130,
+      "sha256": "a5a43b5519d7ef34d15e21c054657f05147ef3006cad8ad0616c19f7b61f4162"
+    },
+    "manifest.json": {
+      "bytes": 110308,
+      "sha256": "d954a1ab455c4a3219430ad6436aebb327ae1f3382d09d7f842b567fa7dbaaa4"
+    },
+    "tokenizer.json": {
+      "bytes": 3522656,
+      "sha256": "7d27c493c729a66ecefc837280b05d948b1ed50d130eebdbf911b1b36cf38ed7"
+    },
+    "train.pt": {
+      "bytes": 18790101,
+      "sha256": "d6cbf5bc0dce9d622f9b1cd2515b7625ab034910ff7b442e5a6b4f7b7b9cce2c"
+    },
+    "validation.pt": {
+      "bytes": 1230717,
+      "sha256": "7f777545ae6f215ce2746628428dff17ea39282cd5479f18199f0b196d73d058"
+    }
+  },
+  "prepared_total_bytes": 29481912,
+  "fixed_validation": {
+    "training_seed": 7,
+    "selection_generator_seed": 8,
+    "windows": 32,
+    "indices": [
+      123,
+      201,
+      241,
+      60,
+      57,
+      116,
+      190,
+      126,
+      176,
+      82,
+      278,
+      80,
+      97,
+      173,
+      163,
+      259,
+      286,
+      99,
+      20,
+      242,
+      237,
+      200,
+      177,
+      230,
+      294,
+      164,
+      132,
+      272,
+      9,
+      280,
+      252,
+      27
+    ],
+    "non_padding_targets": 7220,
+    "note": "Uses the existing train.py selection procedure; original run did not record indices separately."
+  },
+  "notes": [
+    "File SHA256 values fingerprint this regenerated copy for later transfer; original tensor-file hashes were not recorded.",
+    "Prepared file size is not a measurement of network bytes transferred."
+  ]
+}
