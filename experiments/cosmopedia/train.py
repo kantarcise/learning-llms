@@ -15,6 +15,12 @@ import time
 from pathlib import Path
 
 import torch
+from checkpoint import (
+    load_checkpoint,
+    restore_checkpoint,
+    save_checkpoint,
+    write_checkpoint,
+)
 from model import Config, LanguageModel
 from tokenizers import Tokenizer
 from torch.nn import functional as F
@@ -100,7 +106,21 @@ def main() -> None:
         "--data", type=Path, default=Path(__file__).parent / "artifacts/data"
     )
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--steps", type=int, default=200)
+    parser.add_argument(
+        "--resume", type=Path, help="Resume a versioned latest.pt or best.pt"
+    )
+    parser.add_argument("--checkpoint-every", type=int, default=25)
+    parser.add_argument(
+        "--stop-after",
+        type=int,
+        help="Stop at this absolute update, preserving the planned evaluation schedule",
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=200,
+        help="Total target updates, including completed updates",
+    )
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--eval-every", type=int, default=25)
     parser.add_argument("--validation-windows", type=int, default=32)
@@ -111,10 +131,19 @@ def main() -> None:
     )
     args = parser.parse_args()
     if (
-        min(args.steps, args.batch_size, args.eval_every, args.validation_windows) < 1
+        min(
+            args.steps,
+            args.batch_size,
+            args.eval_every,
+            args.validation_windows,
+            args.checkpoint_every,
+        )
+        < 1
         or args.learning_rate <= 0
     ):
         parser.error("Step counts, batch sizes, and learning rate must be positive")
+    if args.stop_after is not None and not 0 < args.stop_after <= args.steps:
+        parser.error("--stop-after must be between 1 and --steps")
     if args.output.exists():
         parser.error("Choose a fresh output directory")
     device_name = args.device
@@ -154,35 +183,98 @@ def main() -> None:
         validation["inputs"][validation_indices],
         validation["targets"][validation_indices],
     )
+    # Hash actual artifacts, not only their descriptive manifest.
+    identity = {
+        "config": model.configuration(),
+        "data_sha256": {
+            name: hashlib.sha256((args.data / name).read_bytes()).hexdigest()
+            for name in ["manifest.json", "tokenizer.json", "train.pt", "validation.pt"]
+        },
+        "seed": args.seed,
+        "batch_size": args.batch_size,
+        "learning_rate": args.learning_rate,
+        "weight_decay": 0.01,
+        "gradient_clip_norm": 1.0,
+        "eval_every": args.eval_every,
+        "validation_indices": validation_indices.tolist(),
+        "device_type": device.type,
+        "torch_version": str(torch.__version__),
+    }
+    prompt = "Once upon a time"
+    checkpoint = load_checkpoint(args.resume, identity) if args.resume else None
+    if checkpoint is not None:
+        progress = checkpoint["progress"]
+        start_step = progress["step"]
+        if args.steps <= start_step or (
+            args.stop_after is not None and args.stop_after <= start_step
+        ):
+            parser.error(
+                "The requested stopping update must exceed the checkpoint update"
+            )
+        restore_checkpoint(checkpoint, model, optimizer, sampling, device)
+        history = progress["history"]
+        before = progress["before"]
+        best_loss, best_step = progress["best_loss"], progress["best_step"]
+        best_snapshot = progress.get("best_checkpoint", checkpoint)
+        best_model = best_snapshot["model"]
+        processed = progress["processed"]
+        interval_loss = progress["interval_loss"]
+        interval_tokens = progress["interval_tokens"]
+    else:
+        start_step = 0
+        before = generate(model, tokenizer, prompt, 40, manifest["eos_id"], device)
+        initial_loss = evaluate(model, vx, vy, args.batch_size, device)
+        if not math.isfinite(initial_loss):
+            raise RuntimeError("Non-finite initial validation loss")
+        best_loss, best_step = initial_loss, 0
+        best_model = {
+            key: value.detach().cpu().clone()
+            for key, value in model.state_dict().items()
+        }
+        history: list[dict[str, int | float | None]] = [
+            {"step": 0, "train_batch_loss": None, "validation_loss": initial_loss}
+        ]
+        processed = 0
+        interval_loss = 0.0
+        interval_tokens = 0
     args.output.mkdir(parents=True)
     parameter_count = sum(p.numel() for p in model.parameters())
     print(
-        f"Device: {device}; parameters: {parameter_count:,}; vocabulary: {config.vocabulary_size:,}",
+        f"Device: {device}; parameters: {parameter_count:,}; start update: {start_step}",
         flush=True,
     )
     print(
-        f"Architecture: {config.layers} blocks, width {config.width}, {config.heads} heads, context {config.context_length}",
+        f"Validation loss at last evaluation: {history[-1]['validation_loss']:.4f}",
         flush=True,
     )
-    print(
-        f"Training windows: {len(training['inputs'])}; fixed validation windows: {len(vx)}",
-        flush=True,
-    )
-    prompt = "Once upon a time"
-    before = generate(model, tokenizer, prompt, 40, manifest["eos_id"], device)
-    initial_loss = evaluate(model, vx, vy, args.batch_size, device)
-    print(f"Step 0: validation={initial_loss:.4f}", flush=True)
-    best_loss, best_step = initial_loss, 0
-    torch.save(model.state_dict(), args.output / "best.pt")
-    history: list[dict[str, int | float | None]] = [
-        {"step": 0, "train_batch_loss": None, "validation_loss": initial_loss}
-    ]
-    processed = 0
-    interval_loss = 0.0
-    interval_tokens = 0
+
+    def save(path: Path, step: int, include_best: bool = False) -> None:
+        """Snapshot a completed update, including an unfinished reporting interval."""
+        state = {
+            "step": step,
+            "history": history,
+            "before": before,
+            "best_loss": best_loss,
+            "best_step": best_step,
+            "processed": processed,
+            "interval_loss": interval_loss,
+            "interval_tokens": interval_tokens,
+        }
+        if include_best:
+            state["best_checkpoint"] = best_snapshot
+        save_checkpoint(path, model, optimizer, sampling, device, identity, state)
+
+    # Each new output directory is self-contained, including after resuming.
+    if checkpoint is None:
+        save(args.output / "best.pt", 0)
+        best_snapshot = load_checkpoint(args.output / "best.pt", identity)
+    else:
+        write_checkpoint(args.output / "best.pt", best_snapshot)
+    segment_start_tokens = processed
+    stop_step = args.stop_after if args.stop_after is not None else args.steps
     synchronize(device)
     started = time.perf_counter()
-    for step in range(1, args.steps + 1):
+    for step in range(start_step + 1, stop_step + 1):
         model.train()
         selected = torch.randint(
             len(training["inputs"]), (args.batch_size,), generator=sampling
@@ -222,13 +314,23 @@ def main() -> None:
             )
             if validation_loss < best_loss:
                 best_loss, best_step = validation_loss, step
-                torch.save(model.state_dict(), args.output / "best.pt")
+                best_model = {
+                    key: value.detach().cpu().clone()
+                    for key, value in model.state_dict().items()
+                }
+                improved = True
+            else:
+                improved = False
             interval_loss, interval_tokens = 0.0, 0
+            if improved:
+                save(args.output / "best.pt", step)
+                best_snapshot = load_checkpoint(args.output / "best.pt", identity)
+        if step % args.checkpoint_every == 0 or step == stop_step:
+            save(args.output / "latest.pt", step, include_best=True)
     synchronize(device)
     elapsed = time.perf_counter() - started
-    model.load_state_dict(
-        torch.load(args.output / "best.pt", map_location=device, weights_only=True)
-    )
+    model.load_state_dict(best_model)
+    torch.save(best_model, args.output / "best-weights.pt")
     after = generate(model, tokenizer, prompt, 80, manifest["eos_id"], device)
     report = {
         "config": model.configuration(),
@@ -237,7 +339,10 @@ def main() -> None:
         "device": str(device),
         "torch_version": torch.__version__,
         "platform": platform.platform(),
-        "steps": args.steps,
+        "steps": stop_step,
+        "planned_steps": args.steps,
+        "segment_start_step": start_step,
+        "resumed_from": str(args.resume) if args.resume else None,
         "batch_size": args.batch_size,
         "learning_rate": args.learning_rate,
         "weight_decay": 0.01,
@@ -254,11 +359,14 @@ def main() -> None:
         "after": after,
         "generation": "Greedy; prompt Once upon a time; 40 new tokens before, 80 after; EOS can stop early",
         "training_target_tokens_seen": processed,
+        "segment_training_target_tokens": processed - segment_start_tokens,
         "loop_seconds_including_evaluation_and_saving": elapsed,
-        "training_targets_per_second_including_evaluation_and_saving": processed
+        "training_targets_per_second_including_evaluation_and_saving": (
+            processed - segment_start_tokens
+        )
         / elapsed,
         "loss_note": "Training is recent sampled batches at changing weights; validation is fixed windows at current weights. Not directly identical measurement procedures.",
-        "checkpoint_note": "best.pt is an inference-only state_dict; architecture and tokenizer provenance in report/data manifest. No optimizer state for resuming.",
+        "checkpoint_note": "latest.pt resumes the latest saved update; best.pt resumes the historical validation-best update. Both contain model/optimizer/RNG/progress/data identity. best-weights.pt contains inference-only historical best weights. Timing/throughput cover this invocation only; token totals and history are cumulative.",
     }
     if device.type == "cuda":
         report["cuda"] = {
@@ -274,10 +382,10 @@ def main() -> None:
         flush=True,
     )
     print(
-        f"Loop: {elapsed:.1f}s; {processed / elapsed:.0f} training target tokens/s including evaluation/saving",
+        f"Segment loop: {elapsed:.1f}s; {(processed - segment_start_tokens) / elapsed:.0f} training target tokens/s including evaluation/saving",
         flush=True,
     )
-    print(f"Saved report and inference-only checkpoint in {args.output}", flush=True)
+    print(f"Saved report and checkpoints in {args.output}", flush=True)
 
 
 if __name__ == "__main__":
