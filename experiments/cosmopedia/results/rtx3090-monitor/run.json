@@ -1,0 +1,109 @@
+{
+  "config": {
+    "vocabulary_size": 49152,
+    "context_length": 256,
+    "width": 256,
+    "heads": 4,
+    "layers": 4,
+    "hidden_width": 1024
+  },
+  "parameter_count": 15803904,
+  "seed": 7,
+  "device": "cuda",
+  "torch_version": "2.14.1+cu126",
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "steps": 100,
+  "planned_steps": 100,
+  "segment_start_step": 0,
+  "resumed_from": null,
+  "batch_size": 4,
+  "learning_rate": 0.0003,
+  "weight_decay": 0.01,
+  "gradient_clip_norm": 1.0,
+  "data_manifest_sha256": "d954a1ab455c4a3219430ad6436aebb327ae1f3382d09d7f842b567fa7dbaaa4",
+  "dataset_revision": "3ba9d605774198c5868892d7a8deda78031a781f",
+  "tokenizer_revision": "1d461723eec654e65efdc40cf49301c89c0c92f4",
+  "data_token_counts": {
+    "train": 1000000,
+    "validation": 65536
+  },
+  "validation_indices": [
+    123,
+    201,
+    241,
+    60,
+    57,
+    116,
+    190,
+    126,
+    176,
+    82,
+    278,
+    80,
+    97,
+    173,
+    163,
+    259,
+    286,
+    99,
+    20,
+    242,
+    237,
+    200,
+    177,
+    230,
+    294,
+    164,
+    132,
+    272,
+    9,
+    280,
+    252,
+    27
+  ],
+  "validation_targets": 7220,
+  "history": [
+    {
+      "step": 0,
+      "train_batch_loss": null,
+      "validation_loss": 10.84516066144378
+    },
+    {
+      "step": 25,
+      "train_batch_loss": 9.880360966177859,
+      "validation_loss": 9.023363421168023
+    },
+    {
+      "step": 50,
+      "train_batch_loss": 8.373679223271782,
+      "validation_loss": 8.005213910324752
+    },
+    {
+      "step": 75,
+      "train_batch_loss": 7.701642832918973,
+      "validation_loss": 7.777956323148141
+    },
+    {
+      "step": 100,
+      "train_batch_loss": 7.627374149052086,
+      "validation_loss": 7.661252901956976
+    }
+  ],
+  "best_step": 100,
+  "before": "Once upon a time critically critically culmin culmin culmin culminvesvesves judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judges judgesorgeorgeorgeorgeorgeorgeorge",
+  "after": "Once upon a time, and the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the",
+  "generation": "Greedy; prompt Once upon a time; 40 new tokens before, 80 after; EOS can stop early",
+  "training_target_tokens_seen": 85926,
+  "segment_training_target_tokens": 85926,
+  "loop_seconds_including_evaluation_and_saving": 42.03408265899998,
+  "training_targets_per_second_including_evaluation_and_saving": 2044.1982925396912,
+  "loss_note": "Training is recent sampled batches at changing weights; validation is fixed windows at current weights. Not directly identical measurement procedures.",
+  "checkpoint_note": "latest.pt resumes the latest saved update; best.pt resumes the historical validation-best update. Both contain model/optimizer/RNG/progress/data identity. best-weights.pt contains inference-only historical best weights. Timing/throughput cover this invocation only; token totals and history are cumulative.",
+  "cuda": {
+    "device_name": "NVIDIA GeForce RTX 3090",
+    "build_version": "12.6",
+    "peak_allocated_bytes": 880952320,
+    "peak_reserved_bytes": 945815552,
+    "memory_scope": "PyTorch allocator across setup, training, evaluation and generation; excludes other processes and non-allocator GPU memory."
+  }
+}

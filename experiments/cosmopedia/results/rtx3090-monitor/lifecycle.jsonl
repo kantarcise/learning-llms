@@ -1,0 +1,6 @@
+{"monotonic_ns": 2407140669133, "phase": "idle", "kind": "start"}
+{"monotonic_ns": 2417640661477, "phase": "idle", "kind": "end"}
+{"monotonic_ns": 2417640942237, "phase": "command", "kind": "start"}
+{"monotonic_ns": 2464409091563, "phase": "command", "kind": "end", "exit_code": 0}
+{"monotonic_ns": 2464409149550, "phase": "cooldown", "kind": "start"}
+{"monotonic_ns": 2494908923276, "phase": "cooldown", "kind": "end"}

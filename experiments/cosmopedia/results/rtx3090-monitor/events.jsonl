@@ -1,0 +1,251 @@
+{"monotonic_ns": 2418941513411, "phase": "setup", "kind": "start"}
+{"monotonic_ns": 2420545188615, "phase": "generation", "kind": "start", "step": 0}
+{"monotonic_ns": 2420764854500, "phase": "generation", "kind": "end", "status": "ok", "step": 0}
+{"monotonic_ns": 2420764921003, "phase": "validation", "kind": "start", "step": 0}
+{"monotonic_ns": 2420848237334, "phase": "validation", "kind": "end", "status": "ok", "step": 0}
+{"monotonic_ns": 2420848297064, "phase": "loss", "kind": "value", "step": 0, "validation_loss": 10.84516066144378}
+{"monotonic_ns": 2420903909568, "phase": "checkpoint", "kind": "start", "step": 0, "file": "best.pt"}
+{"monotonic_ns": 2421012186593, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 0, "file": "best.pt"}
+{"monotonic_ns": 2421012259077, "phase": "checkpoint_read", "kind": "start", "step": 0}
+{"monotonic_ns": 2421049100741, "phase": "checkpoint_read", "kind": "end", "status": "ok", "step": 0}
+{"monotonic_ns": 2421049155513, "phase": "setup", "kind": "end", "status": "ok", "parameter_count": 15803904}
+{"monotonic_ns": 2421049286354, "phase": "train_step", "kind": "start", "step": 1}
+{"monotonic_ns": 2421171693007, "phase": "train_step", "kind": "end", "step": 1, "status": "ok", "loss": 10.847724914550781, "non_padding_targets": 1024, "duration_ns": 122288074, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421171770751, "phase": "train_step", "kind": "start", "step": 2}
+{"monotonic_ns": 2421183972894, "phase": "train_step", "kind": "end", "step": 2, "status": "ok", "loss": 10.66990852355957, "non_padding_targets": 879, "duration_ns": 12157431, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421184023488, "phase": "train_step", "kind": "start", "step": 3}
+{"monotonic_ns": 2421195740493, "phase": "train_step", "kind": "end", "step": 3, "status": "ok", "loss": 10.536505699157715, "non_padding_targets": 966, "duration_ns": 11627479, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421195787780, "phase": "train_step", "kind": "start", "step": 4}
+{"monotonic_ns": 2421207718801, "phase": "train_step", "kind": "end", "step": 4, "status": "ok", "loss": 10.45681381225586, "non_padding_targets": 697, "duration_ns": 11900014, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421207753545, "phase": "train_step", "kind": "start", "step": 5}
+{"monotonic_ns": 2421219007995, "phase": "train_step", "kind": "end", "step": 5, "status": "ok", "loss": 10.365522384643555, "non_padding_targets": 875, "duration_ns": 11224715, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421219040455, "phase": "train_step", "kind": "start", "step": 6}
+{"monotonic_ns": 2421230529879, "phase": "train_step", "kind": "end", "step": 6, "status": "ok", "loss": 10.296859741210938, "non_padding_targets": 1009, "duration_ns": 11464889, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421230562429, "phase": "train_step", "kind": "start", "step": 7}
+{"monotonic_ns": 2421241893351, "phase": "train_step", "kind": "end", "step": 7, "status": "ok", "loss": 10.290249824523926, "non_padding_targets": 1002, "duration_ns": 11300825, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421241929067, "phase": "train_step", "kind": "start", "step": 8}
+{"monotonic_ns": 2421252992413, "phase": "train_step", "kind": "end", "step": 8, "status": "ok", "loss": 10.24594497680664, "non_padding_targets": 1024, "duration_ns": 11035224, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421253030624, "phase": "train_step", "kind": "start", "step": 9}
+{"monotonic_ns": 2421264473883, "phase": "train_step", "kind": "end", "step": 9, "status": "ok", "loss": 10.203453063964844, "non_padding_targets": 868, "duration_ns": 11418903, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421264506092, "phase": "train_step", "kind": "start", "step": 10}
+{"monotonic_ns": 2421275790016, "phase": "train_step", "kind": "end", "step": 10, "status": "ok", "loss": 10.104674339294434, "non_padding_targets": 1024, "duration_ns": 11261202, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421275821815, "phase": "train_step", "kind": "start", "step": 11}
+{"monotonic_ns": 2421286791488, "phase": "train_step", "kind": "end", "step": 11, "status": "ok", "loss": 9.96398639678955, "non_padding_targets": 907, "duration_ns": 10944827, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421286831923, "phase": "train_step", "kind": "start", "step": 12}
+{"monotonic_ns": 2421298311269, "phase": "train_step", "kind": "end", "step": 12, "status": "ok", "loss": 9.95977783203125, "non_padding_targets": 849, "duration_ns": 11449480, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421298342927, "phase": "train_step", "kind": "start", "step": 13}
+{"monotonic_ns": 2421309842340, "phase": "train_step", "kind": "end", "step": 13, "status": "ok", "loss": 9.9175386428833, "non_padding_targets": 611, "duration_ns": 11470630, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421309874820, "phase": "train_step", "kind": "start", "step": 14}
+{"monotonic_ns": 2421320513361, "phase": "train_step", "kind": "end", "step": 14, "status": "ok", "loss": 9.674101829528809, "non_padding_targets": 659, "duration_ns": 10612983, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421320543196, "phase": "train_step", "kind": "start", "step": 15}
+{"monotonic_ns": 2421331718470, "phase": "train_step", "kind": "end", "step": 15, "status": "ok", "loss": 9.719261169433594, "non_padding_targets": 898, "duration_ns": 11149716, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421331748896, "phase": "train_step", "kind": "start", "step": 16}
+{"monotonic_ns": 2421343205720, "phase": "train_step", "kind": "end", "step": 16, "status": "ok", "loss": 9.644639015197754, "non_padding_targets": 728, "duration_ns": 11431698, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421343236166, "phase": "train_step", "kind": "start", "step": 17}
+{"monotonic_ns": 2421353858537, "phase": "train_step", "kind": "end", "step": 17, "status": "ok", "loss": 9.624101638793945, "non_padding_targets": 750, "duration_ns": 10598637, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421353888543, "phase": "train_step", "kind": "start", "step": 18}
+{"monotonic_ns": 2421365215587, "phase": "train_step", "kind": "end", "step": 18, "status": "ok", "loss": 9.39422607421875, "non_padding_targets": 555, "duration_ns": 11301527, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421365246123, "phase": "train_step", "kind": "start", "step": 19}
+{"monotonic_ns": 2421376613552, "phase": "train_step", "kind": "end", "step": 19, "status": "ok", "loss": 9.431334495544434, "non_padding_targets": 712, "duration_ns": 11342783, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421376643487, "phase": "train_step", "kind": "start", "step": 20}
+{"monotonic_ns": 2421388027557, "phase": "train_step", "kind": "end", "step": 20, "status": "ok", "loss": 9.395767211914062, "non_padding_targets": 1024, "duration_ns": 11355877, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421388057632, "phase": "train_step", "kind": "start", "step": 21}
+{"monotonic_ns": 2421400009111, "phase": "train_step", "kind": "end", "step": 21, "status": "ok", "loss": 9.494897842407227, "non_padding_targets": 1024, "duration_ns": 11922415, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421400040749, "phase": "train_step", "kind": "start", "step": 22}
+{"monotonic_ns": 2421411588281, "phase": "train_step", "kind": "end", "step": 22, "status": "ok", "loss": 9.266484260559082, "non_padding_targets": 769, "duration_ns": 11518598, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421411620611, "phase": "train_step", "kind": "start", "step": 23}
+{"monotonic_ns": 2421422242080, "phase": "train_step", "kind": "end", "step": 23, "status": "ok", "loss": 9.223832130432129, "non_padding_targets": 793, "duration_ns": 10596964, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421422272837, "phase": "train_step", "kind": "start", "step": 24}
+{"monotonic_ns": 2421433400633, "phase": "train_step", "kind": "end", "step": 24, "status": "ok", "loss": 8.996786117553711, "non_padding_targets": 1024, "duration_ns": 11103921, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421433430728, "phase": "train_step", "kind": "start", "step": 25}
+{"monotonic_ns": 2421444901929, "phase": "train_step", "kind": "end", "step": 25, "status": "ok", "loss": 8.865341186523438, "non_padding_targets": 989, "duration_ns": 11429664, "estimated_flops": 99857989632}
+{"monotonic_ns": 2421444949126, "phase": "validation", "kind": "start", "step": 25}
+{"monotonic_ns": 2421471349150, "phase": "validation", "kind": "end", "status": "ok", "step": 25}
+{"monotonic_ns": 2421471381560, "phase": "loss", "kind": "value", "step": 25, "validation_loss": 9.023363421168023, "train_loss": 9.880360966177859}
+{"monotonic_ns": 2421531169129, "phase": "checkpoint", "kind": "start", "step": 25, "file": "best.pt"}
+{"monotonic_ns": 2422303885052, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 25, "file": "best.pt"}
+{"monotonic_ns": 2422303996197, "phase": "checkpoint_read", "kind": "start", "step": 25}
+{"monotonic_ns": 2422423533526, "phase": "checkpoint_read", "kind": "end", "status": "ok", "step": 25}
+{"monotonic_ns": 2422423631607, "phase": "checkpoint", "kind": "start", "step": 25, "file": "latest.pt"}
+{"monotonic_ns": 2422934584372, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 25, "file": "latest.pt"}
+{"monotonic_ns": 2422934635777, "phase": "train_step", "kind": "start", "step": 26}
+{"monotonic_ns": 2422946804366, "phase": "train_step", "kind": "end", "step": 26, "status": "ok", "loss": 9.167194366455078, "non_padding_targets": 1024, "duration_ns": 12105723, "estimated_flops": 99857989632}
+{"monotonic_ns": 2422946857164, "phase": "train_step", "kind": "start", "step": 27}
+{"monotonic_ns": 2422958277910, "phase": "train_step", "kind": "end", "step": 27, "status": "ok", "loss": 8.913872718811035, "non_padding_targets": 894, "duration_ns": 11364082, "estimated_flops": 99857989632}
+{"monotonic_ns": 2422958360302, "phase": "train_step", "kind": "start", "step": 28}
+{"monotonic_ns": 2422969502975, "phase": "train_step", "kind": "end", "step": 28, "status": "ok", "loss": 8.750137329101562, "non_padding_targets": 797, "duration_ns": 11096978, "estimated_flops": 99857989632}
+{"monotonic_ns": 2422969551705, "phase": "train_step", "kind": "start", "step": 29}
+{"monotonic_ns": 2422980836991, "phase": "train_step", "kind": "end", "step": 29, "status": "ok", "loss": 8.868194580078125, "non_padding_targets": 972, "duration_ns": 11221639, "estimated_flops": 99857989632}
+{"monotonic_ns": 2422980891602, "phase": "train_step", "kind": "start", "step": 30}
+{"monotonic_ns": 2422992269048, "phase": "train_step", "kind": "end", "step": 30, "status": "ok", "loss": 8.59017562866211, "non_padding_targets": 852, "duration_ns": 11312166, "estimated_flops": 99857989632}
+{"monotonic_ns": 2422992359525, "phase": "train_step", "kind": "start", "step": 31}
+{"monotonic_ns": 2423003521002, "phase": "train_step", "kind": "end", "step": 31, "status": "ok", "loss": 8.62860107421875, "non_padding_targets": 933, "duration_ns": 11114600, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423003568500, "phase": "train_step", "kind": "start", "step": 32}
+{"monotonic_ns": 2423015035412, "phase": "train_step", "kind": "end", "step": 32, "status": "ok", "loss": 8.53839111328125, "non_padding_targets": 662, "duration_ns": 11395560, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423015090443, "phase": "train_step", "kind": "start", "step": 33}
+{"monotonic_ns": 2423026954239, "phase": "train_step", "kind": "end", "step": 33, "status": "ok", "loss": 8.490588188171387, "non_padding_targets": 725, "duration_ns": 11803774, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423027016374, "phase": "train_step", "kind": "start", "step": 34}
+{"monotonic_ns": 2423038037040, "phase": "train_step", "kind": "end", "step": 34, "status": "ok", "loss": 8.6378812789917, "non_padding_targets": 1024, "duration_ns": 10961026, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423038088636, "phase": "train_step", "kind": "start", "step": 35}
+{"monotonic_ns": 2423050392265, "phase": "train_step", "kind": "end", "step": 35, "status": "ok", "loss": 8.414505958557129, "non_padding_targets": 815, "duration_ns": 12247255, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423050454610, "phase": "train_step", "kind": "start", "step": 36}
+{"monotonic_ns": 2423062227117, "phase": "train_step", "kind": "end", "step": 36, "status": "ok", "loss": 8.304484367370605, "non_padding_targets": 1024, "duration_ns": 11710843, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423062278812, "phase": "train_step", "kind": "start", "step": 37}
+{"monotonic_ns": 2423075438754, "phase": "train_step", "kind": "end", "step": 37, "status": "ok", "loss": 8.391290664672852, "non_padding_targets": 1024, "duration_ns": 13091806, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423075496391, "phase": "train_step", "kind": "start", "step": 38}
+{"monotonic_ns": 2423086509714, "phase": "train_step", "kind": "end", "step": 38, "status": "ok", "loss": 8.386062622070312, "non_padding_targets": 780, "duration_ns": 10980813, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423086547634, "phase": "train_step", "kind": "start", "step": 39}
+{"monotonic_ns": 2423097857766, "phase": "train_step", "kind": "end", "step": 39, "status": "ok", "loss": 8.429506301879883, "non_padding_targets": 1024, "duration_ns": 11277372, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423097896027, "phase": "train_step", "kind": "start", "step": 40}
+{"monotonic_ns": 2423109361566, "phase": "train_step", "kind": "end", "step": 40, "status": "ok", "loss": 8.181243896484375, "non_padding_targets": 902, "duration_ns": 11400789, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423109414854, "phase": "train_step", "kind": "start", "step": 41}
+{"monotonic_ns": 2423120459635, "phase": "train_step", "kind": "end", "step": 41, "status": "ok", "loss": 8.176179885864258, "non_padding_targets": 960, "duration_ns": 10994058, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423120507143, "phase": "train_step", "kind": "start", "step": 42}
+{"monotonic_ns": 2423132409049, "phase": "train_step", "kind": "end", "step": 42, "status": "ok", "loss": 8.221258163452148, "non_padding_targets": 674, "duration_ns": 11827809, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423132476945, "phase": "train_step", "kind": "start", "step": 43}
+{"monotonic_ns": 2423145086890, "phase": "train_step", "kind": "end", "step": 43, "status": "ok", "loss": 8.04505443572998, "non_padding_targets": 627, "duration_ns": 12532272, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423145155146, "phase": "train_step", "kind": "start", "step": 44}
+{"monotonic_ns": 2423157136749, "phase": "train_step", "kind": "end", "step": 44, "status": "ok", "loss": 7.853426933288574, "non_padding_targets": 899, "duration_ns": 11931050, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423157248426, "phase": "train_step", "kind": "start", "step": 45}
+{"monotonic_ns": 2423168808340, "phase": "train_step", "kind": "end", "step": 45, "status": "ok", "loss": 8.07252311706543, "non_padding_targets": 800, "duration_ns": 11584680, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423168846991, "phase": "train_step", "kind": "start", "step": 46}
+{"monotonic_ns": 2423180339961, "phase": "train_step", "kind": "end", "step": 46, "status": "ok", "loss": 8.25294303894043, "non_padding_targets": 1024, "duration_ns": 11434682, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423180390044, "phase": "train_step", "kind": "start", "step": 47}
+{"monotonic_ns": 2423191870370, "phase": "train_step", "kind": "end", "step": 47, "status": "ok", "loss": 8.008185386657715, "non_padding_targets": 864, "duration_ns": 11382816, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423191925973, "phase": "train_step", "kind": "start", "step": 48}
+{"monotonic_ns": 2423203277560, "phase": "train_step", "kind": "end", "step": 48, "status": "ok", "loss": 7.990533351898193, "non_padding_targets": 761, "duration_ns": 11305572, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423203327583, "phase": "train_step", "kind": "start", "step": 49}
+{"monotonic_ns": 2423214873570, "phase": "train_step", "kind": "end", "step": 49, "status": "ok", "loss": 7.8140869140625, "non_padding_targets": 672, "duration_ns": 11475467, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423214949580, "phase": "train_step", "kind": "start", "step": 50}
+{"monotonic_ns": 2423226819687, "phase": "train_step", "kind": "end", "step": 50, "status": "ok", "loss": 7.708937168121338, "non_padding_targets": 786, "duration_ns": 11807651, "estimated_flops": 99857989632}
+{"monotonic_ns": 2423226884086, "phase": "validation", "kind": "start", "step": 50}
+{"monotonic_ns": 2423253659690, "phase": "validation", "kind": "end", "status": "ok", "step": 50}
+{"monotonic_ns": 2423253717547, "phase": "loss", "kind": "value", "step": 50, "validation_loss": 8.005213910324752, "train_loss": 8.373679223271782}
+{"monotonic_ns": 2423308157800, "phase": "checkpoint", "kind": "start", "step": 50, "file": "best.pt"}
+{"monotonic_ns": 2424089042404, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 50, "file": "best.pt"}
+{"monotonic_ns": 2424089104970, "phase": "checkpoint_read", "kind": "start", "step": 50}
+{"monotonic_ns": 2424204984054, "phase": "checkpoint_read", "kind": "end", "status": "ok", "step": 50}
+{"monotonic_ns": 2424205099898, "phase": "checkpoint", "kind": "start", "step": 50, "file": "latest.pt"}
+{"monotonic_ns": 2433151030198, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 50, "file": "latest.pt"}
+{"monotonic_ns": 2433151088405, "phase": "train_step", "kind": "start", "step": 51}
+{"monotonic_ns": 2433163114522, "phase": "train_step", "kind": "end", "step": 51, "status": "ok", "loss": 7.644874572753906, "non_padding_targets": 941, "duration_ns": 11980963, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433163158583, "phase": "train_step", "kind": "start", "step": 52}
+{"monotonic_ns": 2433174665921, "phase": "train_step", "kind": "end", "step": 52, "status": "ok", "loss": 7.84190559387207, "non_padding_targets": 1018, "duration_ns": 11478625, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433174701787, "phase": "train_step", "kind": "start", "step": 53}
+{"monotonic_ns": 2433185648068, "phase": "train_step", "kind": "end", "step": 53, "status": "ok", "loss": 8.089742660522461, "non_padding_targets": 875, "duration_ns": 10917938, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433185681099, "phase": "train_step", "kind": "start", "step": 54}
+{"monotonic_ns": 2433197383377, "phase": "train_step", "kind": "end", "step": 54, "status": "ok", "loss": 7.83081579208374, "non_padding_targets": 1022, "duration_ns": 11665660, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433197420415, "phase": "train_step", "kind": "start", "step": 55}
+{"monotonic_ns": 2433209126469, "phase": "train_step", "kind": "end", "step": 55, "status": "ok", "loss": 7.818472862243652, "non_padding_targets": 836, "duration_ns": 11678473, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433209157837, "phase": "train_step", "kind": "start", "step": 56}
+{"monotonic_ns": 2433220106342, "phase": "train_step", "kind": "end", "step": 56, "status": "ok", "loss": 7.479663372039795, "non_padding_targets": 778, "duration_ns": 10924209, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433220136077, "phase": "train_step", "kind": "start", "step": 57}
+{"monotonic_ns": 2433232088366, "phase": "train_step", "kind": "end", "step": 57, "status": "ok", "loss": 7.8008012771606445, "non_padding_targets": 1016, "duration_ns": 11928686, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433232117890, "phase": "train_step", "kind": "start", "step": 58}
+{"monotonic_ns": 2433243663248, "phase": "train_step", "kind": "end", "step": 58, "status": "ok", "loss": 7.967647075653076, "non_padding_targets": 911, "duration_ns": 11520021, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433243693293, "phase": "train_step", "kind": "start", "step": 59}
+{"monotonic_ns": 2433254659530, "phase": "train_step", "kind": "end", "step": 59, "status": "ok", "loss": 7.810824394226074, "non_padding_targets": 954, "duration_ns": 10941651, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433254689015, "phase": "train_step", "kind": "start", "step": 60}
+{"monotonic_ns": 2433266463696, "phase": "train_step", "kind": "end", "step": 60, "status": "ok", "loss": 7.6808857917785645, "non_padding_targets": 625, "duration_ns": 11750817, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433266514790, "phase": "train_step", "kind": "start", "step": 61}
+{"monotonic_ns": 2433277954622, "phase": "train_step", "kind": "end", "step": 61, "status": "ok", "loss": 7.865150451660156, "non_padding_targets": 1024, "duration_ns": 11417401, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433277985690, "phase": "train_step", "kind": "start", "step": 62}
+{"monotonic_ns": 2433288906783, "phase": "train_step", "kind": "end", "step": 62, "status": "ok", "loss": 7.775745868682861, "non_padding_targets": 1024, "duration_ns": 10894394, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433288938803, "phase": "train_step", "kind": "start", "step": 63}
+{"monotonic_ns": 2433300659454, "phase": "train_step", "kind": "end", "step": 63, "status": "ok", "loss": 7.794328689575195, "non_padding_targets": 1024, "duration_ns": 11692729, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433300694008, "phase": "train_step", "kind": "start", "step": 64}
+{"monotonic_ns": 2433312109715, "phase": "train_step", "kind": "end", "step": 64, "status": "ok", "loss": 7.789470195770264, "non_padding_targets": 838, "duration_ns": 11340409, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433312171079, "phase": "train_step", "kind": "start", "step": 65}
+{"monotonic_ns": 2433323217343, "phase": "train_step", "kind": "end", "step": 65, "status": "ok", "loss": 8.16529655456543, "non_padding_targets": 1024, "duration_ns": 11007693, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433323261385, "phase": "train_step", "kind": "start", "step": 66}
+{"monotonic_ns": 2433334670350, "phase": "train_step", "kind": "end", "step": 66, "status": "ok", "loss": 7.4772562980651855, "non_padding_targets": 836, "duration_ns": 11309762, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433334731383, "phase": "train_step", "kind": "start", "step": 67}
+{"monotonic_ns": 2433346599687, "phase": "train_step", "kind": "end", "step": 67, "status": "ok", "loss": 7.824467658996582, "non_padding_targets": 1024, "duration_ns": 11840744, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433346631826, "phase": "train_step", "kind": "start", "step": 68}
+{"monotonic_ns": 2433357675196, "phase": "train_step", "kind": "end", "step": 68, "status": "ok", "loss": 7.487706661224365, "non_padding_targets": 889, "duration_ns": 11018012, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433357710241, "phase": "train_step", "kind": "start", "step": 69}
+{"monotonic_ns": 2433368840992, "phase": "train_step", "kind": "end", "step": 69, "status": "ok", "loss": 7.864468097686768, "non_padding_targets": 975, "duration_ns": 11107849, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433368870907, "phase": "train_step", "kind": "start", "step": 70}
+{"monotonic_ns": 2433379795106, "phase": "train_step", "kind": "end", "step": 70, "status": "ok", "loss": 7.407695293426514, "non_padding_targets": 825, "duration_ns": 10899003, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433379825783, "phase": "train_step", "kind": "start", "step": 71}
+{"monotonic_ns": 2433391397719, "phase": "train_step", "kind": "end", "step": 71, "status": "ok", "loss": 7.398121356964111, "non_padding_targets": 927, "duration_ns": 11542612, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433391430550, "phase": "train_step", "kind": "start", "step": 72}
+{"monotonic_ns": 2433402272387, "phase": "train_step", "kind": "end", "step": 72, "status": "ok", "loss": 7.262059688568115, "non_padding_targets": 659, "duration_ns": 10817983, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433402301942, "phase": "train_step", "kind": "start", "step": 73}
+{"monotonic_ns": 2433413508893, "phase": "train_step", "kind": "end", "step": 73, "status": "ok", "loss": 7.394517421722412, "non_padding_targets": 788, "duration_ns": 11182988, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433413539069, "phase": "train_step", "kind": "start", "step": 74}
+{"monotonic_ns": 2433424609639, "phase": "train_step", "kind": "end", "step": 74, "status": "ok", "loss": 7.559423446655273, "non_padding_targets": 1024, "duration_ns": 11046816, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433424650154, "phase": "train_step", "kind": "start", "step": 75}
+{"monotonic_ns": 2433435824485, "phase": "train_step", "kind": "end", "step": 75, "status": "ok", "loss": 7.1892900466918945, "non_padding_targets": 1000, "duration_ns": 11148193, "estimated_flops": 99857989632}
+{"monotonic_ns": 2433435862876, "phase": "validation", "kind": "start", "step": 75}
+{"monotonic_ns": 2433463780001, "phase": "validation", "kind": "end", "status": "ok", "step": 75}
+{"monotonic_ns": 2433463810677, "phase": "loss", "kind": "value", "step": 75, "validation_loss": 7.777956323148141, "train_loss": 7.701642832918973}
+{"monotonic_ns": 2433515141623, "phase": "checkpoint", "kind": "start", "step": 75, "file": "best.pt"}
+{"monotonic_ns": 2441222013034, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 75, "file": "best.pt"}
+{"monotonic_ns": 2441222091359, "phase": "checkpoint_read", "kind": "start", "step": 75}
+{"monotonic_ns": 2441335899738, "phase": "checkpoint_read", "kind": "end", "status": "ok", "step": 75}
+{"monotonic_ns": 2441335997889, "phase": "checkpoint", "kind": "start", "step": 75, "file": "latest.pt"}
+{"monotonic_ns": 2444129444035, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 75, "file": "latest.pt"}
+{"monotonic_ns": 2444129501962, "phase": "train_step", "kind": "start", "step": 76}
+{"monotonic_ns": 2444142154777, "phase": "train_step", "kind": "end", "step": 76, "status": "ok", "loss": 7.928525924682617, "non_padding_targets": 596, "duration_ns": 12604806, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444142200512, "phase": "train_step", "kind": "start", "step": 77}
+{"monotonic_ns": 2444153332047, "phase": "train_step", "kind": "end", "step": 77, "status": "ok", "loss": 7.597456932067871, "non_padding_targets": 932, "duration_ns": 11101489, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444153368514, "phase": "train_step", "kind": "start", "step": 78}
+{"monotonic_ns": 2444165438052, "phase": "train_step", "kind": "end", "step": 78, "status": "ok", "loss": 7.657794952392578, "non_padding_targets": 888, "duration_ns": 12027269, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444165480981, "phase": "train_step", "kind": "start", "step": 79}
+{"monotonic_ns": 2444177071153, "phase": "train_step", "kind": "end", "step": 79, "status": "ok", "loss": 7.9495849609375, "non_padding_targets": 845, "duration_ns": 11559235, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444177108813, "phase": "train_step", "kind": "start", "step": 80}
+{"monotonic_ns": 2444188015392, "phase": "train_step", "kind": "end", "step": 80, "status": "ok", "loss": 7.990288734436035, "non_padding_targets": 1024, "duration_ns": 10874400, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444188048583, "phase": "train_step", "kind": "start", "step": 81}
+{"monotonic_ns": 2444199876934, "phase": "train_step", "kind": "end", "step": 81, "status": "ok", "loss": 7.558351039886475, "non_padding_targets": 776, "duration_ns": 11781465, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444199920104, "phase": "train_step", "kind": "start", "step": 82}
+{"monotonic_ns": 2444211411483, "phase": "train_step", "kind": "end", "step": 82, "status": "ok", "loss": 7.622690677642822, "non_padding_targets": 846, "duration_ns": 11462275, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444211448181, "phase": "train_step", "kind": "start", "step": 83}
+{"monotonic_ns": 2444222299728, "phase": "train_step", "kind": "end", "step": 83, "status": "ok", "loss": 7.856541633605957, "non_padding_targets": 1003, "duration_ns": 10826030, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444222332308, "phase": "train_step", "kind": "start", "step": 84}
+{"monotonic_ns": 2444233989282, "phase": "train_step", "kind": "end", "step": 84, "status": "ok", "loss": 7.9842529296875, "non_padding_targets": 500, "duration_ns": 11584280, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444234051087, "phase": "train_step", "kind": "start", "step": 85}
+{"monotonic_ns": 2444246157722, "phase": "train_step", "kind": "end", "step": 85, "status": "ok", "loss": 7.622380256652832, "non_padding_targets": 832, "duration_ns": 12047496, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444246202575, "phase": "train_step", "kind": "start", "step": 86}
+{"monotonic_ns": 2444257730962, "phase": "train_step", "kind": "end", "step": 86, "status": "ok", "loss": 7.227285385131836, "non_padding_targets": 847, "duration_ns": 11458168, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444257786204, "phase": "train_step", "kind": "start", "step": 87}
+{"monotonic_ns": 2444269702648, "phase": "train_step", "kind": "end", "step": 87, "status": "ok", "loss": 7.524680137634277, "non_padding_targets": 635, "duration_ns": 11855521, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444269748483, "phase": "train_step", "kind": "start", "step": 88}
+{"monotonic_ns": 2444281520590, "phase": "train_step", "kind": "end", "step": 88, "status": "ok", "loss": 7.7667059898376465, "non_padding_targets": 650, "duration_ns": 11646716, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444281618611, "phase": "train_step", "kind": "start", "step": 89}
+{"monotonic_ns": 2444294216284, "phase": "train_step", "kind": "end", "step": 89, "status": "ok", "loss": 7.656818866729736, "non_padding_targets": 858, "duration_ns": 12554533, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444294269903, "phase": "train_step", "kind": "start", "step": 90}
+{"monotonic_ns": 2444305467749, "phase": "train_step", "kind": "end", "step": 90, "status": "ok", "loss": 7.364880561828613, "non_padding_targets": 1024, "duration_ns": 11102650, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444305533190, "phase": "train_step", "kind": "start", "step": 91}
+{"monotonic_ns": 2444317054855, "phase": "train_step", "kind": "end", "step": 91, "status": "ok", "loss": 7.401082992553711, "non_padding_targets": 780, "duration_ns": 11436658, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444317119414, "phase": "train_step", "kind": "start", "step": 92}
+{"monotonic_ns": 2444329049013, "phase": "train_step", "kind": "end", "step": 92, "status": "ok", "loss": 7.7565789222717285, "non_padding_targets": 838, "duration_ns": 11860121, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444329108433, "phase": "train_step", "kind": "start", "step": 93}
+{"monotonic_ns": 2444341164474, "phase": "train_step", "kind": "end", "step": 93, "status": "ok", "loss": 7.568435192108154, "non_padding_targets": 907, "duration_ns": 11954224, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444341240174, "phase": "train_step", "kind": "start", "step": 94}
+{"monotonic_ns": 2444353367248, "phase": "train_step", "kind": "end", "step": 94, "status": "ok", "loss": 7.8698248863220215, "non_padding_targets": 1024, "duration_ns": 12051123, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444353428521, "phase": "train_step", "kind": "start", "step": 95}
+{"monotonic_ns": 2444365422277, "phase": "train_step", "kind": "end", "step": 95, "status": "ok", "loss": 7.188121795654297, "non_padding_targets": 674, "duration_ns": 11933235, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444365476217, "phase": "train_step", "kind": "start", "step": 96}
+{"monotonic_ns": 2444376575421, "phase": "train_step", "kind": "end", "step": 96, "status": "ok", "loss": 7.3876824378967285, "non_padding_targets": 833, "duration_ns": 11023034, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444376631655, "phase": "train_step", "kind": "start", "step": 97}
+{"monotonic_ns": 2444388415955, "phase": "train_step", "kind": "end", "step": 97, "status": "ok", "loss": 7.066421985626221, "non_padding_targets": 187, "duration_ns": 11666583, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444388501113, "phase": "train_step", "kind": "start", "step": 98}
+{"monotonic_ns": 2444400844616, "phase": "train_step", "kind": "end", "step": 98, "status": "ok", "loss": 7.674429416656494, "non_padding_targets": 921, "duration_ns": 12281469, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444400913423, "phase": "train_step", "kind": "start", "step": 99}
+{"monotonic_ns": 2444412985905, "phase": "train_step", "kind": "end", "step": 99, "status": "ok", "loss": 7.628794193267822, "non_padding_targets": 810, "duration_ns": 11996943, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444413051556, "phase": "train_step", "kind": "start", "step": 100}
+{"monotonic_ns": 2444425039422, "phase": "train_step", "kind": "end", "step": 100, "status": "ok", "loss": 7.3508219718933105, "non_padding_targets": 660, "duration_ns": 11870118, "estimated_flops": 99857989632}
+{"monotonic_ns": 2444425121764, "phase": "validation", "kind": "start", "step": 100}
+{"monotonic_ns": 2444453153760, "phase": "validation", "kind": "end", "status": "ok", "step": 100}
+{"monotonic_ns": 2444453215594, "phase": "loss", "kind": "value", "step": 100, "validation_loss": 7.661252901956976, "train_loss": 7.627374149052086}
+{"monotonic_ns": 2444508305495, "phase": "checkpoint", "kind": "start", "step": 100, "file": "best.pt"}
+{"monotonic_ns": 2458538648567, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 100, "file": "best.pt"}
+{"monotonic_ns": 2458538709840, "phase": "checkpoint_read", "kind": "start", "step": 100}
+{"monotonic_ns": 2458657604539, "phase": "checkpoint_read", "kind": "end", "status": "ok", "step": 100}
+{"monotonic_ns": 2458657740450, "phase": "checkpoint", "kind": "start", "step": 100, "file": "latest.pt"}
+{"monotonic_ns": 2463083225308, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 100, "file": "latest.pt"}
+{"monotonic_ns": 2463093634185, "phase": "checkpoint", "kind": "start", "step": 100, "file": "best-weights.pt"}
+{"monotonic_ns": 2463156489513, "phase": "checkpoint", "kind": "end", "status": "ok", "step": 100, "file": "best-weights.pt"}
+{"monotonic_ns": 2463156539856, "phase": "generation", "kind": "start", "step": 100}
+{"monotonic_ns": 2463260992018, "phase": "generation", "kind": "end", "status": "ok", "step": 100}

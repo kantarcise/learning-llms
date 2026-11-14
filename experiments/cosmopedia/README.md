@@ -212,6 +212,8 @@ Linux follow-up: [issue #14](https://github.com/kantarcise/learning-llms/issues/
 
 ## Checks
 
+For continuous GPU/CPU telemetry, phase-aligned graphs, idle/cooldown capture and an optional one-step kernel trace, see [Observe a training run](MONITORING.md). The wrapper saves raw samples and a portable report using the existing experiment dependencies.
+
 ```bash
 uv run --locked --group experiments --group cosmopedia ruff check experiments/cosmopedia
 uv run --locked --group experiments --group cosmopedia ruff format --check experiments/cosmopedia
