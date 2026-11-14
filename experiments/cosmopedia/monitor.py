@@ -259,6 +259,12 @@ def main() -> None:
     parser.add_argument("--pre-seconds", type=float, default=10.0)
     parser.add_argument("--post-seconds", type=float, default=30.0)
     parser.add_argument(
+        "--stop-timeout",
+        type=float,
+        default=120.0,
+        help="Seconds to allow a cooperative child to finish saving before forced termination",
+    )
+    parser.add_argument(
         "--gpu",
         default="0",
         help="GPU index or UUID to observe; does not change device visibility",
@@ -272,6 +278,8 @@ def main() -> None:
             math.isfinite(v)
             for v in [args.interval, args.pre_seconds, args.post_seconds]
         )
+        or not math.isfinite(args.stop_timeout)
+        or args.stop_timeout <= 0
         or args.interval < 0.1
         or min(args.pre_seconds, args.post_seconds) < 0
     ):
@@ -369,7 +377,7 @@ def main() -> None:
                 if interrupted and process.poll() is None:
                     os.killpg(process.pid, signal.SIGTERM)
                     try:
-                        process.wait(timeout=10)
+                        process.wait(timeout=args.stop_timeout)
                     except subprocess.TimeoutExpired:
                         os.killpg(process.pid, signal.SIGKILL)
                 exit_code = process.wait()
@@ -384,7 +392,7 @@ def main() -> None:
             if process is not None and process.poll() is None:
                 os.killpg(process.pid, signal.SIGTERM)
                 try:
-                    process.wait(timeout=10)
+                    process.wait(timeout=args.stop_timeout)
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait()

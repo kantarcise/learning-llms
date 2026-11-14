@@ -16,6 +16,39 @@ from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
 
 
+def make_fixture(root: Path) -> Path:
+    """Write small deterministic prepared tensors and a local WordLevel tokenizer."""
+    data = root / "data"
+    data.mkdir()
+    vocab = {
+        "<|endoftext|>": 0,
+        "[UNK]": 1,
+        "Once": 2,
+        "upon": 3,
+        "a": 4,
+        "time": 5,
+    }
+    vocab.update({f"t{i}": i for i in range(6, 32)})
+    tokenizer = Tokenizer(WordLevel(vocab, unk_token="[UNK]"))
+    tokenizer.pre_tokenizer = Whitespace()
+    tokenizer.save(str(data / "tokenizer.json"))
+    ids = torch.arange(12 * 9).reshape(12, 9) % 32
+    tensors = {"inputs": ids[:, :-1].clone(), "targets": ids[:, 1:].clone()}
+    tensors["targets"][::2, -2:] = -100
+    for split in ["train", "validation"]:
+        torch.save(tensors, data / f"{split}.pt")
+    manifest = {
+        "vocabulary_size": 32,
+        "context_length": 8,
+        "eos_id": 0,
+        "dataset_revision": "offline-fixture",
+        "tokenizer_revision": "offline-fixture",
+        "token_counts": {"train": 108, "validation": 108},
+    }
+    (data / "manifest.json").write_text(json.dumps(manifest))
+    return data
+
+
 class ResumeTests(unittest.TestCase):
     def assert_nested_equal(self, left: object, right: object) -> None:
         """Require exact tensor and scalar equality throughout serialized state."""
@@ -55,6 +88,8 @@ class ResumeTests(unittest.TestCase):
                 "2",
                 "--validation-windows",
                 "4",
+                "--log-every",
+                "4",
                 *extra,
             ],
             capture_output=True,
@@ -65,39 +100,13 @@ class ResumeTests(unittest.TestCase):
     def test_cli_interrupted_between_evaluations_matches_uninterrupted(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            data = root / "data"
-            data.mkdir()
-            vocab = {
-                "<|endoftext|>": 0,
-                "[UNK]": 1,
-                "Once": 2,
-                "upon": 3,
-                "a": 4,
-                "time": 5,
-            }
-            vocab.update({f"t{i}": i for i in range(6, 32)})
-            tokenizer = Tokenizer(WordLevel(vocab, unk_token="[UNK]"))
-            tokenizer.pre_tokenizer = Whitespace()
-            tokenizer.save(str(data / "tokenizer.json"))
-            ids = torch.arange(12 * 9).reshape(12, 9) % 32
-            tensors = {"inputs": ids[:, :-1].clone(), "targets": ids[:, 1:].clone()}
-            tensors["targets"][::2, -2:] = -100
-            for split in ["train", "validation"]:
-                torch.save(tensors, data / f"{split}.pt")
-            manifest = {
-                "vocabulary_size": 32,
-                "context_length": 8,
-                "eos_id": 0,
-                "dataset_revision": "offline-fixture",
-                "tokenizer_revision": "offline-fixture",
-                "token_counts": {"train": 108, "validation": 108},
-            }
-            (data / "manifest.json").write_text(json.dumps(manifest))
+            data = make_fixture(root)
             self.run_training(data, root / "full", [])
             self.run_training(data, root / "part", ["--stop-after", "2"])
             part = torch.load(root / "part/latest.pt", weights_only=True)
             self.assertEqual(part["progress"]["step"], 2)
             self.assertGreater(part["progress"]["interval_tokens"], 0)
+            self.assertGreater(part["progress"]["plot_interval_tokens"], 0)
             self.assertEqual(len(part["progress"]["history"]), 1)
             # latest.pt is self-contained: no companion checkpoint is required.
             (root / "part/best.pt").unlink()
@@ -129,6 +138,7 @@ class ResumeTests(unittest.TestCase):
             best = torch.load(root / "resumed/best.pt", weights_only=True)
             self.assertEqual(best["progress"]["step"], best["progress"]["best_step"])
             # A changed tensor file must fail even with an unchanged manifest.
+            tensors = torch.load(data / "train.pt", weights_only=True)
             tensors["inputs"][0, 0] = 31
             torch.save(tensors, data / "train.pt")
             with self.assertRaises(subprocess.CalledProcessError) as error:

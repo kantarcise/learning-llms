@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-14",
+  "base_commit": "3ba7bd5",
+  "dataset_revision": "3ba9d605774198c5868892d7a8deda78031a781f",
+  "tokenizer_revision": "1d461723eec654e65efdc40cf49301c89c0c92f4",
+  "train_tokens": 10000000,
+  "validation_tokens": 65536,
+  "validation_windows": 300,
+  "batch_size": 4,
+  "seed": 7,
+  "learning_rate": 0.0003,
+  "total_target_updates": 500000,
+  "log_every": 100,
+  "eval_every": 1000,
+  "checkpoint_every": 5000,
+  "active_loop_budget_seconds": 7200,
+  "calibration_completed_updates": 1000,
+  "calibration_loop_seconds": 13.15648752800007,
+  "continuation_max_seconds": 7186.843512472,
+  "source_sha256": {
+    "train.py": "3f4cef9a5df47ffbd6fecf2fc58f0abe1df435827b2c10733d3068b06da7b29a",
+    "live.py": "58bee648c22c90409aa70aadf783b5fe0df14c513cb7505e8311d135845ece97",
+    "model.py": "d6911d29602efc5888c78aae5acd7c42acf4dc438ae5c14314aea588b1035f19",
+    "checkpoint.py": "ae6885deae4592e57c8451637be3765de80622add6b61cc2b9dda7481183c29a"
+  },
+  "notes": [
+    "New data identity: starts from random weights, rather than loading the old 1M-sample checkpoint.",
+    "Validation documents/tensors match the baseline, but evaluation uses all 300 windows instead of 32; do not compare the losses as identical procedures.",
+    "Calibration is part of this same training trajectory. Continuation resumes at update 1000 with its optimizer/RNG/curve state.",
+    "Time budget is checked at safe update boundaries and can overrun during atomic saves/finalization. GPU job runs on local hardware, not AWS.",
+    "500k updates at the calibration target-token rate would sample roughly 437M non-padding targets with replacement; this repeats data and is not a count of unique tokens or complete epochs.",
+    "Long-run completion/results are pending."
+  ]
+}

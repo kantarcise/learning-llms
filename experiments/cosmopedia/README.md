@@ -98,6 +98,8 @@ The output directory holds `run.json`, resumable `latest.pt` and `best.pt`, and 
 
 ### Stop and resume
 
+For a graph that updates during training, a Stop & save button, and a continuous curve across resumed runs, see [Live loss, stop and resume](LIVE_TRAINING.md). That guide also records the 10M-token longer-run setup and its completed 1,000-update calibration.
+
 `--steps` is the **total target update count**, including updates already completed. Use a fresh output directory for each invocation. For example, stop at update 37 of a planned 100-update run, then continue to 100:
 
 ```bash
@@ -209,6 +211,10 @@ The step-100 recent-training loss differs from the 100-step check because that c
 **Historical continuation limitation:** the Mac's original `best.pt` files save weights only. They cannot recover the optimizer and RNG state of those runs. The current trainer saves versioned resumable snapshots as described above; a command without `--resume` still initializes randomly.
 
 Linux follow-up: [issue #14](https://github.com/kantarcise/learning-llms/issues/14) tracks checkpoint support, resource checks, and a bounded two-hour experiment. Book reading can proceed now.
+
+## Completed longer run
+
+The 10M-token experiment completed 500,000 updates. Validation was best at update 89,000 (4.0308) and worsened to 4.3837 by the final update while training loss kept falling. See the [complete loss curves, power/activity graphs and retained-checkpoint verification](results/long-10m-run/README.md).
 
 ## Checks
 

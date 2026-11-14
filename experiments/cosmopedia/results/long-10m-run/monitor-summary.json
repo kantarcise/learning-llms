@@ -1,0 +1,28 @@
+{
+  "samples": 6845,
+  "duration_seconds": 6852.042283195,
+  "phase_seconds": {
+    "idle": 5.073709765,
+    "setup": 2.1475809129999996,
+    "train_step": 5468.182620665107,
+    "validation": 124.39129329099617,
+    "checkpoint": 1167.6877005169952,
+    "checkpoint_read": 6.371061772999941,
+    "generation": 0.1392658200002188,
+    "cooldown": 30.078872871000385
+  },
+  "gross_sampled_gpu_energy_j": 2410658.647302344,
+  "max_gpu_power_w": 410.04,
+  "max_gpu_temperature_c": 82.0,
+  "max_collection_seconds": 0.230716176,
+  "errors": [
+    "CPU energy unavailable: [Errno 13] Permission denied: '/sys/class/powercap/intel-rapl:0/energy_uj'"
+  ],
+  "notes": [
+    "Phase durations can overlap (setup includes initial validation/generation/checkpoint).",
+    "GPU energy is approximate gross device energy over sampled intervals, includes idle/cooldown/desktop, and is not whole-machine wall power.",
+    "GPU activity percent is time with kernels active, not percent of cores occupied or percent of peak FLOPs.",
+    "FLOPs are an algorithmic estimate: 3x forward matmul work; full-square attention; excludes embeddings/norms/activations/softmax/loss/optimizer. No hardware FLOP or occupancy counters collected.",
+    "Short phases may fall between sensor samples; driver metrics have their own averaging windows. Cooldown is fixed duration, not a guarantee of thermal equilibrium."
+  ]
+}

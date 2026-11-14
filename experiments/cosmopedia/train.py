@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import platform
+import signal
 import time
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from checkpoint import (
     write_checkpoint,
 )
 from events import Events, estimated_training_flops
+from live import LiveLog
 from model import Config, LanguageModel
 from tokenizers import Tokenizer
 from torch.nn import functional as F
@@ -112,6 +114,20 @@ def main() -> None:
     )
     parser.add_argument("--checkpoint-every", type=int, default=25)
     parser.add_argument(
+        "--session", type=Path, help="Parent session folder for the live dashboard"
+    )
+    parser.add_argument(
+        "--log-every",
+        type=int,
+        default=100,
+        help="Updates per recent training-loss point",
+    )
+    parser.add_argument(
+        "--max-seconds",
+        type=float,
+        help="Soft loop-time budget for this invocation, checked between updates",
+    )
+    parser.add_argument(
         "--stop-after",
         type=int,
         help="Stop at this absolute update, preserving the planned evaluation schedule",
@@ -138,6 +154,7 @@ def main() -> None:
             args.eval_every,
             args.validation_windows,
             args.checkpoint_every,
+            args.log_every,
         )
         < 1
         or args.learning_rate <= 0
@@ -147,6 +164,25 @@ def main() -> None:
         parser.error("--stop-after must be between 1 and --steps")
     if args.output.exists():
         parser.error("Choose a fresh output directory")
+    if args.max_seconds is not None and (
+        not math.isfinite(args.max_seconds) or args.max_seconds <= 0
+    ):
+        parser.error("--max-seconds must be finite and positive")
+    if args.session is not None:
+        if (
+            args.output.resolve() == args.session.resolve()
+            or not args.output.resolve().is_relative_to(args.session.resolve())
+        ):
+            parser.error("--output must be a child of --session")
+        args.session.mkdir(parents=True, exist_ok=True)
+    requested_stop: str | None = None
+
+    def request_stop(signum: int, frame: object) -> None:
+        nonlocal requested_stop
+        requested_stop = signal.Signals(signum).name
+
+    for signum in [signal.SIGINT, signal.SIGTERM]:
+        signal.signal(signum, request_stop)
     events = Events()
     events.emit("setup", "start")
     device_name = args.device
@@ -223,6 +259,18 @@ def main() -> None:
         processed = progress["processed"]
         interval_loss = progress["interval_loss"]
         interval_tokens = progress["interval_tokens"]
+        if progress.get("log_every", args.log_every) != args.log_every:
+            parser.error("Keep --log-every unchanged when resuming")
+        training_curve = progress.get(
+            "training_curve",
+            [
+                {"step": row["step"], "loss": row["train_batch_loss"]}
+                for row in history
+                if row["train_batch_loss"] is not None
+            ],
+        )
+        plot_interval_loss = progress.get("plot_interval_loss", 0.0)
+        plot_interval_tokens = progress.get("plot_interval_tokens", 0)
     else:
         start_step = 0
         with events.phase("generation", step=0):
@@ -243,7 +291,13 @@ def main() -> None:
         processed = 0
         interval_loss = 0.0
         interval_tokens = 0
+        training_curve: list[dict[str, int | float]] = []
+        plot_interval_loss = 0.0
+        plot_interval_tokens = 0
     args.output.mkdir(parents=True)
+    live = LiveLog(args.output, args.session)
+    last_saved_step: int | None = start_step if args.resume else None
+    last_saved_path = str(args.resume) if args.resume else None
     parameter_count = sum(p.numel() for p in model.parameters())
     print(
         f"Device: {device}; parameters: {parameter_count:,}; start update: {start_step}",
@@ -254,8 +308,35 @@ def main() -> None:
         flush=True,
     )
 
+    def publish(status: str, step: int, reason: str | None = None) -> None:
+        """Expose cumulative curves without changing the sampler or reporting intervals."""
+        pending = (
+            {"step": step, "loss": plot_interval_loss / plot_interval_tokens}
+            if plot_interval_tokens
+            else None
+        )
+        live.update(
+            status=status,
+            step=step,
+            planned_steps=args.steps,
+            segment_start_step=start_step,
+            history=history,
+            training_curve=training_curve,
+            pending_training_point=pending,
+            best_validation_loss=best_loss,
+            best_step=best_step,
+            latest_checkpoint_step=last_saved_step,
+            latest_checkpoint=last_saved_path,
+            training_target_tokens_seen=processed,
+            stop_reason=reason,
+            log_every=args.log_every,
+            data_token_counts=manifest["token_counts"],
+        )
+
     def save(path: Path, step: int, include_best: bool = False) -> None:
         """Snapshot a completed update, including an unfinished reporting interval."""
+        nonlocal last_saved_step, last_saved_path
+        publish("saving", step)
         state = {
             "step": step,
             "history": history,
@@ -265,12 +346,20 @@ def main() -> None:
             "processed": processed,
             "interval_loss": interval_loss,
             "interval_tokens": interval_tokens,
+            "training_curve": training_curve,
+            "plot_interval_loss": plot_interval_loss,
+            "plot_interval_tokens": plot_interval_tokens,
+            "log_every": args.log_every,
         }
         if include_best:
             state["best_checkpoint"] = best_snapshot
         with events.phase("checkpoint", step=step, file=path.name):
             save_checkpoint(path, model, optimizer, sampling, device, identity, state)
+        if path.name == "latest.pt":
+            last_saved_step, last_saved_path = step, str(path)
+        publish("running", step)
 
+    publish("initializing", start_step)
     # Each new output directory is self-contained, including after resuming.
     if checkpoint is None:
         save(args.output / "best.pt", 0)
@@ -284,7 +373,27 @@ def main() -> None:
     stop_step = args.stop_after if args.stop_after is not None else args.steps
     synchronize(device)
     started = time.perf_counter()
+    last_step = start_step
+    reason: str | None = None
+
+    def stopping_reason() -> str | None:
+        """Check cooperative stop requests without disrupting an in-flight update/save."""
+        if requested_stop:
+            return requested_stop
+        if (args.output / "STOP").exists():
+            return "stop file"
+        if (
+            args.max_seconds is not None
+            and time.perf_counter() - started >= args.max_seconds
+        ):
+            return "time budget"
+        return None
+
+    publish("running", start_step)
     for step in range(start_step + 1, stop_step + 1):
+        reason = stopping_reason()
+        if reason:
+            break
         step_started = time.monotonic_ns()
         events.emit("train_step", "start", step=step)
         model.train()
@@ -308,6 +417,15 @@ def main() -> None:
         interval_loss += loss.item() * valid
         interval_tokens += valid
         processed += valid
+        plot_interval_loss += loss.item() * valid
+        plot_interval_tokens += valid
+        last_step = step
+        if step % args.log_every == 0:
+            training_curve.append(
+                {"step": step, "loss": plot_interval_loss / plot_interval_tokens}
+            )
+            plot_interval_loss, plot_interval_tokens = 0.0, 0
+            publish("running", step)
         events.emit(
             "train_step",
             "end",
@@ -358,8 +476,18 @@ def main() -> None:
                 save(args.output / "best.pt", step)
                 with events.phase("checkpoint_read", step=step):
                     best_snapshot = load_checkpoint(args.output / "best.pt", identity)
-        if step % args.checkpoint_every == 0 or step == stop_step:
+        reason = stopping_reason()
+        if step % args.checkpoint_every == 0 or step == stop_step or reason:
             save(args.output / "latest.pt", step, include_best=True)
+        if reason:
+            break
+    if last_saved_step != last_step or not (args.output / "latest.pt").exists():
+        save(args.output / "latest.pt", last_step, include_best=True)
+    stop_step = last_step
+    reason = reason or (
+        "stop-after budget" if stop_step < args.steps else "target reached"
+    )
+    publish("stopping" if stop_step < args.steps else "saving", stop_step, reason)
     synchronize(device)
     elapsed = time.perf_counter() - started
     model.load_state_dict(best_model)
@@ -376,6 +504,14 @@ def main() -> None:
         "platform": platform.platform(),
         "steps": stop_step,
         "planned_steps": args.steps,
+        "stop_reason": reason,
+        "training_curve": training_curve,
+        "pending_training_point": {
+            "step": stop_step,
+            "loss": plot_interval_loss / plot_interval_tokens,
+        }
+        if plot_interval_tokens
+        else None,
         "segment_start_step": start_step,
         "resumed_from": str(args.resume) if args.resume else None,
         "batch_size": args.batch_size,
@@ -420,7 +556,9 @@ def main() -> None:
         f"Segment loop: {elapsed:.1f}s; {(processed - segment_start_tokens) / elapsed:.0f} training target tokens/s including evaluation/saving",
         flush=True,
     )
-    print(f"Saved report and checkpoints in {args.output}", flush=True)
+    publish("stopped" if stop_step < args.steps else "completed", stop_step, reason)
+    live.finish("stopped" if stop_step < args.steps else "completed")
+    print(f"Saved report, checkpoints and loss.svg in {args.output}", flush=True)
 
 
 if __name__ == "__main__":

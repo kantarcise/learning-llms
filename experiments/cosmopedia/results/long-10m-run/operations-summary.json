@@ -1,0 +1,810 @@
+{
+  "observed_continuation_updates": 499000,
+  "estimated_training_matmul_flops": 49829136826368000,
+  "estimated_step_only_tflops_per_second": 9.133833230687575,
+  "estimated_observation_wall_tflops_per_second": 7.272158397004732,
+  "recorded_step_seconds": 5455.4463134879215,
+  "sampled_gpu_board_energy_kwh": 0.6696274020284289,
+  "sampled_time_weighted_gpu_board_power_w": 351.8201531426549,
+  "per_minute_estimated_work": [
+    {
+      "minute": 0,
+      "flops": 342013614489600,
+      "targets": 2972250,
+      "step_seconds": 39.51844437899992,
+      "updates": 3425
+    },
+    {
+      "minute": 1,
+      "flops": 326935058055168,
+      "targets": 2841642,
+      "step_seconds": 38.177468996000044,
+      "updates": 3274
+    },
+    {
+      "minute": 2,
+      "flops": 229773234143232,
+      "targets": 1983705,
+      "step_seconds": 28.217624872000048,
+      "updates": 2301
+    },
+    {
+      "minute": 3,
+      "flops": 314952099299328,
+      "targets": 2737641,
+      "step_seconds": 34.66590749100006,
+      "updates": 3154
+    },
+    {
+      "minute": 4,
+      "flops": 299074678947840,
+      "targets": 2604039,
+      "step_seconds": 34.274267778999956,
+      "updates": 2995
+    },
+    {
+      "minute": 5,
+      "flops": 446664787623936,
+      "targets": 3891324,
+      "step_seconds": 48.90706987399993,
+      "updates": 4473
+    },
+    {
+      "minute": 6,
+      "flops": 337320288976896,
+      "targets": 2939385,
+      "step_seconds": 36.85758181300005,
+      "updates": 3378
+    },
+    {
+      "minute": 7,
+      "flops": 318646844915712,
+      "targets": 2774337,
+      "step_seconds": 34.67243582600001,
+      "updates": 3191
+    },
+    {
+      "minute": 8,
+      "flops": 280501092876288,
+      "targets": 2425760,
+      "step_seconds": 30.897713436000036,
+      "updates": 2809
+    },
+    {
+      "minute": 9,
+      "flops": 357990892830720,
+      "targets": 3124690,
+      "step_seconds": 38.98488908299999,
+      "updates": 3585
+    },
+    {
+      "minute": 10,
+      "flops": 341015034593280,
+      "targets": 2967315,
+      "step_seconds": 37.188194302,
+      "updates": 3415
+    },
+    {
+      "minute": 11,
+      "flops": 299573968896000,
+      "targets": 2607506,
+      "step_seconds": 32.62752676899999,
+      "updates": 3000
+    },
+    {
+      "minute": 12,
+      "flops": 399431958528000,
+      "targets": 3479946,
+      "step_seconds": 43.578372468000055,
+      "updates": 4000
+    },
+    {
+      "minute": 13,
+      "flops": 361286206488576,
+      "targets": 3145173,
+      "step_seconds": 39.55500281299983,
+      "updates": 3618
+    },
+    {
+      "minute": 14,
+      "flops": 387049567813632,
+      "targets": 3369401,
+      "step_seconds": 42.53460620499992,
+      "updates": 3876
+    },
+    {
+      "minute": 15,
+      "flops": 350102111649792,
+      "targets": 3039326,
+      "step_seconds": 38.06155058999994,
+      "updates": 3506
+    },
+    {
+      "minute": 16,
+      "flops": 467135675498496,
+      "targets": 4058920,
+      "step_seconds": 50.83213397899989,
+      "updates": 4678
+    },
+    {
+      "minute": 17,
+      "flops": 386250703896576,
+      "targets": 3388929,
+      "step_seconds": 42.07752568100007,
+      "updates": 3868
+    },
+    {
+      "minute": 18,
+      "flops": 444767485820928,
+      "targets": 3869690,
+      "step_seconds": 48.457782245999994,
+      "updates": 4454
+    },
+    {
+      "minute": 19,
+      "flops": 423797307998208,
+      "targets": 3656685,
+      "step_seconds": 46.21695999500018,
+      "updates": 4244
+    },
+    {
+      "minute": 20,
+      "flops": 418504834547712,
+      "targets": 3624687,
+      "step_seconds": 45.72098729300004,
+      "updates": 4191
+    },
+    {
+      "minute": 21,
+      "flops": 396735792807936,
+      "targets": 3430271,
+      "step_seconds": 43.34687675500004,
+      "updates": 3973
+    },
+    {
+      "minute": 22,
+      "flops": 458547888390144,
+      "targets": 3992741,
+      "step_seconds": 49.94104533800013,
+      "updates": 4592
+    },
+    {
+      "minute": 23,
+      "flops": 460345332203520,
+      "targets": 3999715,
+      "step_seconds": 50.111834359000134,
+      "updates": 4610
+    },
+    {
+      "minute": 24,
+      "flops": 394538917036032,
+      "targets": 3441963,
+      "step_seconds": 42.95208536700008,
+      "updates": 3951
+    },
+    {
+      "minute": 25,
+      "flops": 404025426051072,
+      "targets": 3517580,
+      "step_seconds": 43.995559718000045,
+      "updates": 4046
+    },
+    {
+      "minute": 26,
+      "flops": 521258705879040,
+      "targets": 4557127,
+      "step_seconds": 56.891949310999934,
+      "updates": 5220
+    },
+    {
+      "minute": 27,
+      "flops": 480816220078080,
+      "targets": 4179344,
+      "step_seconds": 52.379758268999915,
+      "updates": 4815
+    },
+    {
+      "minute": 28,
+      "flops": 396436218839040,
+      "targets": 3433674,
+      "step_seconds": 43.167644878000004,
+      "updates": 3970
+    },
+    {
+      "minute": 29,
+      "flops": 490702161051648,
+      "targets": 4265800,
+      "step_seconds": 53.489745452000065,
+      "updates": 4914
+    },
+    {
+      "minute": 30,
+      "flops": 521757995827200,
+      "targets": 4537011,
+      "step_seconds": 56.87993771500005,
+      "updates": 5225
+    },
+    {
+      "minute": 31,
+      "flops": 406222301822976,
+      "targets": 3540792,
+      "step_seconds": 44.29730294499997,
+      "updates": 4068
+    },
+    {
+      "minute": 32,
+      "flops": 417705970630656,
+      "targets": 3623204,
+      "step_seconds": 45.60359910500014,
+      "updates": 4183
+    },
+    {
+      "minute": 33,
+      "flops": 519760836034560,
+      "targets": 4503431,
+      "step_seconds": 56.807148843000085,
+      "updates": 5205
+    },
+    {
+      "minute": 34,
+      "flops": 478619344306176,
+      "targets": 4152609,
+      "step_seconds": 52.31602462199986,
+      "updates": 4793
+    },
+    {
+      "minute": 35,
+      "flops": 453754704887808,
+      "targets": 3943069,
+      "step_seconds": 49.47665276899998,
+      "updates": 4544
+    },
+    {
+      "minute": 36,
+      "flops": 384353402093568,
+      "targets": 3334990,
+      "step_seconds": 41.85286286500003,
+      "updates": 3849
+    },
+    {
+      "minute": 37,
+      "flops": 507278587330560,
+      "targets": 4411399,
+      "step_seconds": 55.44081421299996,
+      "updates": 5080
+    },
+    {
+      "minute": 38,
+      "flops": 521058989899776,
+      "targets": 4525227,
+      "step_seconds": 56.90887537499986,
+      "updates": 5218
+    },
+    {
+      "minute": 39,
+      "flops": 393440479150080,
+      "targets": 3426735,
+      "step_seconds": 42.90631331499995,
+      "updates": 3940
+    },
+    {
+      "minute": 40,
+      "flops": 408918467543040,
+      "targets": 3560294,
+      "step_seconds": 44.64469142200006,
+      "updates": 4095
+    },
+    {
+      "minute": 41,
+      "flops": 520859273920512,
+      "targets": 4497802,
+      "step_seconds": 56.8546516679998,
+      "updates": 5216
+    },
+    {
+      "minute": 42,
+      "flops": 403825710071808,
+      "targets": 3505133,
+      "step_seconds": 44.07013979800004,
+      "updates": 4044
+    },
+    {
+      "minute": 43,
+      "flops": 400829970382848,
+      "targets": 3477608,
+      "step_seconds": 43.86297396700008,
+      "updates": 4014
+    },
+    {
+      "minute": 44,
+      "flops": 499289948160000,
+      "targets": 4338633,
+      "step_seconds": 54.524225588999904,
+      "updates": 5000
+    },
+    {
+      "minute": 45,
+      "flops": 499289948160000,
+      "targets": 4321362,
+      "step_seconds": 54.97265504899992,
+      "updates": 5000
+    },
+    {
+      "minute": 46,
+      "flops": 499289948160000,
+      "targets": 4336603,
+      "step_seconds": 54.54463271599988,
+      "updates": 5000
+    },
+    {
+      "minute": 47,
+      "flops": 419203840475136,
+      "targets": 3632412,
+      "step_seconds": 45.71542324000003,
+      "updates": 4198
+    },
+    {
+      "minute": 48,
+      "flops": 403725852082176,
+      "targets": 3499748,
+      "step_seconds": 44.05728892000008,
+      "updates": 4043
+    },
+    {
+      "minute": 49,
+      "flops": 514767936552960,
+      "targets": 4476226,
+      "step_seconds": 56.62143244799986,
+      "updates": 5155
+    },
+    {
+      "minute": 50,
+      "flops": 520160267993088,
+      "targets": 4533742,
+      "step_seconds": 56.83159009100002,
+      "updates": 5209
+    },
+    {
+      "minute": 51,
+      "flops": 407520455688192,
+      "targets": 3525145,
+      "step_seconds": 44.432703169999854,
+      "updates": 4081
+    },
+    {
+      "minute": 52,
+      "flops": 452955840970752,
+      "targets": 3929932,
+      "step_seconds": 49.40694905399999,
+      "updates": 4536
+    },
+    {
+      "minute": 53,
+      "flops": 520659557941248,
+      "targets": 4526962,
+      "step_seconds": 56.869952085999984,
+      "updates": 5214
+    },
+    {
+      "minute": 54,
+      "flops": 394439059046400,
+      "targets": 3418035,
+      "step_seconds": 42.99612148600004,
+      "updates": 3950
+    },
+    {
+      "minute": 55,
+      "flops": 402028266258432,
+      "targets": 3504897,
+      "step_seconds": 43.85538185599996,
+      "updates": 4026
+    },
+    {
+      "minute": 56,
+      "flops": 519960552013824,
+      "targets": 4518906,
+      "step_seconds": 56.871712318999954,
+      "updates": 5207
+    },
+    {
+      "minute": 57,
+      "flops": 520459841961984,
+      "targets": 4504626,
+      "step_seconds": 56.86998941099995,
+      "updates": 5212
+    },
+    {
+      "minute": 58,
+      "flops": 416307958775808,
+      "targets": 3625089,
+      "step_seconds": 45.554275992000015,
+      "updates": 4169
+    },
+    {
+      "minute": 59,
+      "flops": 499289948160000,
+      "targets": 4310544,
+      "step_seconds": 54.54772699800002,
+      "updates": 5000
+    },
+    {
+      "minute": 60,
+      "flops": 466236953591808,
+      "targets": 4049244,
+      "step_seconds": 51.21780463499989,
+      "updates": 4669
+    },
+    {
+      "minute": 61,
+      "flops": 519860694024192,
+      "targets": 4520454,
+      "step_seconds": 56.87397166300007,
+      "updates": 5206
+    },
+    {
+      "minute": 62,
+      "flops": 392541757243392,
+      "targets": 3407144,
+      "step_seconds": 42.82261861299985,
+      "updates": 3931
+    },
+    {
+      "minute": 63,
+      "flops": 391942609305600,
+      "targets": 3400819,
+      "step_seconds": 42.81573231700002,
+      "updates": 3925
+    },
+    {
+      "minute": 64,
+      "flops": 501187249963008,
+      "targets": 4351697,
+      "step_seconds": 55.060736414000054,
+      "updates": 5019
+    },
+    {
+      "minute": 65,
+      "flops": 520459841961984,
+      "targets": 4530778,
+      "step_seconds": 56.86932634999994,
+      "updates": 5212
+    },
+    {
+      "minute": 66,
+      "flops": 388547437658112,
+      "targets": 3368753,
+      "step_seconds": 42.736665501999965,
+      "updates": 3891
+    },
+    {
+      "minute": 67,
+      "flops": 386949709824000,
+      "targets": 3355692,
+      "step_seconds": 42.37378047599985,
+      "updates": 3875
+    },
+    {
+      "minute": 68,
+      "flops": 426593331707904,
+      "targets": 3711272,
+      "step_seconds": 46.638087464000165,
+      "updates": 4272
+    },
+    {
+      "minute": 69,
+      "flops": 494297048678400,
+      "targets": 4299484,
+      "step_seconds": 53.951302279,
+      "updates": 4950
+    },
+    {
+      "minute": 70,
+      "flops": 435680408764416,
+      "targets": 3790337,
+      "step_seconds": 47.576614572999894,
+      "updates": 4363
+    },
+    {
+      "minute": 71,
+      "flops": 520260125982720,
+      "targets": 4529215,
+      "step_seconds": 56.87376183999997,
+      "updates": 5210
+    },
+    {
+      "minute": 72,
+      "flops": 390245023481856,
+      "targets": 3372385,
+      "step_seconds": 42.637615346000075,
+      "updates": 3908
+    },
+    {
+      "minute": 73,
+      "flops": 407820029657088,
+      "targets": 3545880,
+      "step_seconds": 44.49616807200005,
+      "updates": 4084
+    },
+    {
+      "minute": 74,
+      "flops": 519261546086400,
+      "targets": 4513044,
+      "step_seconds": 56.85591497499997,
+      "updates": 5200
+    },
+    {
+      "minute": 75,
+      "flops": 519561120055296,
+      "targets": 4506342,
+      "step_seconds": 56.886354356000055,
+      "updates": 5203
+    },
+    {
+      "minute": 76,
+      "flops": 398133804662784,
+      "targets": 3452308,
+      "step_seconds": 43.512464769000054,
+      "updates": 3987
+    },
+    {
+      "minute": 77,
+      "flops": 414410656972800,
+      "targets": 3593109,
+      "step_seconds": 45.297620837000075,
+      "updates": 4150
+    },
+    {
+      "minute": 78,
+      "flops": 519660978044928,
+      "targets": 4508307,
+      "step_seconds": 56.815044709999896,
+      "updates": 5204
+    },
+    {
+      "minute": 79,
+      "flops": 408419177594880,
+      "targets": 3531508,
+      "step_seconds": 44.617647326000004,
+      "updates": 4090
+    },
+    {
+      "minute": 80,
+      "flops": 464439509778432,
+      "targets": 4026042,
+      "step_seconds": 50.72536398700016,
+      "updates": 4651
+    },
+    {
+      "minute": 81,
+      "flops": 468933119311872,
+      "targets": 4080315,
+      "step_seconds": 51.22218824799993,
+      "updates": 4696
+    },
+    {
+      "minute": 82,
+      "flops": 463341071892480,
+      "targets": 4028360,
+      "step_seconds": 50.85151947299995,
+      "updates": 4640
+    },
+    {
+      "minute": 83,
+      "flops": 520459841961984,
+      "targets": 4514729,
+      "step_seconds": 56.871079146999925,
+      "updates": 5212
+    },
+    {
+      "minute": 84,
+      "flops": 397135224766464,
+      "targets": 3451516,
+      "step_seconds": 43.35036913899999,
+      "updates": 3977
+    },
+    {
+      "minute": 85,
+      "flops": 410016905428992,
+      "targets": 3533498,
+      "step_seconds": 44.73201897999995,
+      "updates": 4106
+    },
+    {
+      "minute": 86,
+      "flops": 519361404076032,
+      "targets": 4509014,
+      "step_seconds": 56.79531443800011,
+      "updates": 5201
+    },
+    {
+      "minute": 87,
+      "flops": 518163108200448,
+      "targets": 4513293,
+      "step_seconds": 56.66323481100018,
+      "updates": 5189
+    },
+    {
+      "minute": 88,
+      "flops": 397334940745728,
+      "targets": 3446400,
+      "step_seconds": 43.42688493900004,
+      "updates": 3979
+    },
+    {
+      "minute": 89,
+      "flops": 427092621656064,
+      "targets": 3727028,
+      "step_seconds": 46.70408477799998,
+      "updates": 4277
+    },
+    {
+      "minute": 90,
+      "flops": 520559699951616,
+      "targets": 4513410,
+      "step_seconds": 56.881437218999814,
+      "updates": 5213
+    },
+    {
+      "minute": 91,
+      "flops": 404924147957760,
+      "targets": 3515754,
+      "step_seconds": 44.30574753500005,
+      "updates": 4055
+    },
+    {
+      "minute": 92,
+      "flops": 444867343810560,
+      "targets": 3855007,
+      "step_seconds": 48.623575941000006,
+      "updates": 4455
+    },
+    {
+      "minute": 93,
+      "flops": 496593782439936,
+      "targets": 4316614,
+      "step_seconds": 54.307184038999935,
+      "updates": 4973
+    },
+    {
+      "minute": 94,
+      "flops": 493198610792448,
+      "targets": 4297705,
+      "step_seconds": 54.251132602000126,
+      "updates": 4939
+    },
+    {
+      "minute": 95,
+      "flops": 508077451247616,
+      "targets": 4424698,
+      "step_seconds": 55.65788407999993,
+      "updates": 5088
+    },
+    {
+      "minute": 96,
+      "flops": 403226562134016,
+      "targets": 3488438,
+      "step_seconds": 44.08969019700011,
+      "updates": 4038
+    },
+    {
+      "minute": 97,
+      "flops": 401528976310272,
+      "targets": 3479829,
+      "step_seconds": 43.870003406999956,
+      "updates": 4021
+    },
+    {
+      "minute": 98,
+      "flops": 518163108200448,
+      "targets": 4485444,
+      "step_seconds": 56.79514953299986,
+      "updates": 5189
+    },
+    {
+      "minute": 99,
+      "flops": 520559699951616,
+      "targets": 4523292,
+      "step_seconds": 56.908721633999946,
+      "updates": 5213
+    },
+    {
+      "minute": 100,
+      "flops": 392242183274496,
+      "targets": 3403155,
+      "step_seconds": 42.85478696000004,
+      "updates": 3928
+    },
+    {
+      "minute": 101,
+      "flops": 459846042255360,
+      "targets": 3983881,
+      "step_seconds": 50.294959979000105,
+      "updates": 4605
+    },
+    {
+      "minute": 102,
+      "flops": 517963392221184,
+      "targets": 4488069,
+      "step_seconds": 56.651760193,
+      "updates": 5187
+    },
+    {
+      "minute": 103,
+      "flops": 391543177347072,
+      "targets": 3400565,
+      "step_seconds": 42.81659671100009,
+      "updates": 3921
+    },
+    {
+      "minute": 104,
+      "flops": 408219461615616,
+      "targets": 3561562,
+      "step_seconds": 44.672541527000035,
+      "updates": 4088
+    },
+    {
+      "minute": 105,
+      "flops": 480316930129920,
+      "targets": 4179469,
+      "step_seconds": 52.57002142600009,
+      "updates": 4810
+    },
+    {
+      "minute": 106,
+      "flops": 517264386293760,
+      "targets": 4503574,
+      "step_seconds": 56.71843687600004,
+      "updates": 5180
+    },
+    {
+      "minute": 107,
+      "flops": 481315510026240,
+      "targets": 4184057,
+      "step_seconds": 52.72757260000008,
+      "updates": 4820
+    },
+    {
+      "minute": 108,
+      "flops": 439375154380800,
+      "targets": 3805316,
+      "step_seconds": 48.104059119000034,
+      "updates": 4400
+    },
+    {
+      "minute": 109,
+      "flops": 405223721926656,
+      "targets": 3509078,
+      "step_seconds": 44.331621376000086,
+      "updates": 4058
+    },
+    {
+      "minute": 110,
+      "flops": 518262966190080,
+      "targets": 4489315,
+      "step_seconds": 56.76160961799994,
+      "updates": 5190
+    },
+    {
+      "minute": 111,
+      "flops": 519561120055296,
+      "targets": 4533961,
+      "step_seconds": 56.861624561000056,
+      "updates": 5203
+    },
+    {
+      "minute": 112,
+      "flops": 389945449512960,
+      "targets": 3388362,
+      "step_seconds": 42.68495392900001,
+      "updates": 3905
+    },
+    {
+      "minute": 113,
+      "flops": 224081328734208,
+      "targets": 1927207,
+      "step_seconds": 24.539357584999998,
+      "updates": 2244
+    }
+  ],
+  "scope": "Continuation observation only: updates 1001\u2013500000, plus pre/post idle. FLOPs are algorithmic matmul estimates; GPU energy includes other applications and is not whole-system energy."
+}
