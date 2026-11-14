@@ -94,7 +94,44 @@ Defaults: batch size 4, AdamW learning rate 0.0003, weight decay 0.01, gradient-
 
 **Steps are updates, not epochs.** Each step samples four windows with replacement. The 1,000-step run starts from scratch; it does not resume the saved checkpoint. Reported training loss averages recent sampled batches at changing weights. Validation measures the same 32 deterministically chosen windows at fixed weights. Therefore the curves have different measurement procedures; do not interpret their gap exactly like our full-split character-log curves. Increase `--validation-windows` to evaluate more windows when appropriate.
 
-The output directory holds `run.json` and an inference-only `best.pt`. The checkpoint is just a state dictionary: use the report's config and prepared tokenizer to reconstruct it. It does not contain optimizer/RNG state for resuming. Generation uses the checkpoint with the lowest measured validation loss, including step 0 if nothing improves.
+The output directory holds `run.json`, resumable `latest.pt` and `best.pt`, and inference-only `best-weights.pt`. Generation uses the weights with the lowest measured validation loss, including step 0 if nothing improves. Historical Mac and initial CUDA runs below predate resumable checkpoints; their original `best.pt` files remain weights-only.
+
+### Stop and resume
+
+`--steps` is the **total target update count**, including updates already completed. Use a fresh output directory for each invocation. For example, stop at update 37 of a planned 100-update run, then continue to 100:
+
+```bash
+uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/train.py \
+  --device cuda --steps 100 --stop-after 37 --eval-every 25 \
+  --output experiments/cosmopedia/artifacts/resume-part
+
+uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/train.py \
+  --device cuda --steps 100 --eval-every 25 \
+  --resume experiments/cosmopedia/artifacts/resume-part/latest.pt \
+  --output experiments/cosmopedia/artifacts/resume-continued
+```
+
+The trainer saves `latest.pt` every `--checkpoint-every` updates (default 25) and at the stopping update. It saves `best.pt` when validation improves. Both snapshots contain model weights, AdamW state, completed updates, Torch CPU/active-device RNG state, the separate batch-sampler RNG, validation indices, loss history, best result, and partial interval loss/token totals. A latest snapshot also embeds the historical best snapshot, so it can be transferred alone and still recreate both files. This uses additional disk space to make each continuation self-contained. Model and optimizer restoration follow [PyTorch's general checkpoint pattern](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).
+
+Resume checks architecture, actual data/tokenizer/manifest file hashes, seed, batch size, optimizer settings, evaluation interval/selection, device type and PyTorch version before creating an output directory. Keep these settings unchanged. Old inference-only files are rejected: loading those weights with a fresh optimizer would be a **warm start**, not a resume; this CLI does not offer a warm-start mode.
+
+`--stop-after` stops after a completed update without adding an evaluation at that boundary. This preserves the planned evaluation schedule and unfinished reporting interval. To reproduce a planned run exactly, keep the same `--steps` on both invocations and use `--stop-after` for the earlier stop. Extending an already completed run can introduce an extra evaluation at its previous final update. The report's loss history and token total are cumulative; elapsed time, throughput and GPU-memory peaks cover only the current invocation. Full checkpoint I/O is included in loop timing, so these timings are not directly comparable to the earlier weights-only baseline.
+
+Snapshots are written to a temporary sibling and atomically replace the destination after serialization succeeds. A failed write leaves the previous snapshot intact. After an unexpected process exit, resume the last successfully saved update; unsaved updates must be repeated. This does not promise durability against power loss. Exact continuation is verified on the same software/device stack, not across CUDA, MPS and CPU.
+
+Run the fresh-process comparison on prepared data with:
+
+```bash
+uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/verify_resume.py \
+  --device cuda --steps 100 --interrupt-after 37 --eval-every 25 \
+  --output experiments/cosmopedia/artifacts/resume-verification
+```
+
+This runs 100 uninterrupted updates, then 37 updates plus a fresh-process continuation to 100. It requires exact equality of latest/best checkpoint tensors and metadata, including AdamW, RNG/sampler and reporting state, and compares generated samples and loss history. Checkpoints/logs stay in ignored artifacts; `verification.json` records results and source fingerprints. Offline tests exercise the real CLI with synthetic data, changed-data/settings rejection, RNG restoration, resuming best snapshots, and failed-write preservation.
+
+**Actual RTX 3090 verification (November 14):** the 100-update run and 37 + 63-update continuation matched exactly across **358 tensors** in the latest snapshots, all other checkpoint metadata, the separate best snapshots, loss history and generated samples. Validation again ended at **7.6613**. The [verification report](results/rtx3090-resume/verification.json) contains all three segment reports and source fingerprints; [provenance](results/rtx3090-resume/provenance.json) records the invocation. This verifies a graceful stop and fresh-process continuation on this CUDA stack, not an abrupt machine failure.
+
+The uninterrupted loop took **56.9 seconds** with full checkpoint saving, compared with the earlier 9.82-second weights-only baseline. The interrupted and resumed segments took 17.4 and 57.6 seconds respectively. These timings include substantial snapshot I/O and are not isolated GPU-compute measurements. Measure the intended checkpoint cadence again before setting the two-hour update budget.
 
 ## Actual first check: 100 updates
 
@@ -130,7 +167,7 @@ The synchronized training loop took **9.82 seconds**, or approximately **8,750 n
 
 The best checkpoint was step 100. The fixed-prompt continuation again began `Once upon a time, and the the the ...`; lower loss still does not demonstrate fluent generation. CUDA and MPS losses were close and the generated strings matched in this check. This is one short configuration-specific observation, not a general hardware ranking or a steady-state training benchmark.
 
-The unchanged [CUDA run report](results/rtx3090-100steps/run.json) preserves full samples, losses, timing and memory measurements. The [provenance record](results/rtx3090-100steps/provenance.json) records the command, base commit and source/lockfile hashes. The inference-only checkpoint remains under ignored `artifacts/rtx3090-100steps-20261114/`. Before a longer run, [issue #14](https://github.com/kantarcise/learning-llms/issues/14) still requires resumable checkpoints and an interrupted-versus-uninterrupted check.
+The unchanged [CUDA run report](results/rtx3090-100steps/run.json) preserves full samples, losses, timing and memory measurements. The [provenance record](results/rtx3090-100steps/provenance.json) records the command, base commit and source/lockfile hashes. The inference-only checkpoint remains under ignored `artifacts/rtx3090-100steps-20261114/`. The resume workflow above addresses the checkpoint prerequisite from [issue #14](https://github.com/kantarcise/learning-llms/issues/14); the longer training experiment remains separate.
 
 ## How much data did we actually use? 📦
 
@@ -169,7 +206,7 @@ The best checkpoint was step 1,000. Its continuation included `Once upon a time,
 
 The step-100 recent-training loss differs from the 100-step check because that check reported 25-step intervals, while this run reports 100-step intervals. Step-100 validation loss matches. Validation still uses only 32 fixed windows.
 
-**Continuation limitation:** current `best.pt` files save weights only. Starting a new command initializes randomly; loading old weights for more training would be a warm start with a fresh optimizer. Before a multi-hour Linux run, add resumable checkpoints containing optimizer, step, RNG/sampler state, configuration, and data identity, with separate latest and best checkpoints.
+**Historical continuation limitation:** the Mac's original `best.pt` files save weights only. They cannot recover the optimizer and RNG state of those runs. The current trainer saves versioned resumable snapshots as described above; a command without `--resume` still initializes randomly.
 
 Linux follow-up: [issue #14](https://github.com/kantarcise/learning-llms/issues/14) tracks checkpoint support, resource checks, and a bounded two-hour experiment. Book reading can proceed now.
 

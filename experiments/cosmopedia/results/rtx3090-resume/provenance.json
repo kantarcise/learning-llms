@@ -1,0 +1,6 @@
+{
+  "date": "2026-11-14",
+  "base_commit": "9ab12ca",
+  "command": "uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/verify_resume.py --device cuda --steps 100 --interrupt-after 37 --eval-every 25 --output experiments/cosmopedia/artifacts/rtx3090-resume-20261114",
+  "note": "Verified on the working tree implementing resume atop the RTX 3090 baseline PR. verification.json records source hashes and complete reports; checkpoints and logs remain ignored."
+}
