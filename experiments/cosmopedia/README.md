@@ -98,6 +98,8 @@ The output directory holds `run.json`, resumable `latest.pt` and `best.pt`, and 
 
 ### Stop and resume
 
+For a graph that updates during training, a Stop & save button, and a continuous curve across resumed runs, see [Live loss, stop and resume](LIVE_TRAINING.md). That guide also records the 10M-token longer-run setup and its completed 1,000-update calibration.
+
 `--steps` is the **total target update count**, including updates already completed. Use a fresh output directory for each invocation. For example, stop at update 37 of a planned 100-update run, then continue to 100:
 
 ```bash
