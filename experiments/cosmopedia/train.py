@@ -21,6 +21,7 @@ from checkpoint import (
     save_checkpoint,
     write_checkpoint,
 )
+from events import Events, estimated_training_flops
 from model import Config, LanguageModel
 from tokenizers import Tokenizer
 from torch.nn import functional as F
@@ -146,6 +147,8 @@ def main() -> None:
         parser.error("--stop-after must be between 1 and --steps")
     if args.output.exists():
         parser.error("Choose a fresh output directory")
+    events = Events()
+    events.emit("setup", "start")
     device_name = args.device
     if device_name == "auto":
         device_name = (
@@ -222,8 +225,11 @@ def main() -> None:
         interval_tokens = progress["interval_tokens"]
     else:
         start_step = 0
-        before = generate(model, tokenizer, prompt, 40, manifest["eos_id"], device)
-        initial_loss = evaluate(model, vx, vy, args.batch_size, device)
+        with events.phase("generation", step=0):
+            before = generate(model, tokenizer, prompt, 40, manifest["eos_id"], device)
+        with events.phase("validation", step=0):
+            initial_loss = evaluate(model, vx, vy, args.batch_size, device)
+        events.emit("loss", "value", step=0, validation_loss=initial_loss)
         if not math.isfinite(initial_loss):
             raise RuntimeError("Non-finite initial validation loss")
         best_loss, best_step = initial_loss, 0
@@ -262,19 +268,25 @@ def main() -> None:
         }
         if include_best:
             state["best_checkpoint"] = best_snapshot
-        save_checkpoint(path, model, optimizer, sampling, device, identity, state)
+        with events.phase("checkpoint", step=step, file=path.name):
+            save_checkpoint(path, model, optimizer, sampling, device, identity, state)
 
     # Each new output directory is self-contained, including after resuming.
     if checkpoint is None:
         save(args.output / "best.pt", 0)
-        best_snapshot = load_checkpoint(args.output / "best.pt", identity)
+        with events.phase("checkpoint_read", step=0):
+            best_snapshot = load_checkpoint(args.output / "best.pt", identity)
     else:
-        write_checkpoint(args.output / "best.pt", best_snapshot)
+        with events.phase("checkpoint", step=start_step, file="best.pt"):
+            write_checkpoint(args.output / "best.pt", best_snapshot)
+    events.emit("setup", "end", status="ok", parameter_count=parameter_count)
     segment_start_tokens = processed
     stop_step = args.stop_after if args.stop_after is not None else args.steps
     synchronize(device)
     started = time.perf_counter()
     for step in range(start_step + 1, stop_step + 1):
+        step_started = time.monotonic_ns()
+        events.emit("train_step", "start", step=step)
         model.train()
         selected = torch.randint(
             len(training["inputs"]), (args.batch_size,), generator=sampling
@@ -296,11 +308,31 @@ def main() -> None:
         interval_loss += loss.item() * valid
         interval_tokens += valid
         processed += valid
+        events.emit(
+            "train_step",
+            "end",
+            step=step,
+            status="ok",
+            loss=loss.item(),
+            non_padding_targets=valid,
+            duration_ns=time.monotonic_ns() - step_started,
+            estimated_flops=estimated_training_flops(
+                model.configuration(), len(x), x.shape[1]
+            ),
+        )
         if step % args.eval_every == 0 or step == args.steps:
-            validation_loss = evaluate(model, vx, vy, args.batch_size, device)
+            with events.phase("validation", step=step):
+                validation_loss = evaluate(model, vx, vy, args.batch_size, device)
             if not math.isfinite(validation_loss):
                 raise RuntimeError("Non-finite validation loss")
             train_loss = interval_loss / interval_tokens
+            events.emit(
+                "loss",
+                "value",
+                step=step,
+                validation_loss=validation_loss,
+                train_loss=train_loss,
+            )
             history.append(
                 {
                     "step": step,
@@ -324,14 +356,17 @@ def main() -> None:
             interval_loss, interval_tokens = 0.0, 0
             if improved:
                 save(args.output / "best.pt", step)
-                best_snapshot = load_checkpoint(args.output / "best.pt", identity)
+                with events.phase("checkpoint_read", step=step):
+                    best_snapshot = load_checkpoint(args.output / "best.pt", identity)
         if step % args.checkpoint_every == 0 or step == stop_step:
             save(args.output / "latest.pt", step, include_best=True)
     synchronize(device)
     elapsed = time.perf_counter() - started
     model.load_state_dict(best_model)
-    torch.save(best_model, args.output / "best-weights.pt")
-    after = generate(model, tokenizer, prompt, 80, manifest["eos_id"], device)
+    with events.phase("checkpoint", step=stop_step, file="best-weights.pt"):
+        torch.save(best_model, args.output / "best-weights.pt")
+    with events.phase("generation", step=stop_step):
+        after = generate(model, tokenizer, prompt, 80, manifest["eos_id"], device)
     report = {
         "config": model.configuration(),
         "parameter_count": parameter_count,

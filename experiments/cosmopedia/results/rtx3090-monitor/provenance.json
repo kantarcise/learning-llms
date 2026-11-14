@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-14",
+  "base_commit": "3f5b6be",
+  "train_source_sha256": "a3e32800ffa7b44b5ed5e6424d3292c188fc4001326791f71bfb756a739bdec8",
+  "events_source_sha256": "6cf588fd1991ac5cd5ca8dec832c7d8f5dbeda967e2c8090c629a8e1617533a8",
+  "monitored_state_matches_unmonitored_resume_verification": true,
+  "matched_checkpoint_tensors": 358,
+  "profile_cuda_kernel_events": 193,
+  "notes": [
+    "Raw observation used the first monitor implementation; subsequent deadline-sleep and graph-rendering refinements do not change the preserved sensor samples.",
+    "Raw samples can regenerate charts with monitor_plot.py. The GPU trace and model checkpoints remain in ignored artifacts.",
+    "No hardware FLOP or SM occupancy counters were collected."
+  ]
+}
