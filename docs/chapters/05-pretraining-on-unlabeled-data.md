@@ -244,6 +244,41 @@ For example, `scores[3]` contains exactly the logits from `logits[1, 0]`, and `l
 
     Exponentiation preserves order, so a lower mean cross-entropy always gives a lower perplexity on the same evaluation tokens. Section 5.1.3 takes that measurement beyond our six predictions to the training and validation sets.
 
+### 5.1.3 Calculating the training and validation set losses
+
+We already know how to score six next-token predictions. Now we want two measurements from the same model. **Training loss** asks how well it predicts the text used to fit its weights. **Validation loss** asks how well those same weights predict held-out text. Both use the same cross-entropy calculation. The choice of text gives each number its meaning.
+
+<figure markdown="1">
+
+[![Chapter roadmap with generation and evaluation complete and training and validation losses highlighted as step three.](../assets/chapter-05/dataset-loss-roadmap.svg)](../assets/chapter-05/dataset-loss-roadmap.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.8. Step 3 takes the loss we worked out for one batch and applies it separately to each split. The training loop comes in step 4.</figcaption>
+</figure>
+
+Think back to our Character Logs checkpoint. Its epoch 8 validation loss was 1.9086. Exponentiating gives a perplexity of about **6.74**. That means its predictions on the held-out characters scored like uniform guessing among roughly seven choices containing the correct character. By epoch 30, validation loss reached 2.4473, or **11.56** effective choices. The optimizer used cross-entropy during training. Perplexity lets us read that same outcome on a different scale. [Character Logs comparison](../preparation/training-comparison.md#reading-the-curves-together)
+
+#### Count the story before splitting it
+
+We return to Edith Wharton’s public-domain short story *The Verdict* from Chapter 2. Download the author’s copy as `the-verdict.txt` in the directory where you run this snippet. The count depends on the exact text and tokenizer. [Story file](https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/ch02/01_main-chapter-code/the-verdict.txt)
+
+```python
+from pathlib import Path
+import tiktoken
+
+text_data = Path("the-verdict.txt").read_text(encoding="utf-8")
+tokenizer = tiktoken.get_encoding("gpt2")
+print(len(text_data))                    # 20,479 characters
+print(len(tokenizer.encode(text_data)))  # 5,145 tokens
+```
+
+One story keeps the training loop practical to run on a laptop. Later in this chapter we will load pretrained GPT-2 weights into our model implementation. For a larger corpus, Appendix D and the author’s supplement describe preparing Project Gutenberg books. [Project Gutenberg training supplement](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch05/03_bonus_pretraining_on_gutenberg)
+
+!!! note "What does a pretraining run cost?"
+
+    The book’s Llama 2 7B example processed **2 trillion tokens** using **184,320 A100 GPU-hours**. At its historical assumption of $30 per hour for an eight-GPU server, the arithmetic is `184,320 ÷ 8 × $30 = $691,200`. Dividing by eight converts GPU-hours to server-hours. [Llama 2 report](https://arxiv.org/abs/2307.09288)
+
+    A later open-weight example is **DeepSeek-V3** (December 2024). Its team reports **14.8 trillion tokens** and **2,664,000 H800 GPU-hours** for pretraining. They used their HAI-LLM framework with FP8 mixed precision and distributed the mixture-of-experts model across a cluster of 2,048 GPUs. Their assumed rate was already per GPU-hour, so the estimate is `2,664,000 × $2 = $5,328,000` for pretraining alone. This excludes later training stages and earlier research experiments. The models, hardware and accounting assumptions differ, so the two estimates show scale rather than relative efficiency. [DeepSeek-V3 technical report, Table 1 and §3](https://arxiv.org/abs/2412.19437)
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
