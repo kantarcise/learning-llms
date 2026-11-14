@@ -279,6 +279,96 @@ One story keeps the training loop practical to run on a laptop. Later in this ch
 
     A later open-weight example is **DeepSeek-V3** (December 2024). Its team reports **14.8 trillion tokens** and **2,664,000 H800 GPU-hours** for pretraining. They used their HAI-LLM framework with FP8 mixed precision and distributed the mixture-of-experts model across a cluster of 2,048 GPUs. Their assumed rate was already per GPU-hour, so the estimate is `2,664,000 × $2 = $5,328,000` for pretraining alone. This excludes later training stages and earlier research experiments. The models, hardware and accounting assumptions differ, so the two estimates show scale rather than relative efficiency. [DeepSeek-V3 technical report, Table 1 and §3](https://arxiv.org/abs/2412.19437)
 
+#### Split the story, then build two loaders
+
+<figure markdown="1">
+
+[![The story splits into training and validation text. Each side becomes input windows paired with next-token targets, then batches of two.](../assets/chapter-05/story-to-batches.svg)](../assets/chapter-05/story-to-batches.svg)
+
+<figcaption markdown="span">Companion to Figure 5.9. Follow one training window through the middle panel. The letters stand for consecutive token IDs. The validation loader applies the same shift to its own portion of the story.</figcaption>
+</figure>
+
+Split the **original string** at 90% of its characters. Then tokenize each piece separately. The training loader can shuffle whole examples safely because every target stays paired with its input. Validation keeps the windows in story order. Here we reuse the [Chapter 2 dataset class](02-working-with-text-data.md#26-data-sampling-with-a-sliding-window) directly with PyTorch’s loader, the two components inside the book’s helper.
+
+```python
+from torch.utils.data import DataLoader
+
+cut = int(0.9 * len(text_data))
+width = cfg["context_length"]  # 256 positions in our Chapter 5 model
+train_set = GPTDatasetV1(text_data[:cut], tokenizer, max_length=width, stride=width)
+val_set = GPTDatasetV1(text_data[cut:], tokenizer, max_length=width, stride=width)
+
+torch.manual_seed(123)
+train_loader = DataLoader(train_set, batch_size=2, shuffle=True, drop_last=True)
+val_loader = DataLoader(val_set, batch_size=2, shuffle=False, drop_last=False)
+
+for name, loader in [("training", train_loader), ("validation", val_loader)]:
+    print(name, len(loader), "batches")
+    for inputs, targets in loader:
+        assert inputs.shape == targets.shape == (2, 256)  # True for this story.
+        assert torch.equal(inputs[:, 1:], targets[:, :-1])
+```
+
+The training loader yields **9 batches**, each with 2 windows × 256 positions, so we score **4,608 next tokens**. The validation loader yields **1 batch** with **512 next tokens**. These counts reflect the complete windows available in each split.
+
+!!! tip "Why keep windows the same length?"
+
+    Equal lengths let PyTorch stack windows into a single rectangular tensor. A causal model already sees short prefixes within each window. Training on examples of varying lengths can also expose it to the length patterns it will encounter in use. To batch unequal lengths, one option is to pad each batch and exclude padded targets from the loss.
+
+#### Measure a batch, then average across a loader
+
+```python title="Listing 5.2 companion — batch and loader loss"
+from itertools import islice
+
+
+def calc_loss_batch(
+    inputs: torch.Tensor, targets: torch.Tensor, model: nn.Module, device: torch.device
+) -> torch.Tensor:
+    """Return scalar mean loss for integer IDs [batch, positions]."""
+    logits = model(inputs.to(device))  # One vocabulary score row per position.
+    return torch.nn.functional.cross_entropy(
+        logits.flatten(0, 1), targets.to(device).flatten()
+    )
+
+
+def calc_loss_loader(
+    loader: DataLoader, model: nn.Module, device: torch.device,
+    num_batches: int | None = None,
+) -> float:
+    """Average the scalar batch losses over all batches or a positive limit."""
+    if num_batches is not None and num_batches < 1:
+        raise ValueError("num_batches must be positive")
+    count = len(loader) if num_batches is None else min(num_batches, len(loader))
+    if count == 0:
+        return float("nan")  # An empty loader has no measured loss.
+
+    total = 0.0
+    for inputs, targets in islice(loader, count):
+        total += calc_loss_batch(inputs, targets, model, device).item()
+    return total / count
+```
+
+Each batch here contributes 512 targets, so averaging the nine training batch means gives each scored token equal weight. With unequal-sized batches, a token-level mean needs to weight each batch by its number of scored targets. Setting `num_batches=2` gives a quicker estimate from the first two available batches.
+
+```python
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+model.eval()  # Disable dropout so both splits measure the same fixed model.
+with torch.no_grad():  # Evaluation only needs forward passes.
+    train_loss = calc_loss_loader(train_loader, model, device)
+    val_loss = calc_loss_loader(val_loader, model, device)
+print(f"Training {train_loss:.4f} | Validation {val_loss:.4f}")
+```
+
+The seeded, untrained GPT gives **10.9876 training loss** and **10.9811 validation loss**. For scale, a uniform guess among 50,257 tokens has loss about 10.825. We now have a baseline to measure against when the optimizer starts updating weights.
+
+<figure markdown="1">
+
+[![The seven-step chapter roadmap marks generation, evaluation and dataset losses complete. Training the model is next.](../assets/chapter-05/training-loop-roadmap.svg)](../assets/chapter-05/training-loop-roadmap.svg)
+
+<figcaption markdown="span">Companion to Figure 5.10. Step 3 measured the starting weights on both splits. In step 4, training batches supply gradients and held-out batches let us track how those updates affect validation loss.</figcaption>
+</figure>
+
 ## 5.2 Training an LLM
 
 Notes to come as we read this section.
