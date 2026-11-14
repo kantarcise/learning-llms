@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="466" viewBox="0 0 700 466" role="img" aria-labelledby="title desc">
+  <title id="title">One epoch, nine updates</title>
+  <desc id="desc">Each epoch visits nine training batches. Each batch clears gradients, computes loss, backpropagates, and updates weights. Periodic loss checks and an end-of-epoch text sample track progress.</desc>
+  <style>text{font:18px Arial,sans-serif;fill:#183849}.heading{font-size:22px;font-weight:bold}.code{font:16px monospace}.badge{fill:white;font-size:16px;text-anchor:middle}</style>
+  <rect width="700" height="466" rx="14" fill="#f8fafc"/>
+  <text x="24" y="37" class="heading">1   For each epoch</text>
+  <rect x="24" y="56" width="652" height="337" rx="12" fill="#e5eff0"/>
+  <text x="45" y="92" class="heading">2   Take the next training batch</text>
+  <text x="45" y="122">Two windows × 256 positions = 512 next-token targets</text>
+  <circle cx="61" cy="158" r="15" fill="#286855"/><text x="61" y="163" class="badge">3</text><text x="89" y="164">Clear the previous gradients</text><text x="382" y="164" class="code">optimizer.zero_grad()</text>
+  <circle cx="61" cy="206" r="15" fill="#286855"/><text x="61" y="211" class="badge">4</text><text x="89" y="212">Score the next-token targets</text><text x="382" y="212" class="code">loss = calc_loss_batch(…)</text>
+  <circle cx="61" cy="254" r="15" fill="#286855"/><text x="61" y="259" class="badge">5</text><text x="89" y="260">Compute fresh gradients</text><text x="382" y="260" class="code">loss.backward()</text>
+  <circle cx="61" cy="302" r="15" fill="#286855"/><text x="61" y="307" class="badge">6</text><text x="89" y="308">Update the model weights</text><text x="382" y="308" class="code">optimizer.step()</text>
+  <path d="M61 174v17 m0 31v17 m0 31v17" stroke="#286855" stroke-width="2"/>
+  <rect x="40" y="334" width="620" height="44" rx="7" fill="#fff"/>
+  <text x="54" y="362">7   At evaluation intervals, record training and validation loss.</text>
+  <text x="43" y="432">8   After the last batch, generate a sample from a fixed prompt.</text>
+</svg>

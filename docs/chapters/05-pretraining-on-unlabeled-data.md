@@ -371,7 +371,18 @@ The seeded, untrained GPT gives **10.9876 training loss** and **10.9811 validati
 
 ## 5.2 Training an LLM
 
-Notes to come as we read this section.
+Section 5.1.3 gave us nine training batches from *The Verdict*. What changes when we train the GPT model from Chapter 4? Take the first batch. The model scores 512 next-token targets, and cross-entropy averages those predictions into one loss. Calling `loss.backward()` computes how that loss changes with each trainable parameter. Then `optimizer.step()` uses the gradients to update the weights. The second batch sees those updated weights. With this loader, **one epoch means nine optimizer steps**.
+
+<figure markdown="1">
+
+[![One epoch contains nine batches. Each batch clears gradients, computes a loss, backpropagates and updates weights. Loss checks happen periodically and a text sample follows each epoch.](../assets/chapter-05/one-training-update.svg)](../assets/chapter-05/one-training-update.svg)
+
+<figcaption markdown="span">Original companion to Raschka’s Figure 5.11 (p. 146). Steps 3–6 repeat for every training batch. Steps 7 and 8 let us inspect what the updates accomplished. Validation measures the current weights without updating them.</figcaption>
+</figure>
+
+!!! tip "Where Appendix D fits"
+
+    **Learning-rate warmup** starts the optimizer with a small learning rate and raises it during the opening steps. **Cosine annealing** then lowers the rate along a smooth curve toward a chosen minimum. **Gradient clipping** fits between steps 5 and 6. If the combined gradient norm exceeds a threshold, clipping scales the gradients down before the optimizer uses them. You can follow Listing 5.3 first and return to Appendix D to see where each change belongs. [Author’s Appendix D notebook](https://github.com/rasbt/LLMs-from-scratch/tree/main/appendix-D)
 
 ## 5.3 Decoding strategies to control randomness
 
