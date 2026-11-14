@@ -380,6 +380,23 @@ Section 5.1.3 gave us nine training batches from *The Verdict*. What changes whe
 <figcaption markdown="span">Original companion to Raschka’s Figure 5.11 (p. 146). Steps 3–6 repeat for every training batch. Steps 7 and 8 let us inspect what the updates accomplished. Validation measures the current weights without updating them.</figcaption>
 </figure>
 
+### What counts as one training example?
+
+Suppose we have **1,000 sentences**. How many updates make one epoch? We need to tokenize the sentences, decide how to cut the token stream into windows, and decide how many windows to put in a batch. A single window can span a sentence boundary.
+
+1. **Start with tokens.** For a small example, suppose tokenization gives us nine tokens in order. Call them `A B C D E F G H I`. Each letter stands for one token.
+2. **Build windows.** Choose a window length of four and a stride of four. Each row below is one training example. The last input in the first row, `D`, uses `E` as its target. That same `E` starts the next input window.
+
+    | Example | Input tokens | Next-token targets |
+    | --- | --- | --- |
+    | 1 | A B C D | B C D E |
+    | 2 | E F G H | F G H I |
+
+3. **Batch the rows.** With batch size two, the loader returns both rows together. Cross-entropy averages eight next-token losses, and the optimizer updates the model once. Those nine source tokens supplied **two windows, one batch, one update**.
+4. **Scale up the same arithmetic.** Suppose we start with **256,001 tokens**, use 256-token windows and a stride of 256, and keep only full windows. We get exactly **1,000 training examples**. The extra token supplies the final target. At 100 windows per batch, each step scores 25,600 targets and one epoch takes ten steps.
+
+**One DeepSeek-V3 update.** First picture one row containing **4,096 token positions**. During the main pretraining run, the global batch grew from 3,072 rows to **15,360 rows**. At that later setting, the devices together processed **15,360 × 4,096 = 62,914,560 token positions** per optimizer update. “Global” counts the rows across the whole training cluster. This tells us the size of one step. Counting steps in an epoch would also require knowing what constitutes one pass over the training data. DeepSeek reports its schedule in tokens processed. [DeepSeek-V3 Technical Report, §4.2](https://arxiv.org/html/2412.19437v2#S4.SS2)
+
 !!! tip "Where Appendix D fits"
 
     **Learning-rate warmup** starts the optimizer with a small learning rate and raises it during the opening steps. **Cosine annealing** then lowers the rate along a smooth curve toward a chosen minimum. **Gradient clipping** fits between steps 5 and 6. If the combined gradient norm exceeds a threshold, clipping scales the gradients down before the optimizer uses them. You can follow Listing 5.3 first and return to Appendix D to see where each change belongs. [Author’s Appendix D notebook](https://github.com/rasbt/LLMs-from-scratch/tree/main/appendix-D)
