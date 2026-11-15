@@ -271,7 +271,7 @@ print(len(text_data))                    # 20,479 characters
 print(len(tokenizer.encode(text_data)))  # 5,145 tokens
 ```
 
-One story keeps the training loop practical to run on a laptop. Later in this chapter we will load pretrained GPT-2 weights into our model implementation. For a larger corpus, Appendix D and the author’s supplement describe preparing Project Gutenberg books. [Project Gutenberg training supplement](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch05/03_bonus_pretraining_on_gutenberg)
+One story keeps the training loop practical to run on a laptop. Later in this chapter we will load pretrained GPT-2 weights into our model implementation. For a larger corpus, the author’s supplement describes preparing Project Gutenberg books. [Project Gutenberg training supplement](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch05/03_bonus_pretraining_on_gutenberg)
 
 !!! note "What does a pretraining run cost?"
 
@@ -489,6 +489,73 @@ The sample is a **sneak peek**. Keep the prompt and greedy decoding fixed, and y
     The **W** refers to *decoupled weight decay*. AdamW nudges a weight toward zero separately from the adaptive gradient calculation. With the book’s `lr=0.0004` and `weight_decay=0.1`, the decay part alone multiplies a weight by `1 − 0.0004 × 0.1 = 0.99996`. A weight of 1.0 therefore becomes 0.99996 before the gradient-driven adjustment. The full update can still make that weight larger. Decay is one way to regularize training, and validation loss lets us check how well the resulting model generalizes. [Original AdamW paper](https://arxiv.org/abs/1711.05101)
 
     AdamW is a common choice for language-model pretraining. DeepSeek-V3 is a documented example. The loop accepts an optimizer object, so its choice is independent of the GPT architecture. [DeepSeek-V3 training hyperparameters](https://arxiv.org/html/2412.19437v2#S4.SS2)
+
+### Run ten epochs on *The Verdict*
+
+The earlier loss check evaluated random weights. For the training run, start from a fresh model and construct AdamW after moving the model to the device. On our Mac, `mps` selects the Apple GPU. The batch-loss helper moves the input and target tensors there too.
+
+```python
+device = torch.device("mps")  # Apple GPU for the measured run below.
+torch.manual_seed(123)
+model = GPTModel(cfg).to(device)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
+
+train_losses, val_losses, tokens_seen = train_model_simple(
+    model, train_loader, val_loader, optimizer, device,
+    num_epochs=10, eval_freq=5, eval_iter=5,
+    start_context="Every effort moves you", tokenizer=tokenizer,
+)
+```
+
+Ten epochs × nine batches gives **90 optimizer updates**. Each batch contains 512 target positions. The model therefore sees 46,080 training positions across ten passes through the same small training split. The loop evaluates after updates 1, 6, 11, …, 86. The last printed loss is from update 86 (step 85), while the final text sample uses all 90 updates.
+
+<figure markdown="1">
+
+[![Measured training and validation cross-entropy across ten passes over The Verdict. Both fall early, then training loss keeps falling as validation flattens.](../assets/chapter-05/verdict-ten-epochs.svg)](../assets/chapter-05/verdict-ten-epochs.svg)
+
+<figcaption markdown="span">Companion to Figure 5.12. Each marker is an evaluation on the M5 run. The bottom axis counts passes through the training loader. The top axis counts training-token positions, including repeat visits. [Measured losses and samples](../assets/chapter-05/verdict-ten-epochs.json)</figcaption>
+</figure>
+
+To draw the figure from the three lists returned by the loop, use the measured token count to place every point. In particular, the first observation comes **after** the first update, one ninth of the way through epoch one.
+
+```python title="Plot the measurements returned by train_model_simple"
+import matplotlib.pyplot as plt
+
+tokens_per_epoch = 9 * 512  # Nine full batches from this particular loader.
+epochs_seen = [tokens / tokens_per_epoch for tokens in tokens_seen]
+fig, ax = plt.subplots(figsize=(7.2, 4.2), layout="constrained")
+ax.plot(epochs_seen, train_losses, "o-", color="#176955", label="Training")
+ax.plot(epochs_seen, val_losses, "s--", color="#884382", label="Validation")
+ax.set(xlabel="Epochs completed", ylabel="Mean next-token cross-entropy",
+       xlim=(0, 10), xticks=range(0, 11, 2))
+ax.legend()
+top = ax.secondary_xaxis("top", functions=(
+    lambda epochs: epochs * tokens_per_epoch,
+    lambda tokens: tokens / tokens_per_epoch,
+))
+top.set_xlabel("Training-token positions seen")
+top.set_xticks([0, 10000, 20000, 30000, 40000])
+fig.savefig("verdict-ten-epochs.svg")
+```
+
+On an **Apple M5 with 16 GiB unified memory**, PyTorch 2.14.1 on MPS took **48.4 seconds** for the training loop, including the evaluations and ten samples. Setup and plotting were outside the timer. The book reports training loss **9.781 → 0.391** and validation **9.933 → 6.452**. Our first and last logged measurements were **9.818 → 0.712** and **9.923 → 6.380** respectively. The lowest measured validation loss was **6.132 at step 60**. A fixed seed makes the setup repeatable within an environment, but different devices and software can produce different trajectories.
+
+### What the loss curves and generated text tell us
+
+The useful signal is the change over time. During the first epoch, both curves fall. Later the model keeps improving on familiar windows while progress on held-out windows largely stalls. That widening gap is evidence of **overfitting**. The fact that validation loss is higher at one isolated measurement would tell us much less.
+
+Our first sample continued the prompt with commas. After epoch ten it produced “quite insensible to the irony.” We removed the fixed prompt and collapsed whitespace in both the printed continuation and the first 90% of the story. **The entire 50-token continuation occurred as one contiguous passage in the training split.** Here the more grammatical sample is direct evidence of recall.
+
+A direct check is to take a distinctive passage from a generated continuation and search the **training split**. Longer exact matches give stronger evidence of verbatim recall than everyday phrases like “he said.” A single match establishes overlap for that sample. Held-out loss answers the broader question of generalization. A larger corpus can supply more fresh text per update and require fewer repeat passes to reach the same token budget.
+
+**Chapter roadmap (Figure 5.13).** We can now generate a sample, score next-token predictions, measure loss on two splits, and train the weights. In §5.3 we keep those weights fixed and change how we select tokens from the logits. Temperature and top-k sampling can diversify the continuation. A change in decoding leaves any memorized passages in the weights. Saving and reloading our weights comes in §5.4, followed by loading OpenAI’s GPT-2 weights in §5.5.
+
+<figure markdown="1">
+
+[![Four chapter objectives complete. Decoding strategies are next, followed by saving and loading weights.](../assets/chapter-05/decoding-roadmap.svg)](../assets/chapter-05/decoding-roadmap.svg)
+
+<figcaption markdown="span">Companion to Figure 5.13. The trained model supplies vocabulary scores. The next section explores how we choose a token from those scores.</figcaption>
+</figure>
 
 ## 5.3 Decoding strategies to control randomness
 
