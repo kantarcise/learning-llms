@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="676" height="484" viewBox="0 0 676 484" role="img" aria-labelledby="title desc">
+  <title id="title">Nine scores become three possible continuations</title>
+  <desc id="desc">For the prompt Every effort moves you, the top-three threshold is 4.51. Other logits become negative infinity. At temperature one, forward has about 58 percent probability, toward 36 percent and closer 6 percent.</desc>
+  <style>text{font:18px Arial,sans-serif;fill:#183849}.h{font-size:22px;font-weight:bold}.label{font-weight:bold}.num{text-anchor:end;font-variant-numeric:tabular-nums}</style>
+  <rect width="676" height="484" rx="14" fill="#f8fafc"/>
+  <text x="24" y="38" class="h">Every effort moves you ____</text>
+  <text x="24" y="70">Keep scores ≥ 4.51, then apply softmax at T = 1.</text>
+  <g class="label"><text x="26" y="114">ID</text><text x="85" y="114">Token</text><text x="288" y="114" class="num">Logit</text><text x="418" y="114" class="num">Masked logit</text><text x="640" y="114" class="num">Chance</text></g>
+  <rect x="12" y="125" width="652" height="34" rx="6" fill="#dcefe8"/>
+  <g transform="translate(0 148)"><text x="28">0</text><text x="85">closer</text><text x="288" class="num">4.51</text><text x="418" class="num">4.51</text><rect x="445" y="-12" width="10.45" height="12" rx="3" fill="#23775f"/><text x="640" class="num">6.15%</text></g>
+  <g transform="translate(0 186)"><text x="28">1</text><text x="85">every</text><text x="288" class="num">0.89</text><text x="418" class="num">−∞</text><rect x="445" y="-12" width="0.00" height="12" rx="3" fill="#23775f"/><text x="640" class="num">0%</text></g>
+  <g transform="translate(0 224)"><text x="28">2</text><text x="85">effort</text><text x="288" class="num">-1.90</text><text x="418" class="num">−∞</text><rect x="445" y="-12" width="0.00" height="12" rx="3" fill="#23775f"/><text x="640" class="num">0%</text></g>
+  <rect x="12" y="239" width="652" height="34" rx="6" fill="#dcefe8"/>
+  <g transform="translate(0 262)"><text x="28">3</text><text x="85">forward</text><text x="288" class="num">6.75</text><text x="418" class="num">6.75</text><rect x="445" y="-12" width="98.18" height="12" rx="3" fill="#23775f"/><text x="640" class="num">57.75%</text></g>
+  <g transform="translate(0 300)"><text x="28">4</text><text x="85">inches</text><text x="288" class="num">1.63</text><text x="418" class="num">−∞</text><rect x="445" y="-12" width="0.00" height="12" rx="3" fill="#23775f"/><text x="640" class="num">0%</text></g>
+  <g transform="translate(0 338)"><text x="28">5</text><text x="85">moves</text><text x="288" class="num">-1.62</text><text x="418" class="num">−∞</text><rect x="445" y="-12" width="0.00" height="12" rx="3" fill="#23775f"/><text x="640" class="num">0%</text></g>
+  <g transform="translate(0 376)"><text x="28">6</text><text x="85">pizza</text><text x="288" class="num">-1.89</text><text x="418" class="num">−∞</text><rect x="445" y="-12" width="0.00" height="12" rx="3" fill="#23775f"/><text x="640" class="num">0%</text></g>
+  <rect x="12" y="391" width="652" height="34" rx="6" fill="#dcefe8"/>
+  <g transform="translate(0 414)"><text x="28">7</text><text x="85">toward</text><text x="288" class="num">6.28</text><text x="418" class="num">6.28</text><rect x="445" y="-12" width="61.36" height="12" rx="3" fill="#23775f"/><text x="640" class="num">36.10%</text></g>
+  <g transform="translate(0 452)"><text x="28">8</text><text x="85">you</text><text x="288" class="num">1.79</text><text x="418" class="num">−∞</text><rect x="445" y="-12" width="0.00" height="12" rx="3" fill="#23775f"/><text x="640" class="num">0%</text></g>
+</svg>

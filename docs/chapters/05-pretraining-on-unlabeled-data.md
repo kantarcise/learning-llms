@@ -617,6 +617,37 @@ for temperature in (1.0, 0.1, 5.0):
 
 The shortcut is to read `probabilities[pizza_id]` directly. Multiply it by 1,000 to get the expected count. At temperature 5, repeated experiments would average about 43 occurrences per 1,000 draws. This particular run produced 32.
 
+### 5.3.2 Top-k sampling
+
+In Exercise 5.1, raising the temperature gave `pizza` a chance after `Every effort moves you`. Suppose we want some variety but only among GPT’s three highest-scoring continuations. **Top-k sets who can be picked. Temperature sets the odds among those who remain.** For this prompt, `forward`, `toward`, and `closer` make the cut.
+
+<figure markdown="1">
+
+[![For each of nine vocabulary IDs, compare the original score, masked score and probability. Only forward, toward and closer retain positive probability.](../assets/chapter-05/top-k-shortlist.svg)](../assets/chapter-05/top-k-shortlist.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.15. Follow one token across its row. At temperature 1, masking sends the chance of drawing pizza to exactly zero and redistributes the probability across the three surviving IDs.</figcaption>
+</figure>
+
+```python
+# Reuse the nine logits and the ID-ordered tokens list from §5.3.1.
+top_scores, top_ids = torch.topk(logits, k=3)
+print(top_ids.tolist())                 # [3, 7, 0], in descending score order
+cutoff = top_scores[-1]                 # 4.51, the score for "closer"
+masked = torch.where(logits < cutoff, -torch.inf, logits)
+
+# Keep the original nine ID slots. Softmax gives exp(-inf) = 0 in six slots.
+temperature = 1.0
+probabilities = torch.softmax(masked / temperature, dim=0)
+next_id = torch.multinomial(probabilities, num_samples=1).item()
+print(tokens[next_id])
+```
+
+This threshold keeps a token whose score equals the cutoff. If several tokens tie at the boundary it can retain more than *k*. The nine scores here are distinct.
+
+**Does this make generation static?** Imagine drawing `toward`. The next prompt is now `Every effort moves you toward`. GPT computes fresh logits for that context, so different tokens can enter the top three on the very next step. The filter uses the model’s ranking as its only evidence of suitability. It can discard an unusual but excellent word, and a highly ranked continuation can still be nonsense.
+
+Chapter 3 used the same mathematical trick on a different axis. Causal attention masks **future positions** before mixing value vectors. Here we mask **vocabulary IDs** before choosing the next token. Section 5.3.3 puts this choice inside the generation loop. [Author’s Chapter 5 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/01_main-chapter-code/ch05.ipynb)
+
 ## 5.4 Loading and saving model weights in PyTorch
 
 Notes to come as we read this section.
