@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 534" width="720" height="534" role="img" aria-labelledby="title desc">
+  <title id="title">One GPT-2 block design, four model sizes</title>
+  <desc id="desc">Token and position embeddings feed a stack of pre-normalized causal transformer blocks, each with two residual additions. Width, head count and block count increase from small through XL. Each head has 64 coordinates.</desc>
+  <style>text{font:18px Arial,sans-serif;fill:#183849}.h{font-size:23px;font-weight:bold}.b{font-weight:bold}.n{text-anchor:end;font-variant-numeric:tabular-nums}</style>
+  <rect width="720" height="534" rx="16" fill="#f8fafc"/>
+  <text x="24" y="38" class="h">One GPT-2 design, four sizes</text>
+  <text x="24" y="80">Token IDs → token + position embeddings → dropout</text>
+  <path d="M46 89v21m-6-7 6 7 6-7" fill="none" stroke="#286855" stroke-width="2"/>
+  <rect x="23" y="116" width="674" height="111" rx="10" fill="#dcefe8"/>
+  <text x="42" y="145" class="b">Repeat once per transformer block</text>
+  <text x="42" y="178">y = x + dropout(causal multi-head attention(LayerNorm₁(x)))</text>
+  <text x="42" y="207">output = y + dropout(feedforward(LayerNorm₂(y)))</text>
+  <path d="M46 229v21m-6-7 6 7 6-7" fill="none" stroke="#286855" stroke-width="2"/>
+  <text x="24" y="279">Final LayerNorm → vocabulary projection → 50,257 logits per position</text>
+  <rect x="22" y="305" width="675" height="38" rx="6" fill="#e0eaf4"/>
+  <g class="b"><text x="36" y="330">GPT-2</text><text x="256" y="330" class="n">Width</text><text x="381" y="330" class="n">Heads</text><text x="506" y="330" class="n">Blocks</text><text x="675" y="330" class="n">Parameters</text></g>
+  <g transform="translate(0 370)"><text x="36">Small</text><g class="n"><text x="256">768</text><text x="381">12</text><text x="506">12</text><text x="675">124M</text></g></g>
+  <g transform="translate(0 407)"><text x="36">Medium</text><g class="n"><text x="256">1,024</text><text x="381">16</text><text x="506">24</text><text x="675">355M</text></g></g>
+  <g transform="translate(0 444)"><text x="36">Large</text><g class="n"><text x="256">1,280</text><text x="381">20</text><text x="506">36</text><text x="675">774M</text></g></g>
+  <g transform="translate(0 481)"><text x="36">XL</text><g class="n"><text x="256">1,600</text><text x="381">25</text><text x="506">48</text><text x="675">1,558M</text></g></g>
+</svg>

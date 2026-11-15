@@ -819,6 +819,29 @@ The helper initializes its own logging counters, so its first resumed line says 
 
 Section 5.4 put our own trained parameters back into a fresh GPT. Here we use the same idea with parameters learned by OpenAI during GPT-2 pretraining. The printed book uses TensorFlow to **read the original checkpoint format**. The model that runs the forward pass is still our PyTorch GPT.
 
+### Inspect the checkpoint before building the model
+
+The book’s `download_and_load_gpt2` helper returns two dictionaries. **Settings tell us what to build. Parameters supply the learned numbers to put inside it.** For GPT-2 small, the settings on page 162 are `n_vocab=50257`, `n_ctx=1024`, `n_embd=768`, `n_head=12`, and `n_layer=12`. These are dimensions and counts. The separate parameter dictionary groups the arrays by their role in the forward pass.
+
+```python
+# After loading the original checkpoint with the book’s helper:
+print(params.keys())          # blocks, b, g, wpe, wte
+print(len(params["blocks"]))  # 12 groups of attention, feedforward and norm parameters
+print(params["wte"].shape)    # (50257, 768): token ID selects a row
+print(params["wpe"].shape)    # (1024, 768): position selects a row
+```
+
+For example, `params["wte"][42]` holds all 768 coordinates learned for token ID 42. At position 3, add that row to `params["wpe"][3]` to get the input vector. The top-level `g` and `b` supply the scale and shift for the **final** LayerNorm.
+
+<figure markdown="1">
+
+[![GPT-2 data flow through both residual paths, with width, heads, block count and parameter counts for the four sizes.](../assets/chapter-05/gpt2-family.svg)](../assets/chapter-05/gpt2-family.svg)
+
+<figcaption markdown="span">Original companion to Figure 5.17 (p. 163). Moving from small to XL widens each token row from 768 to 1,600 coordinates and deepens the stack from 12 to 48 blocks. Each head still gets 64 coordinates: 768 ÷ 12 and 1,600 ÷ 25 give the same result.</figcaption>
+</figure>
+
+**Where does Q/K/V bias enter?** On page 164, *after* Figure 5.17, Raschka sets `context_length=1024` and `qkv_bias=True` when constructing the receiving model. The five settings printed earlier have no bias flag. The checkpoint does contain learned attention projection biases, stored together inside each block at `params["blocks"][i]["attn"]["c_attn"]["b"]`. Enabling the flag gives our separate query, key, and value layers a place to load their respective slices.
+
 !!! tip "Use the author’s PyTorch conversion"
 
     Raschka converted the original weights into state dictionaries for the book’s `GPTModel`. For GPT-2 small, use `gpt2-small-124M.pth` from his notebook. Start a fresh model with **1,024 positions** and **Q/K/V biases enabled**. Our short-story run used 256 positions and omitted those biases. The small model’s width (768), block count (12) and head count (12) already match. Then load the dictionary as in §5.4 and switch the model to evaluation mode. This route uses the PyTorch installation already in the project. [Author’s PyTorch loading notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/02_alternative_weight_loading/weight-loading-pytorch.ipynb)
