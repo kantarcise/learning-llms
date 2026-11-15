@@ -740,7 +740,80 @@ A small positive temperature with several candidates can still produce different
 
 ## 5.4 Loading and saving model weights in PyTorch
 
-Notes to come as we read this section.
+What should survive when the Python process exits? To generate another sentence tomorrow, we need the GPT architecture, its configuration, tokenizer, and learned weights. To take the **next AdamW update**, we also want the optimizer’s memory of the preceding batches.
+
+<figure markdown="1">
+
+[![Chapter roadmap with step six highlighted: save the trained model and restore it for generation or further training.](../assets/chapter-05/checkpoint-roadmap.svg)](../assets/chapter-05/checkpoint-roadmap.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 5.16. Step 6 preserves our trained model. Step 7 will bring someone else’s pretrained GPT-2 weights into the architecture we built.</figcaption>
+</figure>
+
+### Save the weights for inference
+
+`model.state_dict()` maps names such as `tok_emb.weight` to tensors. It includes learned parameters and persistent buffers such as the causal attention mask. The `.pth` suffix is a filename convention. In a new session, recreate the architecture with the **same configuration** (including our 256-position embedding table), then copy the saved values into it. [PyTorch guide to saving and loading models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html)
+
+```python
+# End of training
+torch.save(model.state_dict(), "verdict-weights.pth")
+
+# New session: import GPTModel, recreate cfg, and select the device.
+model = GPTModel(cfg).to(device)
+weights = torch.load("verdict-weights.pth", map_location="cpu", weights_only=True)
+model.load_state_dict(weights)
+model.eval()  # Disable dropout for generation.
+```
+
+Dropout samples a fresh mask during training. That temporary mask has no learned weights to save. Reconstructing the model recreates the dropout layers, and `eval()` selects their inference behavior.
+
+### Exercise 5.4 — resume for one epoch
+
+Think of one coordinate in the token embedding table. Its **weight** tells GPT which value to use on the next forward pass. AdamW separately stores running averages of the gradient and squared gradient for that coordinate, plus an update counter for its parameter tensor. Restoring only the model gives the same initial predictions. Starting a fresh AdamW changes how the *next* gradient updates those weights. The same distinction applies to a CNN trained with AdamW.
+
+```python
+# Session 1: immediately after ten epochs.
+torch.save({
+    "model": model.state_dict(),
+    "optimizer": optimizer.state_dict(),
+    "epochs_completed": 10,
+}, "verdict-training.pth")
+```
+
+```python
+# Session 2: recreate the same cfg, tokenizer and loaders from §5.1.
+saved = torch.load("verdict-training.pth", map_location="cpu", weights_only=True)
+model = GPTModel(cfg).to(device)
+model.load_state_dict(saved["model"])
+
+# Attach AdamW to this new model's parameters before loading its history.
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
+optimizer.load_state_dict(saved["optimizer"])
+model.train()
+
+train_model_simple(model, train_loader, val_loader, optimizer, device,
+                   num_epochs=1, eval_freq=5, eval_iter=5,
+                   start_context="Every effort moves you", tokenizer=tokenizer)
+print("Completed epoch", saved["epochs_completed"] + 1)
+```
+
+**Fresh-process check on the M5.** We saved after ten epochs (90 updates), started a second Python process and restored the checkpoint. Before taking another step, all 50,257 next-token logits for the fixed prompt matched the saved reference exactly. After one more epoch, every restored AdamW step counter had advanced from 90 to 99. Validation loss measured after update 99 was **6.4580**.
+
+The helper initializes its own logging counters, so its first resumed line says epoch 1, step 0. AdamW’s restored counters continue from the checkpoint. For an exact replay of a shuffled, dropout-enabled training trajectory, also preserve random generator and sampler state. Our [Cosmopedia resume experiment](https://github.com/kantarcise/learning-llms/tree/main/experiments/cosmopedia/results/rtx3090-resume) tests that stronger requirement.
+
+!!! tip "The JAX equivalent with Flax Linen"
+
+    A JAX training program often carries its state explicitly as a tree of arrays. In Flax Linen, a standard `TrainState` groups the parameters, optimizer state and step. For a small local checkpoint, serialize that state and restore it into a freshly initialized template with the same model and optimizer. To export just the weights, serialize `state.params` and restore into `template.params`. [Flax serialization reference](https://flax-linen.readthedocs.io/en/latest/api_reference/flax.serialization.html)
+
+    ```python
+    from pathlib import Path
+    from flax import serialization
+
+    path = Path("verdict-training.msgpack")
+    path.write_bytes(serialization.to_bytes(state))  # End of session 1.
+
+    # Session 2: initialize template with the matching model and optimizer.
+    state = serialization.from_bytes(template, path.read_bytes())
+    ```
 
 ## 5.5 Loading pretrained weights from OpenAI
 
