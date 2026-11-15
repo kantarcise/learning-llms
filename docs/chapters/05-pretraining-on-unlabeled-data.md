@@ -648,6 +648,89 @@ This threshold keeps a token whose score equals the cutoff. If several tokens ti
 
 Chapter 3 used the same mathematical trick on a different axis. Causal attention masks **future positions** before mixing value vectors. Here we mask **vocabulary IDs** before choosing the next token. Section 5.3.3 puts this choice inside the generation loop. [Author’s Chapter 5 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/01_main-chapter-code/ch05.ipynb)
 
+### 5.3.3 Modifying the text generation function
+
+The Chapter 4 loop already knew how to extend a prompt. Listing 5.4 changes one decision inside it: **given the scores at the last position, which ID should we append?** The same weights can now produce a greedy continuation or a sampled one. [Author’s Chapter 5 implementation](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch05/01_main-chapter-code)
+
+```python title="Listing 5.4 companion — generate for a single prompt"
+@torch.no_grad()
+def generate(
+    model: nn.Module, idx: torch.Tensor, max_new_tokens: int, context_size: int,
+    temperature: float = 0.0, top_k: int | None = None, eos_id: int | None = None,
+) -> torch.Tensor:
+    """Extend one prompt of integer token IDs [1, T]; T is its current length."""
+    for _ in range(max_new_tokens):
+        # Keep the full output in idx. Only the most recent context fits in GPT.
+        context = idx[:, -context_size:]
+        scores = model(context)[:, -1, :]  # [1, vocabulary size] at the last position
+
+        if top_k is not None:
+            # topk sorts the winners. The last winner gives the cutoff.
+            winners = scores.topk(top_k, dim=-1).values
+            cutoff = winners[:, -1:]  # [1, 1], broadcasts across the vocabulary
+            scores = scores.masked_fill(scores < cutoff, -torch.inf)
+
+        if temperature > 0:
+            # Convert the remaining scores to probabilities, then draw one ID.
+            probs = torch.softmax(scores / temperature, dim=-1)
+            next_id = torch.multinomial(probs, num_samples=1)
+        else:
+            # Zero is the greedy setting. This branch avoids division by zero.
+            next_id = scores.argmax(dim=-1, keepdim=True)
+
+        # An optional end marker stops this single prompt before we append it.
+        if eos_id is not None and next_id.item() == eos_id:
+            break
+        idx = torch.cat((idx, next_id), dim=1)  # New token becomes input next time.
+    return idx
+```
+
+Here is the call for the book’s example. Set the seed once before generation so that the random generator advances with each draw.
+
+```python
+model.to("cpu").eval()
+prompt_ids = text_to_token_ids("Every effort moves you", tokenizer)
+torch.manual_seed(123)
+output_ids = generate(model, prompt_ids, max_new_tokens=15,
+                      context_size=cfg["context_length"], top_k=25, temperature=1.4)
+print(token_ids_to_text(output_ids, tokenizer))
+```
+
+**Exercise 5.2 — change the token choice, keep the weights fixed.** We repeated the ten-epoch M5 training setup from §5.2 and then ran three CPU continuations from that single model. Each starts with the same prompt, generates 15 tokens, and resets the seed to 123. These are local outputs.
+
+**Temperature 0, top-k None.**
+
+```text
+Every effort moves you?"
+
+"Yes--quite insensible to the irony. She wanted
+```
+
+**Temperature 0.2, top-k 3.**
+
+```text
+Every effort moves you?"
+
+"Yes--quite insensible to the fact with a laugh
+```
+
+**Temperature 1.4, top-k 25.**
+
+```text
+Every effort moves you stand," she up surprise. It is to have been an object for enough
+```
+
+Once two continuations choose different IDs, the next model inputs differ too. A single unusual choice early on can change the rest of the sentence. A setting that produces a fresh phrase can also produce awkward grammar.
+
+| Application | Decoding choice | What matters to the user |
+| --- | --- | --- |
+| Route a ticket to billing, access, or support | Greedy selection or a narrow shortlist and low temperature | The same request should get a stable label. Restrict the output to the allowed labels and check it before routing. |
+| Brainstorm titles for a talk | Sample several continuations with a wider shortlist and higher temperature | Different phrasings are useful because a person will compare them. Keep the ones that fit. |
+
+A low positive temperature still permits random draws among surviving candidates. Greedy selection removes that draw. Neither setting establishes that a label is correct or an action is safe. For a critical software action, validate the output and enforce the action’s preconditions in ordinary code.
+
+**Revisit after §5.5:** use the same prompt, settings and length with the pretrained GPT-2 weights. Compare coherence and variety separately so a surprising continuation does not automatically count as a better one.
+
 ## 5.4 Loading and saving model weights in PyTorch
 
 Notes to come as we read this section.
