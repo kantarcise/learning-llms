@@ -573,6 +573,31 @@ Moving to CPU is optional. We could keep the trained model and prompt on the M5 
 
 The current helper uses **greedy decoding**. For example, if the leading candidates have probabilities 0.45, 0.35 and 0.20, it always takes the first. With the same prompt, weights and repeatable forward passes, the first choice repeats, the next input is identical, and the same continuation follows step by step. Temperature scaling (§5.3.1) and top-k sampling (§5.3.2) give us control over the distribution we sample from. We can keep dropout off while deliberately introducing randomness at the token-choice step.
 
+### 5.3.1 Temperature scaling
+
+Freeze generation right after `Every effort moves you`. For this one position, Raschka gives us nine illustrative logits. Read the two rows together: token ID 3 means `forward`, and its score is 6.75. Greedy decoding picks it every time. Sampling can also pick it on the first try. The difference shows up when we repeat the choice. [Author’s Chapter 5 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/01_main-chapter-code/ch05.ipynb)
+
+```python
+tokens = ["closer", "every", "effort", "forward", "inches", "moves", "pizza", "toward", "you"]
+logits = torch.tensor([4.51, 0.89, -1.90, 6.75, 1.63, -1.62, -1.89, 6.28, 1.79])
+
+temperature = 1.0
+probabilities = torch.softmax(logits / temperature, dim=0)
+chosen_id = torch.multinomial(probabilities, num_samples=1).item()
+print(tokens[chosen_id])
+```
+
+Temperature sets the odds. The call to `multinomial` makes the random draw. Look at the two leading scores: `forward` leads `toward` by **0.47**. At temperature 0.1 the gap entering softmax becomes **4.7**. At temperature 5 it shrinks to **0.094**. Their ranking stays the same, but the size of the lead changes how often the runner-up gets picked. With a unique highest score, sampling approaches greedy selection as temperature approaches zero. The division requires a positive temperature.
+
+<figure markdown="1">
+
+[![Nine token probabilities at three temperatures. Forward dominates at 0.1, leads toward at 1, and shares more probability with the rest of the vocabulary at 5.](../assets/chapter-05/temperature-scaling.svg)](../assets/chapter-05/temperature-scaling.svg)
+
+<figcaption markdown="span">Companion to Figure 5.14. Each group holds one token fixed while temperature changes. Bars of the same color across all nine groups add up to 100%.</figcaption>
+</figure>
+
+**Exercise 5.1.** Imagine 1,000 copies of the same unfinished sentence. Fill in exactly one next token on each copy. Count how many copies ended in `pizza`. Repeat at temperatures 1, 0.1 and 5, always starting from the same nine logits. The second part asks how you would determine the underlying chance of that outcome without relying on a particular set of 1,000 draws.
+
 ## 5.4 Loading and saving model weights in PyTorch
 
 Notes to come as we read this section.
