@@ -598,6 +598,25 @@ Temperature sets the odds. The call to `multinomial` makes the random draw. Look
 
 **Exercise 5.1.** Imagine 1,000 copies of the same unfinished sentence. Fill in exactly one next token on each copy. Count how many copies ended in `pizza`. Repeat at temperatures 1, 0.1 and 5, always starting from the same nine logits. The second part asks how you would determine the underlying chance of that outcome without relying on a particular set of 1,000 draws.
 
+**Solution.** Use the same logits for the same blank each time. Reset the seed once per temperature, then let the random generator advance through all 1,000 draws.
+
+```python
+pizza_id = tokens.index("pizza")  # 6 in this vocabulary
+for temperature in (1.0, 0.1, 5.0):
+    probabilities = torch.softmax(logits / temperature, dim=0)
+    torch.manual_seed(123)
+    draws = [torch.multinomial(probabilities, 1).item() for _ in range(1000)]
+    print(temperature, draws.count(pizza_id), probabilities[pizza_id].item())
+```
+
+| Temperature | Observed count in 1,000 draws (CPU, PyTorch 2.14.1) | Probability per draw | Expected count in 1,000 draws |
+| ---: | ---: | ---: | ---: |
+| 1 | 0 | 0.01012% | 0.1012 |
+| 0.1 | 0 | 2.97 × 10⁻³⁶% | 2.97 × 10⁻³⁵ |
+| 5 | 32 | 4.2998% | 43.0 |
+
+The shortcut is to read `probabilities[pizza_id]` directly. Multiply it by 1,000 to get the expected count. At temperature 5, repeated experiments would average about 43 occurrences per 1,000 draws. This particular run produced 32.
+
 ## 5.4 Loading and saving model weights in PyTorch
 
 Notes to come as we read this section.
