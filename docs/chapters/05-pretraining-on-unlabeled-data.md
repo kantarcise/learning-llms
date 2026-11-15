@@ -817,7 +817,11 @@ The helper initializes its own logging counters, so its first resumed line says 
 
 ## 5.5 Loading pretrained weights from OpenAI
 
-Notes to come as we read this section.
+Section 5.4 put our own trained parameters back into a fresh GPT. Here we use the same idea with parameters learned by OpenAI during GPT-2 pretraining. The printed book uses TensorFlow to **read the original checkpoint format**. The model that runs the forward pass is still our PyTorch GPT.
+
+!!! tip "Use the author’s PyTorch conversion"
+
+    Raschka converted the original weights into state dictionaries for the book’s `GPTModel`. For GPT-2 small, use `gpt2-small-124M.pth` from his notebook. Start a fresh model with **1,024 positions** and **Q/K/V biases enabled**. Our short-story run used 256 positions and omitted those biases. The small model’s width (768), block count (12) and head count (12) already match. Then load the dictionary as in §5.4 and switch the model to evaluation mode. This route uses the PyTorch installation already in the project. [Author’s PyTorch loading notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/02_alternative_weight_loading/weight-loading-pytorch.ipynb)
 
 ## Questions to bring to the chapter
 
