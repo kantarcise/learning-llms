@@ -731,6 +731,13 @@ A low positive temperature still permits random draws among surviving candidates
 
 **Revisit after §5.5:** use the same prompt, settings and length with the pretrained GPT-2 weights. Compare coherence and variety separately so a surprising continuation does not automatically count as a better one.
 
+**Exercise 5.3 — recover greedy behavior.** Fix the prompt and weights, call `model.eval()`, and assume repeatable forward passes. Two settings in Listing 5.4 give the greedy output:
+
+- **Set `temperature=0`.** The function calls `argmax` directly. You can leave `top_k=None` or use any valid positive k because the mask always retains the highest score.
+- **Set `top_k=1` with a positive temperature.** With a unique highest score, only that ID survives, so sampling must return it. The listing uses a score threshold, so an exact tie for first would retain both IDs. Use the zero-temperature branch when you want greedy tie handling as well.
+
+A small positive temperature with several candidates can still produce different IDs. Resetting a seed can replay a sampled sequence, but that sequence can differ from the greedy one.
+
 ## 5.4 Loading and saving model weights in PyTorch
 
 Notes to come as we read this section.
