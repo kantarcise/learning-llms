@@ -559,7 +559,19 @@ A direct check is to take a distinctive passage from a generated continuation an
 
 ## 5.3 Decoding strategies to control randomness
 
-Notes to come as we read this section.
+“Decode” shows up twice during generation. Suppose the prompt is `Every effort moves you`. The tokenizer **encodes** that string into IDs. GPT reads those IDs and returns a score for every possible next token. A **decoding strategy** chooses the next ID from those scores. We append that ID to the prompt and repeat. Finally, the tokenizer **decodes** the accumulated IDs into readable text. The choice that can make two continuations different happens inside the generation loop.
+
+```python
+model.to("cpu")  # The short example can run here. The prompt IDs must live here too.
+model.eval()     # Switch off training-time dropout.
+prompt_ids = text_to_token_ids("Every effort moves you", tokenizer).to("cpu")
+output_ids = generate_text_simple(model, prompt_ids, 25, model.pos_emb.num_embeddings)
+print(token_ids_to_text(output_ids, tokenizer))
+```
+
+Moving to CPU is optional. We could keep the trained model and prompt on the M5 GPU and use the same decoding strategy. Calling `eval()` is a separate decision: it disables dropout, so a forward pass uses the full network without a fresh random dropout mask. Our Chapter 4 generation helper also uses `torch.no_grad()` to avoid storing a backward graph during inference.
+
+The current helper uses **greedy decoding**. For example, if the leading candidates have probabilities 0.45, 0.35 and 0.20, it always takes the first. With the same prompt, weights and repeatable forward passes, the first choice repeats, the next input is identical, and the same continuation follows step by step. Temperature scaling (§5.3.1) and top-k sampling (§5.3.2) give us control over the distribution we sample from. We can keep dropout off while deliberately introducing randomness at the token-choice step.
 
 ## 5.4 Loading and saving model weights in PyTorch
 
