@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="564" viewBox="0 0 780 564" role="img" aria-labelledby="title desc"><title id="title">One loss calculation, two datasets</title><desc id="desc">Steps 1 and 2 are complete. Step 3 measures loss on training and held-out text. Then come training, decoding strategies, saving and loading, and pretrained weights.</desc><style>text{font:20px Arial,sans-serif;fill:#19364a}.title{font-size:26px;font-weight:bold}.section{font-size:18px;font-weight:bold}</style><rect width="780" height="564" rx="16" fill="#f8fafc"/><text x="24" y="42" class="title">One loss calculation, two datasets</text>
+<text x="24" y="85" class="section">Section 5.1 · Step 3 of 7</text>
+<rect x="22" y="97" width="736" height="46" rx="9" fill="#dcefe8"/><text x="37" y="127">1</text><text x="79" y="127">Generate a sample</text><text x="359" y="127">Done · Decoded the greedy predictions.</text>
+<rect x="22" y="154" width="736" height="46" rx="9" fill="#dcefe8"/><text x="37" y="184">2</text><text x="79" y="184">Evaluate predictions</text><text x="359" y="184">Done · Scored the known next tokens.</text>
+<rect x="22" y="211" width="736" height="46" rx="9" stroke="#26624e" stroke-width="2" fill="#c1e8da"/><text x="37" y="241">3</text><text x="79" y="241">Measure losses</text><text x="359" y="241">Now · Compare the two dataset losses.</text>
+<text x="24" y="296" class="section">Sections 5.2–5.5 · Train and use the model</text>
+<rect x="22" y="308" width="736" height="46" rx="9" fill="#e0eaf4"/><text x="37" y="338">4</text><text x="79" y="338">Train the model</text><text x="359" y="338">Implement the update loop.</text>
+<rect x="22" y="365" width="736" height="46" rx="9" fill="#e0eaf4"/><text x="37" y="395">5</text><text x="79" y="395">Explore decoding</text><text x="359" y="395">Change how the next token is chosen.</text>
+<rect x="22" y="422" width="736" height="46" rx="9" fill="#e0eaf4"/><text x="37" y="452">6</text><text x="79" y="452">Save and reload weights</text><text x="359" y="452">Preserve the result of training.</text>
+<rect x="22" y="479" width="736" height="46" rx="9" fill="#e0eaf4"/><text x="37" y="509">7</text><text x="79" y="509">Load GPT-2 weights</text><text x="359" y="509">Use OpenAI’s pretrained parameters.</text>
+</svg>

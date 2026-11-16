@@ -21,6 +21,7 @@ Their pattern is Material for MkDocs, book-aligned navigation, detailed section 
 
 - The user reads and brings notes, passages, or questions. Help unpack concepts, verify examples, make diagrams when useful, and edit explanations into readable pages.
 - Preserve the user's voice. Support his understanding and original writing; do not invent personal insights, completed exercises, reading progress, or benchmark results.
+- When adapting a book figure, render the relevant PDF page or crop locally and inspect the image before drawing. Compare the rendered companion with the source for arrows, grouping, labels, and layout. Keep source-page previews temporary; commit the original companion artwork.
 - Link chapter explanations to runnable code as it develops. Record input/output shapes and hand-worked examples where helpful.
 - Attribute adapted material and link to sources. Do not commit book PDFs, model weights, credentials, or private employer data.
 - Prefer small, focused, human-readable changes. Follow existing conventions.

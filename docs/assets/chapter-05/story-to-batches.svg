@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="446" viewBox="0 0 720 446" role="img" aria-labelledby="title desc">
+  <title id="title">One story becomes two independent loaders</title>
+  <desc id="desc">Split the raw characters 90 to 10. Within each split, shift six illustrative token IDs by one to get their targets. With real windows of 256, training yields nine batches of two and validation yields one.</desc>
+  <style>text{font:18px Arial,sans-serif;fill:#19364a}.h{font-size:22px;font-weight:bold}.n{font:19px monospace;letter-spacing:5px}.big{font-size:27px;font-weight:bold}</style>
+  <rect width="720" height="446" rx="14" fill="#f8fafc"/>
+  <g transform="translate(24 0)">
+    <text y="36" class="h">Split the story before building windows</text>
+    <text y="72">First 90% of characters · training</text>
+    <text x="672" y="72" text-anchor="end">Last 10% · validation</text>
+    <rect y="85" width="603" height="14" rx="5" fill="#429883"/>
+    <rect x="606" y="85" width="66" height="14" rx="5" fill="#9981bd"/>
+    <rect y="122" width="672" height="150" rx="10" fill="#e8eef4"/>
+    <text x="18" y="153" class="h">Inside each split, tokenize and shift</text>
+    <text x="18" y="198">Input</text><text x="114" y="198" class="n">A   B   C   D   E   F</text>
+    <text x="18" y="237">Target</text><text x="114" y="237" class="n">B   C   D   E   F   G</text>
+    <text y="308">Actual run · 256 tokens per window · 2 windows per batch</text>
+    <rect y="327" width="326" height="95" rx="9" fill="#dcefe8"/>
+    <rect x="342" y="327" width="330" height="95" rx="9" fill="#ece5f6"/>
+    <text x="16" y="365" class="big">9 training batches</text>
+    <text x="16" y="398">Shuffle the windows</text>
+    <text x="358" y="365" class="big">1 validation batch</text>
+    <text x="358" y="398">Keep story order</text>
+  </g>
+</svg>
