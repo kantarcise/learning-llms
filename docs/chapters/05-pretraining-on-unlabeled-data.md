@@ -932,10 +932,57 @@ load_weights_into_gpt(gpt, params)
 
 Why use `wte` twice? GPT-2 used the same learned table to look up input tokens and score output tokens. The listing copies its values into two parameters, which gives the intended inference values. To keep them tied during further training, both layers would need to reference the same parameter. Since this loader replaces parameter objects, create any new training optimizer **after** loading.
 
-## Questions to bring to the chapter
+### Generate with pretrained GPT-2 small
 
-<!-- Add actual questions during reading. -->
+The model now uses the published GPT-2 parameters. A readable continuation is a useful first check. A strict state-dictionary load checks names and shapes, while a numerical comparison can catch mistakes that still produce readable sentences. Here we also compare the two dataset losses with the author's exercise results.
 
-## End of chapter
+```python
+gpt.to("cpu").eval()
+prompt_ids = text_to_token_ids("Every effort moves you", tokenizer)
+torch.manual_seed(123)
+output_ids = generate(gpt, prompt_ids, max_new_tokens=25, context_size=1024,
+                      temperature=1.5, top_k=50)
+print(token_ids_to_text(output_ids, tokenizer))
+```
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Our CPU run (PyTorch 2.14.1, seed 123) produced the same continuation as the book.
+
+```text
+Every effort moves you toward finding an ideal new way to practice something!
+
+What makes us want to be on top of that?
+```
+
+### Exercise 5.5 — score *The Verdict* with pretrained weights
+
+Keep the model's 1,024-position capacity and reuse the **256-token windows** from §5.1.3. Those windows let us evaluate the same nine training batches and one validation batch. Here “training loss” names the split we score. The weights stay fixed for both measurements. [Author’s exercise notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/01_main-chapter-code/exercise-solutions.ipynb)
+
+```python
+device = torch.device("cpu")
+torch.manual_seed(123)  # Match the shuffled training loader's ordering.
+with torch.no_grad():
+    train_loss = calc_loss_loader(train_loader, gpt, device)
+    val_loss = calc_loss_loader(val_loader, gpt, device)
+print(f"Training {train_loss:.4f} | Validation {val_loss:.4f}")
+```
+
+**Measured on CPU:** training **3.75473**, validation **3.55960**. Both are within 0.00002 of the author’s reported values. Our ten-epoch story-only run reached a much lower training loss (0.712 at its last evaluation), yet its validation loss was 6.380. Pretrained GPT-2 assigned more probability to the held-out continuation tokens here. One small held-out batch cannot tell us whether the story appeared in GPT-2’s pretraining corpus.
+
+### Exercise 5.6 — size the comparison before downloading XL
+
+| Download (decimal GB) | GPT-2 small | GPT-2 XL | Extra for XL |
+| --- | ---: | ---: | ---: |
+| Original OpenAI FP32 weight data | 0.498 GB | 6.230 GB | 5.733 GB |
+| Raschka’s converted PyTorch file | 0.703 GB | 6.754 GB | 6.051 GB |
+
+Each row is an alternative format. The first counts the weight data file alone. These are download sizes; the running model also needs working memory. To compare continuations, reuse the small-model prompt, seed, decoding settings and token budget above. The size check precedes the XL run. [OpenAI’s download script](https://github.com/openai/gpt-2/blob/master/download_model.py) · [Converted checkpoint files](https://huggingface.co/rasbt/gpt2-from-scratch-pytorch/tree/main)
+
+## Chapter 5 in seven points
+
+1. **Generate one token at a time.** Read the logits at the last input position, select one ID, append it and run the next step on the longer context.
+2. **Greedy decoding picks the largest score.** In our `generate` function, temperature zero takes the `argmax` branch directly.
+3. **Sampling changes the continuation with the weights held fixed.** Top-k controls which IDs remain eligible. Positive temperature changes their relative probabilities.
+4. **Evaluate on familiar and held-out text.** Cross-entropy measures how much probability the model assigned to the actual next tokens. Perplexity is that same mean loss expressed as `exp(loss)`. Track both splits to see when generalization stalls.
+5. **Pretraining learns from the text itself.** Shifting a token window by one supplies its targets. Backpropagation computes gradients, and the optimizer updates the weights.
+6. **Our loop pairs cross-entropy with AdamW.** Save model parameters to reproduce predictions and optimizer state to resume updates with their accumulated history.
+7. **Reuse the work of pretraining.** Loading released GPT-2 weights gives our own architecture a trained starting point for generation, classification fine-tuning in Chapter 6, and instruction fine-tuning in Chapter 7.
