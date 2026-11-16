@@ -846,6 +846,92 @@ For example, `params["wte"][42]` holds all 768 coordinates learned for token ID 
 
     Raschka converted the original weights into state dictionaries for the book’s `GPTModel`. For GPT-2 small, use `gpt2-small-124M.pth` from his notebook. Start a fresh model with **1,024 positions** and **Q/K/V biases enabled**. Our short-story run used 256 positions and omitted those biases. The small model’s width (768), block count (12) and head count (12) already match. Then load the dictionary as in §5.4 and switch the model to evaluation mode. This route uses the PyTorch installation already in the project. [Author’s PyTorch loading notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/02_alternative_weight_loading/weight-loading-pytorch.ipynb)
 
+### Build a model that fits the checkpoint
+
+The size name selects three dimensions. `copy()` lets us keep the short-story configuration for later. Each `update()` replaces only the named entries.
+
+```python
+model_configs = {
+    "124M":  {"emb_dim": 768,  "n_layers": 12, "n_heads": 12},
+    "355M":  {"emb_dim": 1024, "n_layers": 24, "n_heads": 16},
+    "774M":  {"emb_dim": 1280, "n_layers": 36, "n_heads": 20},
+    "1558M": {"emb_dim": 1600, "n_layers": 48, "n_heads": 25},
+}
+new_config = GPT_CONFIG_124M.copy()
+new_config.update(model_configs["124M"])  # Match the checkpoint we selected.
+new_config.update({"context_length": 1024, "qkv_bias": True})
+gpt = GPTModel(new_config)
+gpt.eval()  # Switch off dropout. The parameters still have their initial values.
+```
+
+### Listing 5.5 — follow one weight into the model
+
+Start inside the **first** block. OpenAI calls its attention output projection `params["blocks"][0]["attn"]["c_proj"]["w"]`. Our module calls it `gpt.trf_blocks[0].att.out_proj.weight`. Both mix the attention heads’ joined outputs. To see why the assignment needs a transpose, imagine the checkpoint stores a tiny matrix `[[1, 2], [3, 4]]`. Multiplying the input row `[10, 1]` by that matrix gives `[13, 24]`. PyTorch’s `nn.Linear` computes `x @ weight.T`, so we must **store** `[[1, 3], [2, 4]]` in its weight. Both matrices are square: checking dimensions alone would miss a forgotten transpose.
+
+The helper below checks each destination shape before returning a trainable parameter. This walkthrough uses the original loader’s nested NumPy arrays. The author’s converted PyTorch checkpoint already has these names and layouts and goes directly through `load_state_dict`. [Author’s Chapter 5 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/01_main-chapter-code/ch05.ipynb)
+
+```python
+import numpy as np
+import torch
+from torch import nn
+
+
+def assign(destination: nn.Parameter, source: np.ndarray) -> nn.Parameter:
+    """Copy a checkpoint array into a trainable parameter of the expected shape."""
+    if tuple(destination.shape) != source.shape:
+        raise ValueError(f"Expected {tuple(destination.shape)}, got {source.shape}")
+    return nn.Parameter(torch.tensor(source, dtype=destination.dtype,
+                                     device=destination.device))
+```
+
+```python title="Listing 5.5 companion — load_weights_into_gpt"
+def load_weights_into_gpt(gpt: GPTModel, params: dict) -> None:
+    """Populate a bias-enabled GPTModel from the book loader's GPT-2 arrays."""
+    gpt.tok_emb.weight = assign(gpt.tok_emb.weight, params["wte"])
+    gpt.pos_emb.weight = assign(gpt.pos_emb.weight, params["wpe"])
+
+    # One checkpoint block maps to one model block, in the same order.
+    for block, saved in zip(gpt.trf_blocks, params["blocks"], strict=True):
+        packed = saved["attn"]["c_attn"]
+        # Small GPT-2: [768, 2304] holds Q, K and V side by side.
+        # Split columns into three [768, 768] matrices and the bias into thirds.
+        qw, kw, vw = np.split(packed["w"], 3, axis=-1)
+        qb, kb, vb = np.split(packed["b"], 3)
+        for layer, weight, bias in (
+            (block.att.W_query, qw, qb),
+            (block.att.W_key, kw, kb),
+            (block.att.W_value, vw, vb),
+        ):
+            layer.weight = assign(layer.weight, weight.T)
+            layer.bias = assign(layer.bias, bias)  # Already a 1-D vector.
+
+        # c_proj appears twice. Its parent tells us which projection it belongs to.
+        # The attention output mixes heads. The MLP expands then shrinks each row.
+        for layer, saved_layer in (
+            (block.att.out_proj, saved["attn"]["c_proj"]),
+            (block.ff.layers[0], saved["mlp"]["c_fc"]),
+            (block.ff.layers[2], saved["mlp"]["c_proj"]),
+        ):
+            layer.weight = assign(layer.weight, saved_layer["w"].T)
+            layer.bias = assign(layer.bias, saved_layer["b"])
+        # ff.layers[1] is GELU. It has no learned parameters to transfer.
+
+        for norm, saved_norm in ((block.norm1, saved["ln_1"]),
+                                 (block.norm2, saved["ln_2"])):
+            norm.scale = assign(norm.scale, saved_norm["g"])
+            norm.shift = assign(norm.shift, saved_norm["b"])
+
+    # Outside the loop: one final normalization and one vocabulary head.
+    gpt.final_norm.scale = assign(gpt.final_norm.scale, params["g"])
+    gpt.final_norm.shift = assign(gpt.final_norm.shift, params["b"])
+    gpt.out_head.weight = assign(gpt.out_head.weight, params["wte"])
+
+
+load_weights_into_gpt(gpt, params)
+```
+
+Why use `wte` twice? GPT-2 used the same learned table to look up input tokens and score output tokens. The listing copies its values into two parameters, which gives the intended inference values. To keep them tied during further training, both layers would need to reference the same parameter. Since this loader replaces parameter objects, create any new training optimizer **after** loading.
+
 ## Questions to bring to the chapter
 
 <!-- Add actual questions during reading. -->
