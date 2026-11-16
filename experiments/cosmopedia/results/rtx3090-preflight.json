@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-14",
+  "issue": "https://github.com/kantarcise/learning-llms/issues/51",
+  "base_commit": "574a406249ba82b2dd14c63498849c959b2bbb04",
+  "environment_change": "pyproject.toml and uv.lock select PyTorch 2.14.1+cu126 on Linux x86-64",
+  "os": "Ubuntu 22.04.4 LTS",
+  "kernel": "6.8.0-138-generic",
+  "architecture": "x86_64",
+  "python": "3.12.10",
+  "uv": "0.12.13",
+  "disk_available_approx_gb": 45,
+  "ram_total_approx_gib": 31,
+  "ram_available_approx_gib": 24,
+  "gpu": "NVIDIA GeForce RTX 3090",
+  "gpu_memory_total_mib": 24576,
+  "gpu_memory_free_at_inventory_mib": 23216,
+  "driver": "560.35.03",
+  "driver_reported_cuda_support": "12.6",
+  "torch": "2.14.1+cu126",
+  "torch_build_cuda": "12.6",
+  "cuda_tensor_check": {
+    "operation": "sum(square([1.0, 2.0])) on cuda",
+    "expected": 5.0,
+    "actual": 5.0
+  },
+  "synthetic_model_check": {
+    "seed": 7,
+    "parameters": 15803904,
+    "input_and_target_shape": [4, 256],
+    "vocabulary_size": 49152,
+    "optimizer": "AdamW",
+    "learning_rate": 0.0003,
+    "gradient_clip_norm": 1.0,
+    "loss": 10.86827564239502,
+    "finite_gradients": true,
+    "embedding_weights_changed": true,
+    "peak_allocated_gpu_mib": 759.44287109375
+  },
+  "notes": [
+    "GPU access required running outside the Codex filesystem sandbox.",
+    "Memory and disk availability are snapshots, not reservations.",
+    "Synthetic random inputs and targets verify execution only; this is not a Cosmopedia training baseline.",
+    "Prepared Cosmopedia data was absent at inventory time."
+  ]
+}

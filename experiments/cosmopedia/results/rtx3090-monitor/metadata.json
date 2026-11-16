@@ -1,0 +1,26 @@
+{
+  "command": [
+    ".venv/bin/python",
+    "experiments/cosmopedia/train.py",
+    "--device",
+    "cuda",
+    "--steps",
+    "100",
+    "--eval-every",
+    "25",
+    "--checkpoint-every",
+    "25",
+    "--output",
+    "experiments/cosmopedia/artifacts/monitored-training-20261114"
+  ],
+  "gpu_selection": "0",
+  "interval_seconds": 0.5,
+  "pre_seconds": 10.0,
+  "post_seconds": 30.0,
+  "start_monotonic_ns": 2407140442814,
+  "started_at_utc": "2026-11-14T10:03:02.953930+00:00",
+  "schema_version": 1,
+  "scope": "System/GPU metrics include other applications; process CPU is per logical core (can exceed 100%), tree RSS can double-count shared pages. GPU busy time is not core occupancy or FLOPs. Sensors are sequential snapshots. CPU energy is optional.",
+  "command_exit_code": 0,
+  "interrupted": false
+}

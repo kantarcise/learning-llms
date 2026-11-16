@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-14",
+  "token_counts": {
+    "train": 10000000,
+    "validation": 65536
+  },
+  "window_counts": {
+    "train": 46058,
+    "validation": 300
+  },
+  "document_counts": {
+    "train": 13960,
+    "validation": 89
+  },
+  "all_document_hashes_and_reconstructed_tensors_verified": true,
+  "validation_documents_and_tensors_identical_to_1m_baseline": true,
+  "splits_disjoint": true,
+  "prepared_files": {
+    "manifest.json": {
+      "bytes": 1040268,
+      "sha256": "7d3d6bdd25da1650b2b1568a64ee147e71d4870afedd655a538e69e3eb66ecaf"
+    },
+    "train.pt": {
+      "bytes": 188655317,
+      "sha256": "aed10893190ebb1d7d8a799304565a51c12c3df42c886682ccdfc05870f7b18a"
+    },
+    "documents.jsonl": {
+      "bytes": 54893319,
+      "sha256": "36f6bff149f0e7223c50b933d040d423644a64d34f78ddb78bc9221f8fbdceec"
+    },
+    "tokenizer.json": {
+      "bytes": 3522656,
+      "sha256": "7d27c493c729a66ecefc837280b05d948b1ed50d130eebdbf911b1b36cf38ed7"
+    },
+    "validation.pt": {
+      "bytes": 1230717,
+      "sha256": "7f777545ae6f215ce2746628428dff17ea39282cd5479f18199f0b196d73d058"
+    }
+  },
+  "prepared_total_bytes": 249342277,
+  "note": "Training data intentionally enlarged; starts a new experiment rather than resuming the old 1M-token data identity."
+}

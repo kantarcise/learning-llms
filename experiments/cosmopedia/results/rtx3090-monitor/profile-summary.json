@@ -1,0 +1,24 @@
+{
+  "device": "cuda",
+  "torch": "2.14.1+cu126",
+  "config": {
+    "vocabulary_size": 49152,
+    "context_length": 256,
+    "width": 256,
+    "heads": 4,
+    "layers": 4,
+    "hidden_width": 1024
+  },
+  "batch": 4,
+  "context": 256,
+  "warmup_updates": 3,
+  "profiled_updates": 1,
+  "synthetic_inputs": true,
+  "supported_operator_flops": 96652754946,
+  "estimated_training_matmul_flops": 99857989632,
+  "notes": [
+    "Not a training baseline or hardware FLOP-counter measurement.",
+    "PyTorch FLOPs use formulas for supported operators; fused attention/backward coverage may be incomplete.",
+    "Trace overhead perturbs timing. Use the CUDA kernel track to inspect execution, not operator FLOPs as an occupancy measurement."
+  ]
+}

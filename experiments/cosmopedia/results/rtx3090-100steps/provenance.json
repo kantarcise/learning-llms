@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-14",
+  "base_commit": "574a406249ba82b2dd14c63498849c959b2bbb04",
+  "working_tree_note": "Includes local CUDA dependency selection, peak-memory reporting and experiment documentation; source hashes below identify the maintained Python files used.",
+  "command": "uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/train.py --device cuda --seed 7 --batch-size 4 --steps 100 --eval-every 25 --validation-windows 32 --output experiments/cosmopedia/artifacts/rtx3090-100steps-20261114",
+  "sha256": {
+    "experiments/cosmopedia/train.py": "58b45bfb154c7dbb5d500c28dc14878501e8adfe3717cfc774b48283f958a9a8",
+    "experiments/cosmopedia/model.py": "d6911d29602efc5888c78aae5acd7c42acf4dc438ae5c14314aea588b1035f19",
+    "pyproject.toml": "b4d3e6e1af41aa406d608167bb461fc0aa7588f19bdfcd47ad81c766af3622d1",
+    "uv.lock": "1aef8d00e2ec7d197664ee84c48b2e4561baef879a9495f45485985e7201be4d"
+  },
+  "inventory": "../rtx3090-preflight.json",
+  "data_verification": "../rtx3090-data-verification.json",
+  "matches_original_mps_workload": true,
+  "notes": [
+    "Single short run, with an active desktop sharing the GPU; throughput is an observation for this configuration.",
+    "No pure training-only or steady-state timing; loop includes evaluation and checkpoint saving.",
+    "Checkpoint remains inference-only; resume is not verified."
+  ]
+}
