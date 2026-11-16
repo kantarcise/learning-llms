@@ -968,14 +968,56 @@ print(f"Training {train_loss:.4f} | Validation {val_loss:.4f}")
 
 **Measured on CPU:** training **3.75473**, validation **3.55960**. Both are within 0.00002 of the author’s reported values. Our ten-epoch story-only run reached a much lower training loss (0.712 at its last evaluation), yet its validation loss was 6.380. Pretrained GPT-2 assigned more probability to the held-out continuation tokens here. One small held-out batch cannot tell us whether the story appeared in GPT-2’s pretraining corpus.
 
-### Exercise 5.6 — size the comparison before downloading XL
+### Exercise 5.6 — compare GPT-2 small and XL
 
 | Download (decimal GB) | GPT-2 small | GPT-2 XL | Extra for XL |
 | --- | ---: | ---: | ---: |
 | Original OpenAI FP32 weight data | 0.498 GB | 6.230 GB | 5.733 GB |
 | Raschka’s converted PyTorch file | 0.703 GB | 6.754 GB | 6.051 GB |
 
-Each row is an alternative format. The first counts the weight data file alone. These are download sizes; the running model also needs working memory. To compare continuations, reuse the small-model prompt, seed, decoding settings and token budget above. The size check precedes the XL run. [OpenAI’s download script](https://github.com/openai/gpt-2/blob/master/download_model.py) · [Converted checkpoint files](https://huggingface.co/rasbt/gpt2-from-scratch-pytorch/tree/main)
+Each row is an alternative format. The first counts the weight data file alone. These are download sizes; the running model also needs working memory. We downloaded both converted files and checked their SHA-256 digests against the publisher’s metadata. [OpenAI’s download script](https://github.com/openai/gpt-2/blob/master/download_model.py) · [Converted checkpoint files](https://huggingface.co/rasbt/gpt2-from-scratch-pytorch/tree/main)
+
+We ran both models on the M5 CPU in evaluation mode with the same GPT-2 tokenizer, prompt and **25 new tokens**. For XL we selected 48 layers, width 1,600 and 25 heads. To fit the 16 GiB Mac comfortably, we constructed the model on PyTorch’s meta device and assigned memory-mapped checkpoint tensors, converting the causal masks to the boolean type used in our implementation. Both checkpoints passed strict loading.
+
+**Sampling with temperature 1.5, top-k 50 and seed 123**
+
+GPT-2 small
+
+```text
+Every effort moves you toward finding an ideal new way to practice something!
+
+What makes us want to be on top of that?
+```
+
+GPT-2 XL
+
+```text
+Every effort moves you toward finding an ideal life. You don't have to accept your current one at once, because if you do you'll never
+```
+
+**Greedy decoding**
+
+GPT-2 small
+
+```text
+Every effort moves you forward.
+
+The first step is to understand the importance of your work.
+
+The second step is to understand the
+```
+
+GPT-2 XL
+
+```text
+Every effort moves you closer to the goal.
+
+The goal is to be the best you can be.
+
+The goal is to be
+```
+
+Both sampled continuations begin with “toward finding an ideal” before choosing a different noun. Greedy decoding makes the difference visible on the very first token: small picks “forward” and XL picks “closer.” Both greedy samples then repeat a sentence opening. The unfinished endings reflect the fixed token budget. One prompt illustrates a difference in behavior; a quality comparison would need more prompts.
 
 ## Chapter 5 in seven points
 
