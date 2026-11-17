@@ -79,7 +79,18 @@ The full pool contains 747 examples of each class. Shuffling and slicing gives a
 
 ## 6.3 Creating data loaders
 
-Notes to come as we read this section.
+In Chapter 2, cutting a sliding window gave us equally long rows before batching. Here one SMS is one example, and its target is one class ID. One message might encode to three tokens and another to five. How do we stack both rows in one tensor without cutting off the end of the longer message?
+
+| Message | Encoded input (illustrative IDs) | Input padded to five positions | Class ID |
+| --- | --- | --- | --- |
+| A | `11 12 13` | `11 12 13 50256 50256` | `0` (ham) |
+| B | `21 22 23 24 25` | `21 22 23 24 25` | `1` (spam) |
+
+The inputs now have shape `[2, 5]` and the labels have shape `[2]`. Truncating both messages to three tokens would save computation but discard the last two tokens of B. Padding preserves them and spends two extra input positions on A. The book reuses GPT-2’s end-of-text ID, `50256`, as the right-padding value. It sets the width from the longest **encoded training message** and reuses that width for validation and test, truncating any longer messages in those splits.
+
+!!! tip "Think of letterboxing an image for object detection"
+
+    Imagine fitting a wide photo onto a square canvas. Resizing changes the pixel grid. Letterboxing preserves the aspect ratio during resizing and fills the leftover space with a border. Adding padding IDs is like adding that border: the original token IDs stay in order, and the extra positions let PyTorch stack examples into a rectangular batch. The label still describes the whole message.
 
 ## 6.4 Initializing a model with pretrained weights
 
