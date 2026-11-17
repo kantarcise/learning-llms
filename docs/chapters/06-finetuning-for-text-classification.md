@@ -221,6 +221,81 @@ For our training split, this adds **904 padding positions per message**, with th
 
 More padding supplies additional positions for computation. Its effect on classification depends on how the classifier uses those positions, which we will see when adding its output head.
 
+### From individual examples to batches
+
+The dataset supplies one pair at a time. A data loader collects several pairs and stacks their input tensors and labels. With batch size 8, a full batch has inputs shaped `[8, 120]` and labels shaped `[8]`. Here **B = 8 messages** and **T = 120 token positions per message**. Each row has one class label.
+
+<figure markdown="1">
+
+![Eight rows of token IDs paired with eight class labels. Each row has 120 positions including padding.](../assets/chapter-06/sms-batch.svg)
+
+<figcaption markdown="span">Our version of Figure 6.7. Illustrative IDs and labels show the alignment. Row 3 and label 3 describe the same message. The ellipsis hides intermediate token positions, and 50256 is padding.</figcaption>
+</figure>
+
+```python title="Create the training, validation, and test data loaders"
+from torch.utils.data import DataLoader
+
+torch.manual_seed(123)
+batch_size = 8
+num_workers = 0  # Load examples in the main process.
+
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=batch_size,
+    shuffle=True,       # Draw a new order when we iterate over the dataset again.
+    num_workers=num_workers,
+    drop_last=True,     # Keep every training batch at eight messages.
+)
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=batch_size,
+    shuffle=False,
+    num_workers=num_workers,
+    drop_last=False,    # Evaluate the remaining messages in a smaller final batch.
+)
+test_loader = DataLoader(
+    test_dataset,
+    batch_size=batch_size,
+    shuffle=False,
+    num_workers=num_workers,
+    drop_last=False,
+)
+```
+
+A `DataLoader` is an **iterable**. Calling `iter(train_loader)` creates an iterator that remembers where it is in this pass. Calling `next()` on that iterator retrieves the next batch. Python’s `for` loop performs those steps for us and stops when the iterator raises `StopIteration`.
+
+```python
+batches = iter(train_loader)
+input_batch, target_batch = next(batches)
+print(input_batch.shape)   # torch.Size([8, 120])
+print(target_batch.shape)  # torch.Size([8])
+```
+
+The book checks the **last** training batch by consuming the whole loader. The variables retain the final pair after the loop ends.
+
+```python
+for input_batch, target_batch in train_loader:
+    pass  # Fetch each batch without training on it.
+
+print(input_batch.shape)   # torch.Size([8, 120])
+print(target_batch.shape)  # torch.Size([8])
+```
+
+With 1,045 training messages, 130 full batches use 1,040 messages. `drop_last=True` leaves five messages out of that pass. Since training shuffles, the omitted messages can change on the next pass. Validation and test keep their final partial batches.
+
+| Loader | Messages | Batches | Last input shape | Last label shape |
+| --- | ---: | ---: | --- | --- |
+| Training | 1,045 | 130 | `[8, 120]` | `[8]` |
+| Validation | 149 | 19 | `[5, 120]` | `[5]` |
+| Test | 300 | 38 | `[4, 120]` | `[4]` |
+
+```python
+print(len(train_loader), len(val_loader), len(test_loader))
+# 130 19 38
+```
+
+These counts and shapes were verified with the CSV splits from §6.2. Creating another iterator starts another pass through the loader. Iterating retrieves data, and the training loop will later use that data to compute a loss and update weights.
+
 ## 6.4 Initializing a model with pretrained weights
 
 Notes to come as we read this section.
