@@ -352,10 +352,27 @@ print(model.out_head)
 <figcaption markdown="span">Companion to Figure 6.9. Trace the embeddings through the two residual additions in each of the 12 blocks and the final LayerNorm. On the right, each row of the output weight matrix reads all 768 features at one position and produces one logit. Labeled messages teach the new head which combinations suggest spam.</figcaption>
 </figure>
 
+!!! note "Fine-tuning selected layers vs. all layers"
+
+    Think of a CNN used as a feature extractor. Earlier GPT layers have already learned patterns that can be useful across tasks. We can reuse those features and train a small head to recognize spam. We can also let later blocks adapt the features themselves. How much that helps is an empirical question. Freezing the early blocks still runs their forward pass, but saves the work of computing and storing gradients for their weights.
+
+Listing 6.7 relies on the order of two operations. First freeze every parameter currently in the model. Then create a new output layer. The new layer has its own parameters, which PyTorch makes trainable by default.
+
 ```python
-# Replace the module named out_head. PyTorch initializes its new weights and bias.
-model.out_head = torch.nn.Linear(model.out_head.in_features, 2)
+for parameter in model.parameters():
+    parameter.requires_grad = False
+
+torch.manual_seed(123)  # Reproduce the starting values of the new head.
+model.out_head = torch.nn.Linear(
+    in_features=config["emb_dim"],  # 768 for GPT-2 small
+    out_features=2,                 # ham and spam
+)
+
+print([name for name, p in model.named_parameters() if p.requires_grad])
+# ['out_head.weight', 'out_head.bias']
 ```
+
+PyTorch also offers `model.requires_grad_(False)` as a shorthand for the loop. Applying it before the swap freezes the existing parameters, including the old vocabulary head. Applying it after the swap would freeze the new head too. At this point the new head has 1,536 trainable weights (2 × 768) and two biases. Reading the width from the configuration lets the same code build a two-class head for a wider GPT-2 variant.
 
 One detail matters when carrying the CNN analogy over. A typical ResNet pools its feature map to produce one vector per **image**. GPT-2 produces one vector per **token position**. With the batch from §6.3, applying the new head gives logits shaped `[8, 120, 2]`. We still need to choose which position supplies the two scores for each whole SMS. Replacing the layer and deciding which parameters to fine-tune are separate steps.
 
