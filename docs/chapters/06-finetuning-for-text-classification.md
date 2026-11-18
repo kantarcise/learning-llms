@@ -349,7 +349,7 @@ print(model.out_head)
 
 ![Before and after replacing the GPT-2 output head. A hidden vector of width 768 feeds either the vocabulary projection or its two-class replacement.](../assets/chapter-06/classifier-head.svg)
 
-<figcaption markdown="span">Companion to Figure 6.9. Follow one position in “Claim your free prize!” through the model. Each score on the right draws on all 768 coordinates. Labeled messages teach the new head which combinations suggest spam.</figcaption>
+<figcaption markdown="span">Companion to Figure 6.9. Trace the embeddings through the two residual additions in each of the 12 blocks and the final LayerNorm. On the right, each row of the output weight matrix reads all 768 features at one position and produces one logit. Labeled messages teach the new head which combinations suggest spam.</figcaption>
 </figure>
 
 ```python

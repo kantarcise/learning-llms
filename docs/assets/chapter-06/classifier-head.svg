@@ -1,20 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="326" viewBox="0 0 760 326" role="img" aria-labelledby="title desc">
-  <title id="title">One hidden vector, two possible output heads</title>
-  <desc id="desc">For the text Claim your free prize, GPT-2 produces a contextual vector at each position. At one position the original head reads 768 features to score vocabulary tokens. Its replacement reads those features to score ham and spam.</desc>
-  <rect width="760" height="326" rx="12" fill="#faf8f3"/>
-  <g font-family="system-ui, sans-serif" fill="#253330">
-    <text x="24" y="41" font-family="Georgia, serif" font-size="28" font-weight="bold">What changes when we replace the head?</text>
-    <text x="24" y="78" font-size="18">“Claim your free prize!” → embeddings → 12 transformer blocks → final LayerNorm</text>
-    <rect x="24" y="99" width="712" height="50" rx="8" fill="#e4ebe8"/>
-    <text x="380" y="130" text-anchor="middle" font-size="19">Look at one token position: its hidden vector has 768 coordinates.</text>
-    <path d="M380 149V166H197V185 M380 166H565V185" fill="none" stroke="#60756e" stroke-width="2"/>
-    <rect x="24" y="185" width="346" height="115" rx="8" fill="#e7ebef"/>
-    <rect x="391" y="185" width="345" height="115" rx="8" fill="#deeee5"/>
-    <text x="42" y="215" font-size="18" font-weight="bold">Before · Vocabulary head</text>
-    <text x="42" y="246" font-size="20">768 → 50,257 logits</text>
-    <text x="42" y="276" font-size="16">One score per possible next token</text>
-    <text x="409" y="215" font-size="18" font-weight="bold">After · Classification head</text>
-    <text x="409" y="246" font-size="20">768 → 2 logits</text>
-    <text x="409" y="276" font-size="16">One score for ham, one for spam</text>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="700" viewBox="0 0 940 700" role="img" aria-labelledby="title desc">
+<title id="title">GPT-2 small, from token IDs to the output head</title>
+<desc id="desc">Token and position embeddings are added before dropout. Twelve pre-norm transformer blocks each contain masked attention and a feedforward network with two residual paths. After final normalization, the old head scores vocabulary tokens. Its replacement scores ham and spam.</desc>
+<defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7" fill="#47645c"/></marker></defs>
+<rect width="940" height="700" rx="14" fill="#faf8f3"/>
+<g font-family="system-ui, sans-serif" fill="#213631">
+<text x="26" y="43" font-size="32" font-weight="650" text-anchor="start">From GPT-2 to a spam classifier</text>
+<text x="28" y="76" font-size="20" font-weight="650" text-anchor="start">Pretrained GPT-2 backbone</text>
+<text x="500" y="76" font-size="20" font-weight="650" text-anchor="start">Output for one token position</text>
+<rect x="28" y="106" width="188" height="37" rx="7" fill="#e0e9e5"/>
+<text x="122" y="131" font-size="17" font-weight="400" text-anchor="middle">Token embedding</text>
+<rect x="238" y="106" width="188" height="37" rx="7" fill="#e0e9e5"/>
+<text x="332" y="131" font-size="17" font-weight="400" text-anchor="middle">Position embedding</text>
+<text x="120" y="99" font-size="14" font-weight="400" text-anchor="middle">Token IDs</text>
+<text x="330" y="99" font-size="14" font-weight="400" text-anchor="middle">Position IDs</text>
+<path d="M122 144V161H224" fill="none" stroke="#47645c" stroke-width="1.7"/>
+<path d="M332 144V161H224" fill="none" stroke="#47645c" stroke-width="1.7"/>
+<text x="224" y="169" font-size="23" font-weight="650" text-anchor="middle">⊕</text>
+<path d="M224 174v15" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="224" y="211" font-size="17" font-weight="400" text-anchor="middle">Embedding dropout</text>
+<path d="M224 218v16" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="24" y="238" width="410" height="333" rx="7" fill="#e4eee8"/>
+<text x="40" y="265" font-size="19" font-weight="650" text-anchor="start">Transformer block</text>
+<text x="418" y="265" font-size="20" font-weight="650" text-anchor="end">× 12</text>
+<path d="M208 270v10" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="44" y="281" width="329" height="49" rx="7" fill="#ffffff"/>
+<text x="208" y="303" font-size="15" font-weight="650" text-anchor="middle">LayerNorm → masked multi-head attention</text>
+<text x="208" y="322" font-size="14" font-weight="400" text-anchor="middle">12 heads</text>
+<path d="M208 330v12" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="208" y="362" font-size="16" font-weight="400" text-anchor="middle">Dropout</text>
+<path d="M208 366v10" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="208" y="397" font-size="22" font-weight="650" text-anchor="middle">⊕</text>
+<path d="M208 273H395V389H226" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<path d="M208 401v12" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="44" y="415" width="329" height="49" rx="7" fill="#ffffff"/>
+<text x="208" y="437" font-size="15" font-weight="650" text-anchor="middle">LayerNorm → feedforward</text>
+<text x="208" y="456" font-size="14" font-weight="400" text-anchor="middle">768 → 3,072 → GELU → 768</text>
+<path d="M208 464v12" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="208" y="496" font-size="16" font-weight="400" text-anchor="middle">Dropout</text>
+<path d="M208 500v10" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="208" y="531" font-size="22" font-weight="650" text-anchor="middle">⊕</text>
+<path d="M208 407H395V523H226" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="236" y="548" font-size="14" font-weight="400" text-anchor="start">⊕  Residual addition</text>
+<path d="M208 534v35" fill="none" stroke="#47645c" stroke-width="1.7"/>
+<path d="M208 571v15" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="67" y="590" width="282" height="42" rx="7" fill="#e0e9e5"/>
+<text x="208" y="617" font-size="18" font-weight="650" text-anchor="middle">Final LayerNorm</text>
+<path d="M208 632v19" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="208" y="676" font-size="19" font-weight="650" text-anchor="middle">768 features per position</text>
+<path d="M352 610H462V112H488" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="500" y="120" font-size="18" font-weight="650" text-anchor="start">Read the same 768 coordinates</text>
+<rect x="490" y="150" width="423" height="212" rx="7" fill="#e2e8ef"/>
+<text x="510" y="181" font-size="17" font-weight="650" text-anchor="start">BEFORE  ·  Language modeling</text>
+<text x="510" y="222" font-size="32" font-weight="650" text-anchor="start">768 → 50,257</text>
+<text x="510" y="250" font-size="16" font-weight="400" text-anchor="start">One learned row per vocabulary token</text>
+<text x="510" y="290" font-size="16" font-weight="400" text-anchor="start">row 0  ·  token “!”</text>
+<text x="510" y="312" font-size="17" font-weight="400" text-anchor="start">⋮</text>
+<text x="510" y="338" font-size="16" font-weight="400" text-anchor="start">row 50,256  ·  end of text</text>
+<rect x="490" y="416" width="423" height="212" rx="7" fill="#d6ebdf"/>
+<text x="510" y="447" font-size="17" font-weight="650" text-anchor="start">AFTER  ·  SMS classification</text>
+<text x="510" y="488" font-size="32" font-weight="650" text-anchor="start">768 → 2</text>
+<text x="510" y="516" font-size="16" font-weight="400" text-anchor="start">One learned row per class</text>
+<text x="510" y="559" font-size="17" font-weight="650" text-anchor="start">row 0  ·  ham score</text>
+<text x="510" y="590" font-size="17" font-weight="650" text-anchor="start">row 1  ·  spam score</text>
+<path d="M700 364v37" fill="none" stroke="#47645c" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="718" y="391" font-size="16" font-weight="650" text-anchor="start">Replace out_head</text>
+<text x="495" y="662" font-size="17" font-weight="400" text-anchor="start">Each row combines all 768 features</text>
+<text x="495" y="685" font-size="17" font-weight="400" text-anchor="start">to compute one logit.</text>
+</g></svg>
