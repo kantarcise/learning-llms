@@ -227,9 +227,9 @@ The dataset supplies one pair at a time. A data loader collects several pairs an
 
 <figure markdown="1">
 
-![Eight rows of token IDs paired with eight class labels. Each row has 120 positions including padding.](../assets/chapter-06/sms-batch.svg)
+![Three SMS examples from an eight-message batch, with verified token IDs and one class label per row.](../assets/chapter-06/sms-batch.svg)
 
-<figcaption markdown="span">Our version of Figure 6.7. Illustrative IDs and labels show the alignment. Row 3 and label 3 describe the same message. The ellipsis hides intermediate token positions, and 50256 is padding.</figcaption>
+<figcaption markdown="span">Companion to Figure 6.7. Follow the highlighted SMS across the page. GPT-2 encodes its exclamation mark as token ID 0. The separate 1 on the right labels the whole message as spam. These messages illustrate the layout of a batch.</figcaption>
 </figure>
 
 ```python title="Create the training, validation, and test data loaders"
