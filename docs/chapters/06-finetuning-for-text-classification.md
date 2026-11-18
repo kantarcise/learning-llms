@@ -336,7 +336,32 @@ Pretraining rewarded GPT-2 for predicting the next token. The question and the p
 
 ## 6.5 Adding a classification head
 
-Notes to come as we read this section.
+If you have adapted an image classifier to a new dataset, you have already made this change. Imagine a pretrained ResNet whose final layer scores 1,000 ImageNet classes. To classify cats and dogs, you keep the network that extracts features from pixels and replace its final linear layer with one that scores your two labels. Training on labeled photos teaches the new layer how to use those features.
+
+GPT-2 small gives us a similar place to make the swap. Run `print(model)` on the model loaded in §6.4. Follow the token and position embeddings through 12 transformer blocks (same architecture, each with its own weights), then find the final LayerNorm and `out_head`. You can inspect just that last module:
+
+```python
+print(model.out_head)
+# Linear(in_features=768, out_features=50257, bias=False)
+```
+
+<figure markdown="1">
+
+![Before and after replacing the GPT-2 output head. A hidden vector of width 768 feeds either the vocabulary projection or its two-class replacement.](../assets/chapter-06/classifier-head.svg)
+
+<figcaption markdown="span">Companion to Figure 6.9. Follow one position in “Claim your free prize!” through the model. Each score on the right draws on all 768 coordinates. Labeled messages teach the new head which combinations suggest spam.</figcaption>
+</figure>
+
+```python
+# Replace the module named out_head. PyTorch initializes its new weights and bias.
+model.out_head = torch.nn.Linear(model.out_head.in_features, 2)
+```
+
+One detail matters when carrying the CNN analogy over. A typical ResNet pools its feature map to produce one vector per **image**. GPT-2 produces one vector per **token position**. With the batch from §6.3, applying the new head gives logits shaped `[8, 120, 2]`. We still need to choose which position supplies the two scores for each whole SMS. Replacing the layer and deciding which parameters to fine-tune are separate steps.
+
+!!! tip "How many outputs does a binary classifier need?"
+
+    The book uses two logits and a class ID (0 for ham, 1 for spam) with cross-entropy. The same pattern extends to three news categories by giving the head three outputs. A binary classifier can also use a single logit for spam with PyTorch’s `BCEWithLogitsLoss` and a floating-point 0/1 target. Applying sigmoid to that logit gives the predicted spam probability.
 
 ## 6.6 Calculating the classification loss and accuracy
 

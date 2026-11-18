@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="326" viewBox="0 0 760 326" role="img" aria-labelledby="title desc">
+  <title id="title">One hidden vector, two possible output heads</title>
+  <desc id="desc">For the text Claim your free prize, GPT-2 produces a contextual vector at each position. At one position the original head reads 768 features to score vocabulary tokens. Its replacement reads those features to score ham and spam.</desc>
+  <rect width="760" height="326" rx="12" fill="#faf8f3"/>
+  <g font-family="system-ui, sans-serif" fill="#253330">
+    <text x="24" y="41" font-family="Georgia, serif" font-size="28" font-weight="bold">What changes when we replace the head?</text>
+    <text x="24" y="78" font-size="18">“Claim your free prize!” → embeddings → 12 transformer blocks → final LayerNorm</text>
+    <rect x="24" y="99" width="712" height="50" rx="8" fill="#e4ebe8"/>
+    <text x="380" y="130" text-anchor="middle" font-size="19">Look at one token position: its hidden vector has 768 coordinates.</text>
+    <path d="M380 149V166H197V185 M380 166H565V185" fill="none" stroke="#60756e" stroke-width="2"/>
+    <rect x="24" y="185" width="346" height="115" rx="8" fill="#e7ebef"/>
+    <rect x="391" y="185" width="345" height="115" rx="8" fill="#deeee5"/>
+    <text x="42" y="215" font-size="18" font-weight="bold">Before · Vocabulary head</text>
+    <text x="42" y="246" font-size="20">768 → 50,257 logits</text>
+    <text x="42" y="276" font-size="16">One score per possible next token</text>
+    <text x="409" y="215" font-size="18" font-weight="bold">After · Classification head</text>
+    <text x="409" y="246" font-size="20">768 → 2 logits</text>
+    <text x="409" y="276" font-size="16">One score for ham, one for spam</text>
+  </g>
+</svg>
