@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="375" viewBox="0 0 680 375" role="img" aria-labelledby="title desc">
+  <title id="title">Where the pretrained model enters the spam project</title>
+  <desc id="desc">Data preparation is complete. Section 6.4 builds GPT-2 small and loads its learned weights. The classifier head, evaluation tools, training, and testing come later.</desc>
+  <rect width="680" height="375" rx="12" fill="#faf8f3"/>
+  <g font-family="system-ui, sans-serif" fill="#253330">
+    <path d="M40 48V322" stroke="#869893" stroke-width="2"/>
+    <circle cx="40" cy="44" r="8" fill="#477264"/>
+    <text x="68" y="50" font-size="19" font-weight="bold">1 · Prepare the data</text>
+    <text x="68" y="77" font-size="17">Download SMS messages, encode them, and build labeled batches.</text>
+    <rect x="18" y="99" width="644" height="162" rx="9" fill="#e1efe8"/>
+    <circle cx="40" cy="126" r="8" fill="#21604a"/>
+    <text x="68" y="133" font-size="21" font-weight="bold">2 · Set up the model</text>
+    <text x="68" y="169" font-size="18" font-weight="bold">§6.4   Build GPT-2 small → load pretrained weights</text>
+    <text x="68" y="198" font-size="17">Try a prompt. “Every effort moves you” continues with “forward.”</text>
+    <text x="68" y="238" font-size="16">Next in setup: add the spam classifier head and evaluation tools.</text>
+    <circle cx="40" cy="302" r="8" fill="#faf8f3" stroke="#657974" stroke-width="2"/>
+    <text x="68" y="309" font-size="19" font-weight="bold">3 · Fine-tune and use the classifier</text>
+    <text x="68" y="339" font-size="17">Train on labeled SMS, measure accuracy, then classify new messages.</text>
+  </g>
+</svg>

@@ -298,7 +298,41 @@ These counts and shapes were verified with the CSV splits from §6.2. Creating a
 
 ## 6.4 Initializing a model with pretrained weights
 
-Notes to come as we read this section.
+We have batches of SMS messages and their labels. Before an optimizer sees any of them, we can check our starting point. Can the model still complete a sentence the way GPT-2 did at the end of Chapter 5?
+
+<figure markdown="1">
+
+![The three stages of the spam project, with the current steps of building GPT-2 and loading its pretrained weights highlighted.](../assets/chapter-06/model-setup.svg)
+
+<figcaption markdown="span">Companion to Figure 6.8. The highlighted steps give us a working text generator. The SMS labels prepared in stage 1 will supply the targets when we train it as a classifier.</figcaption>
+</figure>
+
+Listing 6.6 reuses the book’s checkpoint loader and GPT implementation. The configuration gives the model its shape. Loading the checkpoint supplies the numbers learned during pretraining. We choose the small GPT-2 configuration with 12 blocks, 12 attention heads, and 768 coordinates per token. The checkpoint needs a position table with 1,024 rows even though our SMS batches use only 120 positions. [Chapter 5 checkpoint walkthrough](05-pretraining-on-unlabeled-data.md#55-loading-pretrained-weights-from-openai)
+
+```python title="Initialize GPT-2 small with the book’s Chapter 6 helper modules"
+from chapter05 import GPTModel, load_weights_into_gpt
+from gpt_download import download_and_load_gpt2
+
+config = {
+    "vocab_size": 50257, "context_length": 1024,
+    "emb_dim": 768, "n_layers": 12, "n_heads": 12,
+    "qkv_bias": True,  # The checkpoint includes these projection biases.
+    "drop_rate": 0.0,
+}
+_, params = download_and_load_gpt2(model_size="124M", models_dir="gpt2")
+model = GPTModel(config)             # The layers start with random weights.
+load_weights_into_gpt(model, params)  # Copy pretrained values into those layers.
+model.eval()                         # Use evaluation behavior for generation.
+```
+
+The book then uses the same greedy generation helper twice. Both prompts go through the same tokenizer and model. What changes is the behavior we ask for.
+
+| Prompt | What the book reports | What we learn |
+| --- | --- | --- |
+| “Every effort moves you” | The model adds “forward.” and continues with a grammatical sentence about work. | A plausible continuation is a quick smoke test for the loaded weights. |
+| A cash-prize SMS with a request to answer yes or no about spam | The model echoes the question and starts repeating the prize message. | On this example, it continues the prompt without giving the requested decision. |
+
+Pretraining rewarded GPT-2 for predicting the next token. The question and the promised prize are just more text for it to continue. This one prompt illustrates the gap between fluent completion and following an instruction. To measure spam classification accuracy, we will need predictions for many labeled messages. Section 6.5 begins by giving the model two output scores for that task.
 
 ## 6.5 Adding a classification head
 
