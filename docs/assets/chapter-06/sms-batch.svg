@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 356" role="img" aria-labelledby="title desc">
+  <title id="title">Eight messages, eight labels</title>
+  <desc id="desc">Three example rows from an illustrative batch. Read across each row from the SMS to its GPT-2 token IDs and its single class label. Five middle rows are omitted.</desc>
+  <style>
+    text { font-family: system-ui, sans-serif; fill: #262e30 }
+    .title { font: bold 32px Georgia, serif }
+    .heading { font-size: 16px; font-weight: 650 }
+    .message { font-size: 19px }
+    .ids { font: 17px ui-monospace, monospace }
+    .detail { font-size: 15px; fill: #495959 }
+  </style>
+  <rect width="760" height="356" rx="12" fill="#faf8f3"/>
+  <text x="28" y="46" class="title">Eight messages, eight labels</text>
+  <text x="28" y="89" class="heading">SMS message</text>
+  <text x="268" y="89" class="heading">Input IDs [8, 120]</text>
+  <text x="645" y="89" class="heading">Labels [8]</text>
+  <path d="M28 102H732 M28 284H732" stroke="#bbbfba"/>
+  <rect x="18" y="161" width="724" height="48" rx="6" fill="#f8e6c7"/>
+  <g class="message">
+    <text x="28" y="140">Tea at six?</text>
+    <text x="28" y="192">Claim your free prize!</text>
+    <text x="28" y="270">See you soon.</text>
+  </g>
+  <g class="ids">
+    <text x="268" y="140">49770  379  2237  30  …  50256</text>
+    <text x="268" y="192">44819  534  1479  11596  0  …  50256</text>
+    <text x="268" y="270">6214  345  2582  13  …  50256</text>
+  </g>
+  <g class="heading">
+    <text x="645" y="140">0 · ham</text>
+    <text x="645" y="192">1 · spam</text>
+    <text x="645" y="270">0 · ham</text>
+  </g>
+  <text x="28" y="233" class="detail" font-style="italic">Five more messages …</text>
+  <text x="28" y="321" class="detail">Each input row ends with enough 50256 padding IDs to fill 120 positions.</text>
+</svg>
