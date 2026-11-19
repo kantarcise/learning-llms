@@ -396,6 +396,46 @@ One detail matters when carrying the CNN analogy over. A typical ResNet pools it
 
     The book uses two logits and a class ID (0 for ham, 1 for spam) with cross-entropy. The same pattern extends to three news categories by giving the head three outputs. A binary classifier can also use a single logit for spam with PyTorch’s `BCEWithLogitsLoss` and a floating-point 0/1 target. Applying sigmoid to that logit gives the predicted spam probability.
 
+<figure markdown="1">
+
+![GPT-2 stages from embeddings through block 11 to the classifier. The final block, final LayerNorm and head are trainable in both runs. Only the full-model run also updates the embeddings and blocks 0–10.](../assets/chapter-06/trainable-blocks.svg)
+
+<figcaption markdown="span">Companion to Figure 6.10. Both configurations send the SMS through the entire stack. Read the brackets on the right to see where the optimizer can change a weight after the backward pass.</figcaption>
+</figure>
+
+### Exercise 6.2 — Fine-tune the whole model
+
+Start each run from the same pretrained GPT-2 small checkpoint and the same freshly initialized classifier head. In the chapter run, train block 11, the final LayerNorm, and the head. In the exercise run, enable gradients everywhere before creating the optimizer:
+
+```python
+model.requires_grad_(True)  # Includes the embeddings and all 12 blocks.
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.1)
+```
+
+We ran both configurations on the Mac GPU with the §6.2 splits. Each run used one epoch of 130 updates, eight messages per update, width 120, zero dropout, and the last position’s logits for cross-entropy. Seed 123 controlled both the new head and the shared shuffle order. We evaluated all 149 validation and 300 test messages in evaluation mode.
+
+| Trainable weights | Validation accuracy | Test accuracy |
+| --- | ---: | ---: |
+| Last block, final LayerNorm, head | 130/149 (87.2%) | 255/300 (85.0%) |
+| Whole model | 145/149 (97.3%) | 280/300 (93.3%) |
+
+These are single-seed, one-epoch results. The sign and size of the difference can change with training duration or seed. For comparison, the author’s separate experiments report 95.00% and 96.67% test accuracy for these configurations (rows 1 and 5). [Author’s experiment table](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch06/02_bonus_additional-experiments)
+
+### One SMS through the new head
+
+The input interface from Chapter 5 still works. Tokenize the SMS and add a batch axis so GPT receives one row.
+
+```python
+ids = tokenizer.encode("Do you have time")   # [5211, 345, 423, 640]
+inputs = torch.tensor(ids).unsqueeze(0)     # [1 message, 4 positions]
+model.eval()
+with torch.no_grad():
+    logits = model(inputs.to(next(model.parameters()).device))
+print(logits.shape)                         # torch.Size([1, 4, 2])
+```
+
+The four positions each get a ham score and a spam score. Changing which weights may learn affects the backward pass. Replacing the vocabulary head changes the last dimension of this forward pass. A single example can run at its actual length here; the exercise used padded rows when batching messages.
+
 ## 6.6 Calculating the classification loss and accuracy
 
 Notes to come as we read this section.
