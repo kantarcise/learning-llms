@@ -374,6 +374,22 @@ print([name for name, p in model.named_parameters() if p.requires_grad])
 
 PyTorch also offers `model.requires_grad_(False)` as a shorthand for the loop. Applying it before the swap freezes the existing parameters, including the old vocabulary head. Applying it after the swap would freeze the new head too. At this point the new head has 1,536 trainable weights (2 × 768) and two biases. Reading the width from the configuration lets the same code build a two-class head for a wider GPT-2 variant.
 
+With only the head trainable, the classifier learns how to score the features GPT-2 already produces. Figure 6.10 shows the next choice. Let the last transformer block adapt those features to SMS messages, and let the final LayerNorm adapt its scale and shift before the head reads them.
+
+```python
+# Blocks are indexed 0 through 11. Python's [-1] selects block 11.
+for parameter in model.trf_blocks[-1].parameters():
+    parameter.requires_grad = True
+
+# This LayerNorm follows the whole stack. The last block has its own norms too.
+for parameter in model.final_norm.parameters():
+    parameter.requires_grad = True
+```
+
+After these loops the trainable path is **block 11 → final LayerNorm → two-class head**. The head was already trainable when we created it. The embeddings and blocks 0 through 10 still participate in every prediction with their pretrained weights fixed.
+
+Appendix B (p. 295) points to Raschka’s comparison. With pretrained GPT-2 small, 120 positions, and the last position used for classification, training only the head gave **72% test accuracy** (row 3). The last-block setup reached **95%** (row 1). These measurements are from the author’s SMS experiment. They motivate trying this particular group of layers and measuring the result on the task at hand. [Additional spam classification experiments](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch06/02_bonus_additional-experiments)
+
 One detail matters when carrying the CNN analogy over. A typical ResNet pools its feature map to produce one vector per **image**. GPT-2 produces one vector per **token position**. With the batch from §6.3, applying the new head gives logits shaped `[8, 120, 2]`. We still need to choose which position supplies the two scores for each whole SMS. Replacing the layer and deciding which parameters to fine-tune are separate steps.
 
 !!! tip "How many outputs does a binary classifier need?"
