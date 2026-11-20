@@ -436,6 +436,61 @@ print(logits.shape)                         # torch.Size([1, 4, 2])
 
 The four positions each get a ham score and a spam score. Changing which weights may learn affects the backward pass. Replacing the vocabulary head changes the last dimension of this forward pass. A single example can run at its actual length here; the exercise used padded rows when batching messages.
 
+### Which row represents the message?
+
+Before the head swap, the output for “Do you have time” had shape `[1, 4, 50257]`. The classifier produces `[1, 4, 2]`. Each of the four rows still corresponds to an input position. Its two columns are raw class scores, or logits. The hidden vector feeding the head still has 768 coordinates.
+
+<figure markdown="1">
+
+![Four pairs of ham and spam logits aligned with Do, you, have, and time. The time row is selected.](../assets/chapter-06/last-position-logits.svg)
+
+<figcaption markdown="span">Companion to Figure 6.11. These are our forward-pass values before fine-tuning, rounded to four decimals. Even an ordinary question gets a higher spam score here because the new head still has its initial weights.</figcaption>
+</figure>
+
+```python
+message_logits = logits[:, -1, :]  # Every message, final position, both classes.
+print(message_logits.shape)        # torch.Size([1, 2])
+# For this input: tensor([[-3.5983, 3.9902]]) to four decimal places.
+```
+
+Why choose “time”? Imagine two messages that both start with “Do”. At position zero the model sees the same token, at the same position, in both messages. With dropout off it must produce the same pair of scores there, even if one message goes on to offer a cash prize. By the time GPT processes the final position, every earlier word is available as evidence. Training supplies one label per SMS and computes the loss on the selected pair of scores. Gradients can flow through the earlier positions that helped produce those scores.
+
+<figure markdown="1">
+
+![Causal attention mask for Do you have time. Each row can access its own token and all earlier ones.](../assets/chapter-06/sms-causal-context.svg)
+
+<figcaption markdown="span">Companion to Figure 6.12. The mask tells us which connections are allowed. The attention weights determine how much each allowed position contributes.</figcaption>
+</figure>
+
+For this unpadded example, index `-1` lands on “time”. In the chapter’s right-padded batches, it often lands on a padding ID at position 119. That position can still attend to the entire SMS. Selecting the last actual word in each padded row would be a different experiment.
+
+### Exercise 6.3 — First or last position?
+
+Keep the last transformer block, final LayerNorm, and classifier head trainable in both runs. Change the position that supplies the logits to **both** the training loss and the evaluation prediction. Start each run from the same pretrained weights and identically initialized head.
+
+```python
+position = 0  # Repeat with -1 on a fresh copy of the model.
+
+# Inside each training step, before backward() and optimizer.step():
+token_logits = model(input_batch)                   # [messages, positions, classes]
+message_logits = token_logits[:, position, :]       # [messages, classes]
+loss = torch.nn.functional.cross_entropy(message_logits, label_batch)
+
+# During evaluation, use the same row selection on each held-out batch.
+model.eval()
+with torch.no_grad():
+    predictions = model(eval_inputs)[:, position, :].argmax(dim=-1)
+```
+
+We ran one epoch per position on the Mac GPU with the §6.2 splits. Both runs used 130 updates, batch size 8, width 120, zero dropout, AdamW with learning rate 0.00005 and weight decay 0.1, and seed 123 for the head and the shuffle order.
+
+| Position used throughout | Validation accuracy | Test accuracy |
+| --- | ---: | ---: |
+| First (`0`) | 97/149 (65.1%) | 197/300 (65.7%) |
+| Last (`-1`) | 130/149 (87.2%) | 255/300 (85.0%) |
+
+Reading the last position gave **58 more correct test predictions** on this split. The first token can carry a clue, which helps explain why first-position classification can work at all. The causal mask prevents it from using anything the sender writes afterward. The size of the accuracy gap is specific to this one-epoch comparison.
+
 ## 6.6 Calculating the classification loss and accuracy
 
 Notes to come as we read this section.

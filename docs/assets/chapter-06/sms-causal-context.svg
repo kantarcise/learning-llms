@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="368" viewBox="0 0 760 368" role="img" aria-label="Which words can each position use?"><rect width="760" height="368" rx="12" fill="#faf8f3"/><g font-family="system-ui,sans-serif" fill="#233932">
+<text x="22" y="40" font-size="25" font-weight="650">Which words can each position use?</text>
+<text x="22" y="77" font-size="17" font-weight="400">Each row is one query position. Read across to see its available context.</text>
+<text x="139" y="117" font-size="17" font-weight="650">Do</text>
+<text x="217" y="117" font-size="17" font-weight="650">you</text>
+<text x="295" y="117" font-size="17" font-weight="650">have</text>
+<text x="373" y="117" font-size="17" font-weight="650">time</text>
+<text x="28" y="155" font-size="18" font-weight="650">Do</text>
+<rect x="127" y="131" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="145" y="153" font-size="16" font-weight="400">yes</text>
+<rect x="205" y="131" width="70" height="34" rx="5" fill="#ebe9e4"/>
+<text x="223" y="153" font-size="16" font-weight="400">—</text>
+<rect x="283" y="131" width="70" height="34" rx="5" fill="#ebe9e4"/>
+<text x="301" y="153" font-size="16" font-weight="400">—</text>
+<rect x="361" y="131" width="70" height="34" rx="5" fill="#ebe9e4"/>
+<text x="379" y="153" font-size="16" font-weight="400">—</text>
+<text x="450" y="155" font-size="17" font-weight="650">Only “Do” is visible.</text>
+<text x="28" y="200" font-size="18" font-weight="650">you</text>
+<rect x="127" y="176" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="145" y="198" font-size="16" font-weight="400">yes</text>
+<rect x="205" y="176" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="223" y="198" font-size="16" font-weight="400">yes</text>
+<rect x="283" y="176" width="70" height="34" rx="5" fill="#ebe9e4"/>
+<text x="301" y="198" font-size="16" font-weight="400">—</text>
+<rect x="361" y="176" width="70" height="34" rx="5" fill="#ebe9e4"/>
+<text x="379" y="198" font-size="16" font-weight="400">—</text>
+<text x="28" y="245" font-size="18" font-weight="650">have</text>
+<rect x="127" y="221" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="145" y="243" font-size="16" font-weight="400">yes</text>
+<rect x="205" y="221" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="223" y="243" font-size="16" font-weight="400">yes</text>
+<rect x="283" y="221" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="301" y="243" font-size="16" font-weight="400">yes</text>
+<rect x="361" y="221" width="70" height="34" rx="5" fill="#ebe9e4"/>
+<text x="379" y="243" font-size="16" font-weight="400">—</text>
+<text x="28" y="290" font-size="18" font-weight="650">time</text>
+<rect x="127" y="266" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="145" y="288" font-size="16" font-weight="400">yes</text>
+<rect x="205" y="266" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="223" y="288" font-size="16" font-weight="400">yes</text>
+<rect x="283" y="266" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="301" y="288" font-size="16" font-weight="400">yes</text>
+<rect x="361" y="266" width="70" height="34" rx="5" fill="#cfe6d8"/>
+<text x="379" y="288" font-size="16" font-weight="400">yes</text>
+<text x="450" y="290" font-size="17" font-weight="650">All four words are visible.</text>
+<text x="22" y="344" font-size="16" font-weight="400">Green = attention allowed. A dash marks a future position blocked by the causal mask.</text>
+</g></svg>
