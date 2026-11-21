@@ -804,12 +804,89 @@ The book reports 97.21% on training using the original loader, which evaluates 1
 
 ## 6.8 Using the LLM as a spam classifier
 
-Notes to come as we read this section.
+During training we needed an SMS and its known label. Now someone can give us just the SMS. The saved weights and the preprocessing decisions from training supply everything else the classifier needs for a forward pass.
 
-## Questions to bring to the chapter
+<figure markdown="1">
 
-<!-- Add actual questions during reading. -->
+![Three stages of classifier development, ending with predicting one label for a new SMS.](../assets/chapter-06/classify-new-sms.svg)
 
-## End of chapter
+<figcaption markdown="span">Companion to Raschka’s Figure 6.18. Steps 1–9 produced and tested the classifier. Step 10 uses it on a message whose label we want to predict.</figcaption>
+</figure>
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+### From an SMS to a label
+
+Listing 6.12 calls this function `classify_review`. Here the text is an SMS. Use the width we trained with (120), even for a short message. We trained the classifier to read the last **padded position**. Feeding just the unpadded tokens would ask it to read a different position.
+
+```python title="Classifying one message"
+@torch.inference_mode()
+def classify_review(
+    text: str, model: GPTModel, tokenizer: tiktoken.Encoding, max_length: int,
+) -> str:
+    """Map one SMS to a class name using the padded width from training."""
+    model.eval()
+    if not 1 <= max_length <= model.pos_emb.num_embeddings:
+        raise ValueError("Choose a width within the model's position table.")
+    ids = tokenizer.encode_ordinary(text)[:max_length]
+    ids += [tokenizer.eot_token] * (max_length - len(ids))
+
+    # One message of T token IDs. The outer list supplies the batch dimension.
+    inputs = torch.tensor([ids], dtype=torch.long, device=model.pos_emb.weight.device)
+    # [1, T, 2] → [1, 2]. Training scored this same final padded position.
+    scores = model(inputs)[:, -1, :]
+    return ("not spam", "spam")[scores.argmax(dim=-1).item()]
+```
+
+The output head already has a score for each class. Taking the index of the larger score gives the label ID. Run these two messages through the trained model:
+
+```python
+max_length = train_dataset.max_length
+messages = [
+    "You are a winner! You have been specially selected to receive a cash award.",
+    "Hey, just wanted to check if we're still on for dinner tonight. Let me know.",
+]
+labels = [classify_review(text, model, tokenizer, max_length) for text in messages]
+print(labels)
+```
+
+Our run printed `["not spam", "not spam"]`. The dinner invitation was correct. The shorter prize offer was a false negative. We also checked both exact messages from Listing 6.12 with the restored model: it labeled the book’s prize offer (with the two dollar amounts) **spam** and its dinner invitation **not spam**. Several words and punctuation marks changed in our paraphrase, so these examples alone cannot identify which change flipped the label.
+
+### Keep the classifier for the next session
+
+`model.state_dict()` includes the pretrained backbone, its fine-tuned layers, the new output head, and registered buffers. Saving the architecture settings, tokenizer name, and training width alongside those tensors makes it possible to reconstruct the same prediction path. This checkpoint is for inference. The model class, the two-label mapping, and the preprocessing function travel with the application code.
+
+```python title="Saving and restoring the SMS classifier"
+torch.save({
+    "config": config,
+    "weights": model.state_dict(),
+    "max_length": max_length,
+    "tokenizer": tokenizer.name,
+}, "sms-classifier.pth")
+
+# A fresh process needs the GPTModel class and the same two-output head.
+saved = torch.load("sms-classifier.pth", map_location="cpu", weights_only=True)
+restored = GPTModel(saved["config"])
+restored.out_head = torch.nn.Linear(saved["config"]["emb_dim"], 2)
+restored.load_state_dict(saved["weights"])
+encoding = tiktoken.get_encoding(saved["tokenizer"])
+print([classify_review(text, restored, encoding, saved["max_length"]) for text in messages])
+```
+
+The restored CPU model returned the same two labels as the fine-tuned GPU model for our examples. The checkpoint can now be used without another training run.
+
+### How does this compare with Harvey’s legal models?
+
+The common idea is to start with a capable model and supply examples or feedback that reward the behavior a product needs. Our target is one class ID per message. A legal agent’s target can be a sequence of actions and a written answer. For example, given a question about a settlement, it may need to find the agreement, read the relevant clause, and use it in the answer.
+
+Mercor reports a legal experiment with Harvey using **NVIDIA Nemotron 3.5 Super**. They used supervised fine-tuning on examples of model-generated work that passed a grader’s selection. That is close to instruction fine-tuning: the demonstration includes how to work through the assignment as well as what to answer. On held-out APEX-Agents legal tasks, average rubric criteria met rose from **45.1% to 51.8%**. Full-credit attempts rose from **19.8% to 25.0%**. Those percentages measure different things from SMS classification accuracy. [Mercor’s experiment and worked example](https://www.mercor.com/blog/mercor-nvidia-nemotron-3-5/)
+
+Harvey has also reported training a **GLM-5.1** legal agent with Applied Compute using reinforcement learning. The agent attempts a task and a grader scores the result, giving training a reward signal. Harvey’s product uses multiple model providers. Each research result describes a particular model, method, and evaluation. [Harvey’s training report](https://www.harvey.ai/blog/training-a-legal-agent-with-applied-compute) · [Harvey’s product FAQ](https://help.harvey.ai/articles/harvey-faq)
+
+## Chapter 6 in seven points
+
+1. Choose the output the task needs. Classification produces one of a fixed set of labels. Instruction fine-tuning teaches a model to generate a response to a request.
+2. Keep the text input pipeline. Each SMS becomes GPT-2 token IDs. Truncating and padding to a shared width lets the loader batch messages alongside their class labels.
+3. Start with pretrained weights. GPT-2 brings the language representations it learned through next-token prediction.
+4. Replace the vocabulary head. Each position’s 768 features now produce two class scores in place of 50,257 vocabulary scores.
+5. Train on one label per SMS. The final position can attend to the whole message. Cross-entropy on its two logits updates the head, final layer normalization, and last transformer block.
+6. Count correct decisions on held-out messages. Five-batch checks tracked progress during training. The final test counted 287 correct predictions across 300 messages.
+7. Package what inference needs. Restore the classifier weights and architecture, apply the same tokenizer and padding rule, and map the winning score to the same class name.
