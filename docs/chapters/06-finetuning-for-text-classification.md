@@ -752,6 +752,56 @@ The five epochs took **103.5 seconds (1.72 minutes)** with PyTorch 2.14.1 on the
 
 Our curves have the same shape as Figure 6.16. At the first loss check, training and validation loss were **2.153 and 2.392**. At the last check they were **0.083 and 0.074**. Both fell sharply early on and stayed close as training progressed. At the end of epoch five, accuracy was **100.0% on training and 97.5% on validation**, measured on 40 messages per split. [Recorded measurements for all 13 loss checks and five epoch-end accuracy checks](../assets/chapter-06/sms-five-epochs.json).
 
+!!! tip "Choosing the number of epochs"
+    Five epochs was enough for this run. In Figure 6.16, training and validation loss dropped together, with little evidence of overfitting on the monitored batches. If training loss keeps falling while validation loss consistently rises, an earlier checkpoint is a better candidate. If validation loss is still improving, try a longer run and compare checkpoints on validation data. Reserve the test set for the final evaluation.
+
+### Accuracy at the end of each epoch
+
+Reuse `plot_values` with the five accuracy measurements. The first point belongs at the **end of epoch one** (1,040 messages seen). Each validation check scores the same first 40 messages. The training loader shuffles, so its sample can change from one check to the next.
+
+```python
+from matplotlib.ticker import PercentFormatter, MultipleLocator
+
+per_epoch = len(train_loader) * train_loader.batch_size
+messages = tuple(epoch * per_epoch for epoch in range(1, len(accuracies) + 1))
+training, validation = zip(*accuracies)
+fig = plot_values(messages, training, validation, per_epoch, ylabel="Classification accuracy")
+ax = fig.axes[0]
+ax.set_ylim(0.65, 1.025)
+ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+ax.set_xticks(messages)
+ax.child_axes[0].xaxis.set_major_locator(MultipleLocator(1))
+fig.savefig("sms-training-accuracy.svg")
+```
+
+<figure markdown="1">
+
+![Training and validation accuracy climb from 70% and 72.5% at epoch one to 100% and 97.5% at epochs four and five.](../assets/chapter-06/sms-training-accuracy.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 6.17. At epochs four and five the classifier got 39 of the 40 validation messages right. A single decision moves this estimate by 2.5 percentage points.</figcaption>
+</figure>
+
+### Evaluate every message
+
+Omit the optional batch limit from `calc_accuracy_loader` to visit every batch. There is one more detail for training data. Our training loader drops its short final batch, so build an evaluation loader over the same dataset that includes those remaining messages.
+
+```python
+full_train_loader = DataLoader(train_loader.dataset, batch_size=8, shuffle=False, drop_last=False)
+for name, loader in [("Training", full_train_loader), ("Validation", val_loader), ("Test", test_loader)]:
+    accuracy = calc_accuracy_loader(loader, model, device)
+    print(f"{name}: {accuracy:.2%} across {len(loader.dataset)} messages")
+```
+
+We repeated the five-epoch M5 run with seed 123 and the same settings to evaluate the final weights. All five epoch-end accuracy pairs matched the recorded run.
+
+| Split | Correct / evaluated | Accuracy |
+| --- | ---: | ---: |
+| Training | 1,016 / 1,045 | 97.22% |
+| Validation | 145 / 149 | 97.32% |
+| Test | 287 / 300 | 95.67% |
+
+The book reports 97.21% on training using the original loader, which evaluates 1,040 messages. Our training denominator includes all 1,045. The validation and test sets contain different messages, so a small gap can arise from the split alone. Repeatedly choosing settings on validation performance can also favor that split. If a persistent training–validation gap develops, compare dropout or weight decay settings using validation data.
+
 ## 6.8 Using the LLM as a spam classifier
 
 Notes to come as we read this section.

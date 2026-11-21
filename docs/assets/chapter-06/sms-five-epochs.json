@@ -104,5 +104,23 @@
       "training": 1.0,
       "validation": 0.975
     }
-  ]
+  ],
+  "full_split_evaluation": {
+    "source": "Separate seed-123 five-epoch repeat with the same settings. All five sampled epoch accuracies matched the plotted run.",
+    "drop_last": false,
+    "splits": {
+      "training": {
+        "correct": 1016,
+        "messages": 1045
+      },
+      "validation": {
+        "correct": 145,
+        "messages": 149
+      },
+      "test": {
+        "correct": 287,
+        "messages": 300
+      }
+    }
+  }
 }
