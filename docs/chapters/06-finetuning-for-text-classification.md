@@ -629,7 +629,11 @@ On the Mac GPU, the initial losses were **2.453 on training, 2.583 on validation
 
 ## 6.7 Fine-tuning the model on supervised data
 
-Notes to come as we read this section.
+Figure 6.15 revisits the [training loop from §5.2](05-pretraining-on-unlabeled-data.md#52-training-an-llm). For each batch, we clear the previous gradients, run the model, calculate cross-entropy, call `loss.backward()`, and take an optimizer step. In our classifier, that step updates the last transformer block, the final layer normalization, and the two-class output head.
+
+What changes is the question each example asks. During pretraining, every position had a next-token target. Here, eight messages have eight labels. We take the two logits at the final position of each message and use the eight labels to compute one mean training loss.
+
+What we monitor changes too. In Chapter 5 we tracked training and validation loss and generated a sample to see what the model had learned to write. We still track both losses. In place of the text sample, we now measure classification accuracy by counting how many messages the model labels correctly. **Loss drives the update. Accuracy tells us how often the classifier gets the decision right.**
 
 ## 6.8 Using the LLM as a spam classifier
 
