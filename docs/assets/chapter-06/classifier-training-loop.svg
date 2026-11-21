@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="454" viewBox="0 0 720 454" role="img" aria-labelledby="title desc">
+  <title id="title">One epoch of classifier fine-tuning</title>
+  <desc id="desc">Inside each epoch, 130 batches each update weights once. Periodically check loss inside the batch loop. Measure accuracy after all batches.</desc>
+  <style>text{font-family:Arial,sans-serif;fill:#172f3c}.heading{font-size:22px;font-weight:700}.body{font-size:18px}.small{font-size:16px}.code{font:16px monospace;fill:#245859}</style>
+  <rect width="720" height="454" rx="14" fill="#f6f8f8"/>
+  <text x="26" y="40" class="heading">One epoch</text>
+  <text x="690" y="39" text-anchor="end" class="body">Repeat for 5 epochs</text>
+  <rect x="26" y="58" width="668" height="285" rx="12" fill="#e4efee"/>
+  <text x="50" y="95" class="heading">For each of 130 training batches</text>
+  <text x="50" y="124" class="body">8 messages → 8 labels → one weight update</text>
+  <path d="M61 152v102" stroke="#62958d" stroke-width="2"/>
+  <g fill="#286d64"><circle cx="61" cy="155" r="5"/><circle cx="61" cy="188" r="5"/><circle cx="61" cy="221" r="5"/><circle cx="61" cy="254" r="5"/></g>
+  <g class="body"><text x="81" y="161">Clear previous gradients</text><text x="81" y="194">Score the eight labels</text><text x="81" y="227">Compute new gradients</text><text x="81" y="260">Update trainable weights</text></g>
+  <g class="code"><text x="394" y="161">optimizer.zero_grad()</text><text x="394" y="194">calc_loss_batch(...)</text><text x="394" y="227">loss.backward()</text><text x="394" y="260">optimizer.step()</text></g>
+  <path d="M50 280h620" stroke="#b5ceca"/>
+  <text x="50" y="315" class="body">At steps 0, 50, 100, … check training and validation loss.</text>
+  <path d="M61 343v19m-5 -6 5 6 5 -6" fill="none" stroke="#526c75" stroke-width="2"/>
+  <rect x="26" y="367" width="668" height="68" rx="10" fill="#e6ebf5"/>
+  <text x="50" y="395" class="heading">At epoch end</text>
+  <text x="50" y="419" class="small">Measure accuracy on five training batches and five validation batches.</text>
+</svg>

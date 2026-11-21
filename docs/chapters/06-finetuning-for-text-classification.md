@@ -635,6 +635,123 @@ What changes is the question each example asks. During pretraining, every positi
 
 What we monitor changes too. In Chapter 5 we tracked training and validation loss and generated a sample to see what the model had learned to write. We still track both losses. In place of the text sample, we now measure classification accuracy by counting how many messages the model labels correctly. **Loss drives the update. Accuracy tells us how often the classifier gets the decision right.**
 
+<figure markdown="1">
+
+![Each epoch contains 130 batch updates, periodic loss checks, and one accuracy check at the end.](../assets/chapter-06/classifier-training-loop.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 6.15. The indentation in Listing 6.10 follows the two boxes. Loss is checked inside the batch loop. Accuracy is checked once the loader is exhausted.</figcaption>
+</figure>
+
+### Follow one batch through Listing 6.10
+
+The first batch contains 8 messages of 120 token positions each. In Chapter 5 that shape would give us 960 next-token targets. Here it gives us **eight class labels**, so the examples-seen counter advances by eight. With 130 full training batches per epoch, five epochs give us 650 optimizer updates and 5,200 message presentations, including repeat visits across epochs.
+
+Reuse the body of [Chapter 5’s `evaluate_model`](05-pretraining-on-unlabeled-data.md#reading-listing-53-one-batch-at-a-time) with the `calc_loss_loader` defined in §6.6. It temporarily puts the model into evaluation mode, measures both splits with gradients disabled, and switches back to training mode. The helper stays the same because the choice of which logits to score lives inside `calc_loss_batch`.
+
+```python title="Fine-tuning the SMS classifier"
+def train_classifier_simple(
+    model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
+    optimizer: torch.optim.Optimizer, device: torch.device,
+    num_epochs: int, eval_freq: int, eval_iter: int,
+) -> tuple[list[tuple[int, float, float]], list[tuple[float, float]]]:
+    """Record (messages seen, train loss, validation loss) and epoch accuracies."""
+    losses = []
+    accuracies = []
+    examples_seen = 0
+    step = 0
+    for epoch in range(1, num_epochs + 1):
+        model.train()
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+            loss = calc_loss_batch(inputs, labels, model, device)
+            loss.backward()   # Gradients for the parameters we unfroze in §6.5.
+            optimizer.step()  # One update for the whole batch.
+            examples_seen += labels.numel()  # One label per SMS.
+
+            # Step 0 is the first completed update, as in the book.
+            if step % eval_freq == 0:
+                train_loss, val_loss = evaluate_model(
+                    model, train_loader, val_loader, device, eval_iter
+                )
+                losses.append((examples_seen, train_loss, val_loss))
+                print(f"Step {step}: loss {train_loss:.3f} / {val_loss:.3f}")
+            step += 1
+
+        # Outside the batch loop: measure accuracy once per epoch.
+        train_acc = calc_accuracy_loader(train_loader, model, device, eval_iter)
+        val_acc = calc_accuracy_loader(val_loader, model, device, eval_iter)
+        accuracies.append((train_acc, val_acc))
+        print(f"Epoch {epoch}: accuracy {train_acc:.1%} / {val_acc:.1%}")
+    return losses, accuracies
+```
+
+### Time the five-epoch fine-tune
+
+Start with the pretrained backbone and fresh classifier head from §6.5. Rerunning this cell on an already fine-tuned model would give it another five epochs. On the Mac, move the model to the MPS device before creating AdamW. A monotonic wall clock measures the time a reader actually waits, including the scheduled evaluations. Synchronizing the GPU at the boundaries makes the end time include its queued work.
+
+```python
+from time import perf_counter
+
+torch.manual_seed(123)
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.1)
+if device.type == "mps":
+    torch.mps.synchronize()
+start = perf_counter()
+losses, accuracies = train_classifier_simple(
+    model, train_loader, val_loader, optimizer, device,
+    num_epochs=5, eval_freq=50, eval_iter=5,
+)
+if device.type == "mps":
+    torch.mps.synchronize()  # Wait for queued GPU work before stopping the timer.
+elapsed = perf_counter() - start
+print(f"Five epochs took {elapsed:.1f} seconds")
+```
+
+### Plot the losses where they were measured
+
+Our adaptation of Listing 6.11 records the message count at each loss check. The first point is at **8 messages** (step 0), and the last is at **4,808** (step 600). Training continues to 5,200. A second axis converts those same coordinates into epochs using 1,040 presentations per epoch. This keeps each point at its measured position.
+
+```python title="Plotting training and validation measurements"
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+
+
+def plot_values(
+    examples: tuple[int, ...], training: tuple[float, ...],
+    validation: tuple[float, ...], examples_per_epoch: int, ylabel: str = "Mean cross-entropy loss",
+) -> Figure:
+    """Plot training and validation measurements against messages seen, with epochs on the upper axis."""
+    fig, ax = plt.subplots(figsize=(7.4, 3.8), layout="constrained")
+    ax.plot(examples, training, "o-", color="#18685d", label="Training", markersize=4)
+    ax.plot(examples, validation, "s--", color="#a94b24", label="Validation", markersize=4)
+    ax.set(xlabel="Training messages seen", ylabel=ylabel, ylim=(0, None))
+    ax.grid(axis="y", alpha=0.2)
+    ax.legend(frameon=False)
+    top = ax.secondary_xaxis("top", functions=(
+        lambda count: count / examples_per_epoch,
+        lambda epochs: epochs * examples_per_epoch,
+    ))
+    top.set_xlabel("Epochs completed")
+    return fig
+
+
+examples, training, validation = zip(*losses)
+# The training loader drops its short last batch: 130 full batches of eight.
+fig = plot_values(examples, training, validation, len(train_loader) * train_loader.batch_size)
+fig.savefig("sms-training-loss.svg")
+```
+
+<figure markdown="1">
+
+![Measured training and validation losses fall sharply at first, then track each other closely over five epochs.](../assets/chapter-06/sms-training-loss.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 6.16, plotted from our M5 MacBook Air run. Each marker averages five batches of eight messages. The first pair of markers already includes one optimizer update.</figcaption>
+</figure>
+
+The five epochs took **103.5 seconds (1.72 minutes)** with PyTorch 2.14.1 on the Mac GPU. This times training and monitoring with the model and data already loaded. The book reports about six minutes on an M3 Air. The two machines were measured separately, so these times give a ballpark comparison.
+
+Our curves have the same shape as Figure 6.16. At the first loss check, training and validation loss were **2.153 and 2.392**. At the last check they were **0.083 and 0.074**. Both fell sharply early on and stayed close as training progressed. At the end of epoch five, accuracy was **100.0% on training and 97.5% on validation**, measured on 40 messages per split. [Recorded measurements for all 13 loss checks and five epoch-end accuracy checks](../assets/chapter-06/sms-five-epochs.json).
+
 ## 6.8 Using the LLM as a spam classifier
 
 Notes to come as we read this section.
