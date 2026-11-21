@@ -573,6 +573,60 @@ for name, loader in [
 
 Our Mac GPU run reproduced the book’s three percentages. A fair coin would average 40 correct out of 80 across many trials. These scores are close to that reference. A randomly initialized head can consistently favor one class, so near-50% accuracy alone tells us little about its prediction pattern. The ten batches give us a quick baseline to compare against as training proceeds.
 
+### Measuring the loss before fine-tuning
+
+Accuracy asks whether the correct class won. Imagine two training steps where the probability assigned to the correct label rises from 0.10 to 0.40. The prediction is still wrong both times, so accuracy gives the same answer. Cross-entropy falls from about 2.30 to 0.92. Accuracy changes in jumps when the winning label changes. Cross-entropy varies smoothly with the logits, so its gradient gives the optimizer a direction even before the winning class changes.
+
+Chapter 5 scored a next-token target at every position. Here each SMS has one target. Selecting the final position gives cross-entropy exactly the pair of logits it needs for each label.
+
+```python
+def calc_loss_batch(
+    input_batch: torch.Tensor,
+    target_batch: torch.Tensor,
+    model: torch.nn.Module,
+    device: torch.device,
+) -> torch.Tensor:
+    """Return scalar mean loss for long token IDs [B, T] and long class IDs [B].
+
+    B counts messages and T counts padded token positions per message.
+    """
+    logits = model(input_batch.to(device))[:, -1, :]  # [B, 2]: ham and spam
+    # Cross-entropy takes raw logits and uses the target ID to score the correct class.
+    return torch.nn.functional.cross_entropy(logits, target_batch.to(device))
+```
+
+Listing 6.9 averages the batch losses. A batch limit lets us estimate loss quickly. Omitting it evaluates every batch. Each batch has equal weight in this average, including a short final batch if the loader returns one.
+
+```python
+def calc_loss_loader(
+    data_loader: DataLoader,
+    model: torch.nn.Module,
+    device: torch.device,
+    num_batches: int | None = None,
+) -> float:
+    """Average the scalar batch losses. An empty selection yields NaN."""
+    total_loss = 0.0
+    count = 0
+    for inputs, targets in islice(data_loader, num_batches):
+        total_loss += calc_loss_batch(inputs, targets, model, device).item()
+        count += 1
+    return total_loss / count if count else float("nan")
+```
+
+The accuracy check above used ten batches per split. The book uses **five batches per split** for the loss baseline, or 40 messages each. Run this immediately after the accuracy example, with the same model and loaders. The training loader shuffles on each new pass.
+
+```python
+model.eval()
+with torch.no_grad():
+    for name, loader in [
+        ("Training", train_loader), ("Validation", val_loader), ("Test", test_loader)
+    ]:
+        loss = calc_loss_loader(loader, model, device, num_batches=5)
+        print(f"{name} loss: {loss:.3f}")
+```
+
+On the Mac GPU, the initial losses were **2.453 on training, 2.583 on validation, and 2.322 on test**. For comparison, predicting both classes with equal probability on every message gives a loss of about 0.693. A confident wrong prediction can push the average loss well above that value. In §6.7 the optimizer will use the training loss to update the trainable parameters.
+
 ## 6.7 Fine-tuning the model on supervised data
 
 Notes to come as we read this section.
