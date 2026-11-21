@@ -493,7 +493,25 @@ Reading the last position gave **58 more correct test predictions** on this spli
 
 ## 6.6 Calculating the classification loss and accuracy
 
-Notes to come as we read this section.
+In Chapter 5 the question at each position was *which token comes next?* GPT-2 produced one score for each of its 50,257 vocabulary entries. Here the question is *which class describes the whole SMS?* We still tokenize the input with the full GPT-2 vocabulary. The replacement head learns two new sets of weights that read the same 768 features, one for ham and one for spam.
+
+Consider the last row we measured in §6.5 for “Do you have time.” Index 0 means ham and index 1 means spam. Keeping that order lets us trace the prediction all the way from numbers back to a word.
+
+<figure markdown="1">
+
+![Two logits for an ordinary SMS become probabilities. The higher score is at index 1, so the new head predicts spam.](../assets/chapter-06/scores-to-label.svg)
+
+<figcaption markdown="span">Companion to Figure 6.14. Softmax preserves the order of the scores. This confidently wrong prediction on an ordinary message illustrates why replacing the head is only the setup for training.</figcaption>
+</figure>
+
+```python
+message_logits = logits[:, -1, :]                 # [one message, two classes]
+probabilities = message_logits.softmax(dim=-1)    # Normalize across ham and spam.
+predicted_ids = probabilities.argmax(dim=-1)      # One winning index per SMS.
+# message_logits.argmax(dim=-1) gives the same class IDs directly.
+```
+
+**Fine-tuning is training with a pretrained starting point.** For a labeled training batch, cross-entropy compares the two raw logits per message with its known class ID. Backpropagation computes gradients, and the optimizer updates the trainable weights. In the chapter setup those are the new head, final LayerNorm, and last transformer block. During evaluation we can compute that same loss and count correct predictions for accuracy, with the optimizer idle. Measuring both before the first update gives us a baseline.
 
 ## 6.7 Fine-tuning the model on supervised data
 

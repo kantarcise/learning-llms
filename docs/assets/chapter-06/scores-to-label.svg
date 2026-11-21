@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="315" viewBox="0 0 800 315" role="img" aria-labelledby="t d">
+<title id="t">From one SMS to a predicted label</title><desc id="d">For Do you have time, the untrained head scores spam higher than ham. Softmax preserves this order. Argmax selects index one, which maps to spam.</desc>
+<rect width="800" height="315" rx="12" fill="#faf8f3"/>
+<g font-family="system-ui,sans-serif" fill="#243930">
+<text x="25" y="42" font-size="27" font-weight="bold">“Do you have time”</text>
+<text x="25" y="76" font-size="18">GPT-2 reads the SMS. Take the two logits at its last position.</text>
+<rect x="20" y="101" width="760" height="127" rx="8" fill="#e8eeea"/>
+<g font-size="18"><text x="40" y="132">Class index</text><text x="243" y="132">Logit</text><text x="398" y="132">Softmax probability</text>
+<text x="40" y="170">0 · ham</text><text x="243" y="170">−3.5983</text><text x="398" y="170">0.0005</text>
+<g font-weight="bold"><text x="40" y="205">1 · spam</text><text x="243" y="205">3.9902</text><text x="398" y="205">0.9995</text><text x="545" y="205">← highest</text></g></g>
+<text x="25" y="265" font-size="21" font-weight="bold">argmax → index 1 → predicted label: spam</text>
+<text x="25" y="295" font-size="17">The new head makes this prediction before it has learned from any labeled SMS.</text>
+</g></svg>
