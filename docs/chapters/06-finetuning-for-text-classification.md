@@ -493,6 +493,13 @@ Reading the last position gave **58 more correct test predictions** on this spli
 
 ## 6.6 Calculating the classification loss and accuracy
 
+<figure markdown="1">
+
+![Three-stage roadmap highlighting step 7, implementing loss and accuracy after attaching the classifier head.](../assets/chapter-06/evaluation-setup.svg)
+
+<figcaption markdown="span">Companion to Figure 6.13. Measuring the classifier before its first weight update gives us a baseline. Repeating those measurements during fine-tuning shows whether the updates help.</figcaption>
+</figure>
+
 In Chapter 5 the question at each position was *which token comes next?* GPT-2 produced one score for each of its 50,257 vocabulary entries. Here the question is *which class describes the whole SMS?* We still tokenize the input with the full GPT-2 vocabulary. The replacement head learns two new sets of weights that read the same 768 features, one for ham and one for spam.
 
 Consider the last row we measured in §6.5 for “Do you have time.” Index 0 means ham and index 1 means spam. Keeping that order lets us trace the prediction all the way from numbers back to a word.
