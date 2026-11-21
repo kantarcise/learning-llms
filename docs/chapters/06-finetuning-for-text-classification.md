@@ -436,13 +436,204 @@ print(logits.shape)                         # torch.Size([1, 4, 2])
 
 The four positions each get a ham score and a spam score. Changing which weights may learn affects the backward pass. Replacing the vocabulary head changes the last dimension of this forward pass. A single example can run at its actual length here; the exercise used padded rows when batching messages.
 
+### Which row represents the message?
+
+Before the head swap, the output for “Do you have time” had shape `[1, 4, 50257]`. The classifier produces `[1, 4, 2]`. Each of the four rows still corresponds to an input position. Its two columns are raw class scores, or logits. The hidden vector feeding the head still has 768 coordinates.
+
+<figure markdown="1">
+
+![Four pairs of ham and spam logits aligned with Do, you, have, and time. The time row is selected.](../assets/chapter-06/last-position-logits.svg)
+
+<figcaption markdown="span">Companion to Figure 6.11. These are our forward-pass values before fine-tuning, rounded to four decimals. Even an ordinary question gets a higher spam score here because the new head still has its initial weights.</figcaption>
+</figure>
+
+```python
+message_logits = logits[:, -1, :]  # Every message, final position, both classes.
+print(message_logits.shape)        # torch.Size([1, 2])
+# For this input: tensor([[-3.5983, 3.9902]]) to four decimal places.
+```
+
+Why choose “time”? Imagine two messages that both start with “Do”. At position zero the model sees the same token, at the same position, in both messages. With dropout off it must produce the same pair of scores there, even if one message goes on to offer a cash prize. By the time GPT processes the final position, every earlier word is available as evidence. Training supplies one label per SMS and computes the loss on the selected pair of scores. Gradients can flow through the earlier positions that helped produce those scores.
+
+<figure markdown="1">
+
+![Causal attention mask for Do you have time. Each row can access its own token and all earlier ones.](../assets/chapter-06/sms-causal-context.svg)
+
+<figcaption markdown="span">Companion to Figure 6.12. The mask tells us which connections are allowed. The attention weights determine how much each allowed position contributes.</figcaption>
+</figure>
+
+For this unpadded example, index `-1` lands on “time”. In the chapter’s right-padded batches, it often lands on a padding ID at position 119. That position can still attend to the entire SMS. Selecting the last actual word in each padded row would be a different experiment.
+
+### Exercise 6.3 — First or last position?
+
+Keep the last transformer block, final LayerNorm, and classifier head trainable in both runs. Change the position that supplies the logits to **both** the training loss and the evaluation prediction. Start each run from the same pretrained weights and identically initialized head.
+
+```python
+position = 0  # Repeat with -1 on a fresh copy of the model.
+
+# Inside each training step, before backward() and optimizer.step():
+token_logits = model(input_batch)                   # [messages, positions, classes]
+message_logits = token_logits[:, position, :]       # [messages, classes]
+loss = torch.nn.functional.cross_entropy(message_logits, label_batch)
+
+# During evaluation, use the same row selection on each held-out batch.
+model.eval()
+with torch.no_grad():
+    predictions = model(eval_inputs)[:, position, :].argmax(dim=-1)
+```
+
+We ran one epoch per position on the Mac GPU with the §6.2 splits. Both runs used 130 updates, batch size 8, width 120, zero dropout, AdamW with learning rate 0.00005 and weight decay 0.1, and seed 123 for the head and the shuffle order.
+
+| Position used throughout | Validation accuracy | Test accuracy |
+| --- | ---: | ---: |
+| First (`0`) | 97/149 (65.1%) | 197/300 (65.7%) |
+| Last (`-1`) | 130/149 (87.2%) | 255/300 (85.0%) |
+
+Reading the last position gave **58 more correct test predictions** on this split. The first token can carry a clue, which helps explain why first-position classification can work at all. The causal mask prevents it from using anything the sender writes afterward. The size of the accuracy gap is specific to this one-epoch comparison.
+
 ## 6.6 Calculating the classification loss and accuracy
 
-Notes to come as we read this section.
+<figure markdown="1">
+
+![Three-stage roadmap highlighting step 7, implementing loss and accuracy after attaching the classifier head.](../assets/chapter-06/evaluation-setup.svg)
+
+<figcaption markdown="span">Companion to Figure 6.13. Measuring the classifier before its first weight update gives us a baseline. Repeating those measurements during fine-tuning shows whether the updates help.</figcaption>
+</figure>
+
+In Chapter 5 the question at each position was *which token comes next?* GPT-2 produced one score for each of its 50,257 vocabulary entries. Here the question is *which class describes the whole SMS?* We still tokenize the input with the full GPT-2 vocabulary. The replacement head learns two new sets of weights that read the same 768 features, one for ham and one for spam.
+
+Consider the last row we measured in §6.5 for “Do you have time.” Index 0 means ham and index 1 means spam. Keeping that order lets us trace the prediction all the way from numbers back to a word.
+
+<figure markdown="1">
+
+![Two logits for an ordinary SMS become probabilities. The higher score is at index 1, so the new head predicts spam.](../assets/chapter-06/scores-to-label.svg)
+
+<figcaption markdown="span">Companion to Figure 6.14. Softmax preserves the order of the scores. This confidently wrong prediction on an ordinary message illustrates why replacing the head is only the setup for training.</figcaption>
+</figure>
+
+```python
+message_logits = logits[:, -1, :]                 # [one message, two classes]
+probabilities = message_logits.softmax(dim=-1)    # Normalize across ham and spam.
+predicted_ids = probabilities.argmax(dim=-1)      # One winning index per SMS.
+# message_logits.argmax(dim=-1) gives the same class IDs directly.
+```
+
+**Fine-tuning is training with a pretrained starting point.** For a labeled training batch, cross-entropy compares the two raw logits per message with its known class ID. Backpropagation computes gradients, and the optimizer updates the trainable weights. In the chapter setup those are the new head, final LayerNorm, and last transformer block. During evaluation we can compute that same loss and count correct predictions for accuracy, with the optimizer idle. Measuring both before the first update gives us a baseline.
+
+### Counting correct predictions across a loader
+
+The last row for “Do you have time” contains `[-3.5983, 3.9902]`. The larger logit is at index 1, so the predicted label is spam. We can skip softmax when counting correct predictions because it preserves the ordering of the two scores. In a batch, `dim=-1` makes this choice separately for each message.
+
+```python title="Count correct SMS labels (adapted from Listing 6.8)"
+from itertools import islice
+
+import torch
+from torch.utils.data import DataLoader
+
+
+@torch.no_grad()
+def calc_accuracy_loader(
+    data_loader: DataLoader,
+    model: torch.nn.Module,
+    device: torch.device,
+    num_batches: int | None = None,
+) -> float:
+    """Return the fraction correct for the evaluated messages. None uses all batches."""
+    model.eval()  # Use evaluation behavior, including disabling dropout.
+    correct = 0
+    seen = 0
+    for inputs, targets in islice(data_loader, num_batches):
+        # B = messages, T = token positions. Each position has two class logits.
+        logits = model(inputs.to(device))           # [B, T, 2]
+        predictions = logits[:, -1, :].argmax(-1)   # [B], one class ID per SMS
+        correct += (predictions == targets.to(device)).sum().item()
+        seen += targets.numel()  # Counts actual messages even in a short final batch.
+    if seen == 0:
+        raise ValueError("Accuracy requires at least one labeled message.")
+    return correct / seen
+```
+
+Start from the pretrained model and the seed-123 classifier head from §6.5, before the first optimizer step. With the three loaders from §6.3, the following measures 10 batches of eight messages per split. Resetting the seed before evaluation reproduces the training loader’s shuffle for this check.
+
+```python
+device = next(model.parameters()).device
+torch.manual_seed(123)
+for name, loader in [
+    ("Training", train_loader), ("Validation", val_loader), ("Test", test_loader)
+]:
+    accuracy = calc_accuracy_loader(loader, model, device, num_batches=10)
+    print(f"{name}: {accuracy:.2%}")
+```
+
+| Split | Correct / evaluated | Accuracy before fine-tuning |
+| --- | ---: | ---: |
+| Training | 37/80 | 46.25% |
+| Validation | 36/80 | 45.00% |
+| Test | 39/80 | 48.75% |
+
+Our Mac GPU run reproduced the book’s three percentages. A fair coin would average 40 correct out of 80 across many trials. These scores are close to that reference. A randomly initialized head can consistently favor one class, so near-50% accuracy alone tells us little about its prediction pattern. The ten batches give us a quick baseline to compare against as training proceeds.
+
+### Measuring the loss before fine-tuning
+
+Accuracy asks whether the correct class won. Imagine two training steps where the probability assigned to the correct label rises from 0.10 to 0.40. The prediction is still wrong both times, so accuracy gives the same answer. Cross-entropy falls from about 2.30 to 0.92. Accuracy changes in jumps when the winning label changes. Cross-entropy varies smoothly with the logits, so its gradient gives the optimizer a direction even before the winning class changes.
+
+Chapter 5 scored a next-token target at every position. Here each SMS has one target. Selecting the final position gives cross-entropy exactly the pair of logits it needs for each label.
+
+```python
+def calc_loss_batch(
+    input_batch: torch.Tensor,
+    target_batch: torch.Tensor,
+    model: torch.nn.Module,
+    device: torch.device,
+) -> torch.Tensor:
+    """Return scalar mean loss for long token IDs [B, T] and long class IDs [B].
+
+    B counts messages and T counts padded token positions per message.
+    """
+    logits = model(input_batch.to(device))[:, -1, :]  # [B, 2]: ham and spam
+    # Cross-entropy takes raw logits and uses the target ID to score the correct class.
+    return torch.nn.functional.cross_entropy(logits, target_batch.to(device))
+```
+
+Listing 6.9 averages the batch losses. A batch limit lets us estimate loss quickly. Omitting it evaluates every batch. Each batch has equal weight in this average, including a short final batch if the loader returns one.
+
+```python
+def calc_loss_loader(
+    data_loader: DataLoader,
+    model: torch.nn.Module,
+    device: torch.device,
+    num_batches: int | None = None,
+) -> float:
+    """Average the scalar batch losses. An empty selection yields NaN."""
+    total_loss = 0.0
+    count = 0
+    for inputs, targets in islice(data_loader, num_batches):
+        total_loss += calc_loss_batch(inputs, targets, model, device).item()
+        count += 1
+    return total_loss / count if count else float("nan")
+```
+
+The accuracy check above used ten batches per split. The book uses **five batches per split** for the loss baseline, or 40 messages each. Run this immediately after the accuracy example, with the same model and loaders. The training loader shuffles on each new pass.
+
+```python
+model.eval()
+with torch.no_grad():
+    for name, loader in [
+        ("Training", train_loader), ("Validation", val_loader), ("Test", test_loader)
+    ]:
+        loss = calc_loss_loader(loader, model, device, num_batches=5)
+        print(f"{name} loss: {loss:.3f}")
+```
+
+On the Mac GPU, the initial losses were **2.453 on training, 2.583 on validation, and 2.322 on test**. For comparison, predicting both classes with equal probability on every message gives a loss of about 0.693. A confident wrong prediction can push the average loss well above that value. In §6.7 the optimizer will use the training loss to update the trainable parameters.
 
 ## 6.7 Fine-tuning the model on supervised data
 
-Notes to come as we read this section.
+Figure 6.15 revisits the [training loop from §5.2](05-pretraining-on-unlabeled-data.md#52-training-an-llm). For each batch, we clear the previous gradients, run the model, calculate cross-entropy, call `loss.backward()`, and take an optimizer step. In our classifier, that step updates the last transformer block, the final layer normalization, and the two-class output head.
+
+What changes is the question each example asks. During pretraining, every position had a next-token target. Here, eight messages have eight labels. We take the two logits at the final position of each message and use the eight labels to compute one mean training loss.
+
+What we monitor changes too. In Chapter 5 we tracked training and validation loss and generated a sample to see what the model had learned to write. We still track both losses. In place of the text sample, we now measure classification accuracy by counting how many messages the model labels correctly. **Loss drives the update. Accuracy tells us how often the classifier gets the decision right.**
 
 ## 6.8 Using the LLM as a spam classifier
 

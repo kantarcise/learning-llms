@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="368" viewBox="0 0 760 368" role="img" aria-label="Four token positions produce four pairs of logits"><rect width="760" height="368" rx="12" fill="#faf8f3"/><g font-family="system-ui,sans-serif" fill="#233932">
+<text x="22" y="40" font-size="25" font-weight="650">Four token positions produce four pairs of logits</text>
+<text x="22" y="78" font-size="16" font-weight="400">“Do you have time” → embeddings → 12 GPT blocks → final norm → 2-class head</text>
+<text x="32" y="121" font-size="17" font-weight="650">Position</text>
+<text x="145" y="121" font-size="17" font-weight="650">Token</text>
+<text x="295" y="121" font-size="17" font-weight="650">Ham</text>
+<text x="425" y="121" font-size="17" font-weight="650">Spam</text>
+<text x="32" y="155" font-size="18" font-weight="400">0</text>
+<text x="145" y="155" font-size="18" font-weight="400">Do</text>
+<text x="295" y="155" font-size="18" font-weight="400">−1.5854</text>
+<text x="425" y="155" font-size="18" font-weight="400">0.9904</text>
+<text x="32" y="200" font-size="18" font-weight="400">1</text>
+<text x="145" y="200" font-size="18" font-weight="400">you</text>
+<text x="295" y="200" font-size="18" font-weight="400">−3.7235</text>
+<text x="425" y="200" font-size="18" font-weight="400">7.4548</text>
+<text x="32" y="245" font-size="18" font-weight="400">2</text>
+<text x="145" y="245" font-size="18" font-weight="400">have</text>
+<text x="295" y="245" font-size="18" font-weight="400">−2.2661</text>
+<text x="425" y="245" font-size="18" font-weight="400">6.6049</text>
+<rect x="20" y="264" width="715" height="40" rx="5" fill="#d6eadf"/>
+<text x="32" y="290" font-size="18" font-weight="400">3</text>
+<text x="145" y="290" font-size="18" font-weight="400">time</text>
+<text x="295" y="290" font-size="18" font-weight="400">−3.5983</text>
+<text x="425" y="290" font-size="18" font-weight="400">3.9902</text>
+<text x="547" y="290" font-size="17" font-weight="650">← select this pair</text>
+<text x="22" y="344" font-size="16" font-weight="400">logits[:, −1, :] keeps both class scores for the final position of every message.</text>
+</g></svg>
