@@ -1,0 +1,126 @@
+{
+  "hardware": "Apple M5 MacBook Air",
+  "device": "mps",
+  "torch": "2.14.1",
+  "seed": 123,
+  "epochs": 5,
+  "batch_size": 8,
+  "batches_per_epoch": 130,
+  "eval_batches": 5,
+  "eval_every_steps": 50,
+  "learning_rate": 5e-05,
+  "weight_decay": 0.1,
+  "seconds_including_evaluation": 103.49726412515156,
+  "loss_checks": [
+    {
+      "messages_seen": 8,
+      "training": 2.1533897638320925,
+      "validation": 2.391910743713379
+    },
+    {
+      "messages_seen": 408,
+      "training": 0.6170463919639587,
+      "validation": 0.6371333718299865
+    },
+    {
+      "messages_seen": 808,
+      "training": 0.5231330633163452,
+      "validation": 0.5573782086372375
+    },
+    {
+      "messages_seen": 1208,
+      "training": 0.5605324745178223,
+      "validation": 0.48856876492500306
+    },
+    {
+      "messages_seen": 1608,
+      "training": 0.41897561550140383,
+      "validation": 0.39662458896636965
+    },
+    {
+      "messages_seen": 2008,
+      "training": 0.4089104175567627,
+      "validation": 0.3531014919281006
+    },
+    {
+      "messages_seen": 2408,
+      "training": 0.33341431617736816,
+      "validation": 0.3203684002161026
+    },
+    {
+      "messages_seen": 2808,
+      "training": 0.34001725614070893,
+      "validation": 0.3061758607625961
+    },
+    {
+      "messages_seen": 3208,
+      "training": 0.13633111417293547,
+      "validation": 0.2001356914639473
+    },
+    {
+      "messages_seen": 3608,
+      "training": 0.15311544314026831,
+      "validation": 0.13223153576254845
+    },
+    {
+      "messages_seen": 4008,
+      "training": 0.2223944306373596,
+      "validation": 0.13655749410390855
+    },
+    {
+      "messages_seen": 4408,
+      "training": 0.2065543208271265,
+      "validation": 0.1433887965977192
+    },
+    {
+      "messages_seen": 4808,
+      "training": 0.08322763508185745,
+      "validation": 0.07360272221267224
+    }
+  ],
+  "epoch_accuracy": [
+    {
+      "epoch": 1,
+      "training": 0.7,
+      "validation": 0.725
+    },
+    {
+      "epoch": 2,
+      "training": 0.825,
+      "validation": 0.85
+    },
+    {
+      "epoch": 3,
+      "training": 0.9,
+      "validation": 0.9
+    },
+    {
+      "epoch": 4,
+      "training": 1.0,
+      "validation": 0.975
+    },
+    {
+      "epoch": 5,
+      "training": 1.0,
+      "validation": 0.975
+    }
+  ],
+  "full_split_evaluation": {
+    "source": "Separate seed-123 five-epoch repeat with the same settings. All five sampled epoch accuracies matched the plotted run.",
+    "drop_last": false,
+    "splits": {
+      "training": {
+        "correct": 1016,
+        "messages": 1045
+      },
+      "validation": {
+        "correct": 145,
+        "messages": 149
+      },
+      "test": {
+        "correct": 287,
+        "messages": 300
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="375" viewBox="0 0 680 375" role="img" aria-labelledby="title desc">
+  <title id="title">Where we measure the spam classifier</title>
+  <desc id="desc">Steps 1–6 prepared the batches and classifier. Step 7 builds loss and accuracy utilities. Steps 8–10 use them during and after fine-tuning.</desc>
+  <rect width="680" height="375" rx="12" fill="#faf8f3"/>
+  <g font-family="system-ui, sans-serif" fill="#253330">
+    <path d="M40 48V322" stroke="#869893" stroke-width="2"/>
+    <circle cx="40" cy="44" r="8" fill="#477264"/>
+    <text x="68" y="50" font-size="19" font-weight="bold">Stage 1 · SMS batches ready</text>
+    <text x="68" y="77" font-size="17">Steps 1–3 · Download, preprocess, and batch labeled messages.</text>
+    <rect x="18" y="99" width="644" height="162" rx="9" fill="#e1efe8"/>
+    <circle cx="40" cy="126" r="8" fill="#21604a"/>
+    <text x="68" y="133" font-size="21" font-weight="bold">Stage 2 · Model setup</text>
+    <text x="68" y="169" font-size="16">Steps 4–6 complete · GPT-2 loaded and classifier head attached</text>
+    <text x="68" y="198" font-size="19" font-weight="bold">Step 7 · Implement classification loss and accuracy</text>
+    <text x="68" y="238" font-size="16">Run these measurements now to establish a baseline.</text>
+    <circle cx="40" cy="302" r="8" fill="#faf8f3" stroke="#657974" stroke-width="2"/>
+    <text x="68" y="309" font-size="19" font-weight="bold">Stage 3 · Fine-tune and use the classifier</text>
+    <text x="68" y="339" font-size="17">Steps 8–10 · Train, evaluate the trained classifier, and use it on new SMS.</text>
+  </g>
+</svg>
