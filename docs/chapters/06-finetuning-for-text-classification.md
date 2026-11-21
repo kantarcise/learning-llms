@@ -520,6 +520,59 @@ predicted_ids = probabilities.argmax(dim=-1)      # One winning index per SMS.
 
 **Fine-tuning is training with a pretrained starting point.** For a labeled training batch, cross-entropy compares the two raw logits per message with its known class ID. Backpropagation computes gradients, and the optimizer updates the trainable weights. In the chapter setup those are the new head, final LayerNorm, and last transformer block. During evaluation we can compute that same loss and count correct predictions for accuracy, with the optimizer idle. Measuring both before the first update gives us a baseline.
 
+### Counting correct predictions across a loader
+
+The last row for “Do you have time” contains `[-3.5983, 3.9902]`. The larger logit is at index 1, so the predicted label is spam. We can skip softmax when counting correct predictions because it preserves the ordering of the two scores. In a batch, `dim=-1` makes this choice separately for each message.
+
+```python title="Count correct SMS labels (adapted from Listing 6.8)"
+from itertools import islice
+
+import torch
+from torch.utils.data import DataLoader
+
+
+@torch.no_grad()
+def calc_accuracy_loader(
+    data_loader: DataLoader,
+    model: torch.nn.Module,
+    device: torch.device,
+    num_batches: int | None = None,
+) -> float:
+    """Return the fraction correct for the evaluated messages. None uses all batches."""
+    model.eval()  # Use evaluation behavior, including disabling dropout.
+    correct = 0
+    seen = 0
+    for inputs, targets in islice(data_loader, num_batches):
+        # B = messages, T = token positions. Each position has two class logits.
+        logits = model(inputs.to(device))           # [B, T, 2]
+        predictions = logits[:, -1, :].argmax(-1)   # [B], one class ID per SMS
+        correct += (predictions == targets.to(device)).sum().item()
+        seen += targets.numel()  # Counts actual messages even in a short final batch.
+    if seen == 0:
+        raise ValueError("Accuracy requires at least one labeled message.")
+    return correct / seen
+```
+
+Start from the pretrained model and the seed-123 classifier head from §6.5, before the first optimizer step. With the three loaders from §6.3, the following measures 10 batches of eight messages per split. Resetting the seed before evaluation reproduces the training loader’s shuffle for this check.
+
+```python
+device = next(model.parameters()).device
+torch.manual_seed(123)
+for name, loader in [
+    ("Training", train_loader), ("Validation", val_loader), ("Test", test_loader)
+]:
+    accuracy = calc_accuracy_loader(loader, model, device, num_batches=10)
+    print(f"{name}: {accuracy:.2%}")
+```
+
+| Split | Correct / evaluated | Accuracy before fine-tuning |
+| --- | ---: | ---: |
+| Training | 37/80 | 46.25% |
+| Validation | 36/80 | 45.00% |
+| Test | 39/80 | 48.75% |
+
+Our Mac GPU run reproduced the book’s three percentages. A fair coin would average 40 correct out of 80 across many trials. These scores are close to that reference. A randomly initialized head can consistently favor one class, so near-50% accuracy alone tells us little about its prediction pattern. The ten batches give us a quick baseline to compare against as training proceeds.
+
 ## 6.7 Fine-tuning the model on supervised data
 
 Notes to come as we read this section.
