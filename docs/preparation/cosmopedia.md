@@ -117,3 +117,21 @@ KV caching took slightly longer per decoded token in all five workloads on the R
 The 32-output workload used the same prompt IDs and model configuration as the Mac run. The checkpoint fingerprints differ. The 3090 used the best weights from the local 100-step monitored run, while the Mac used the 1,000-step checkpoint. Each ratio compares two paths using identical weights on the 3090. Both paths matched the reference greedy ID at all 480 predictions across the five workloads. The largest absolute logit difference was 0.0000062.
 
 [32-output timings](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-matched.json) · [192-output timings](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-long.json)
+
+### What happens as requests arrive faster?
+
+At 250 offered requests per second, the RTX 3090 produced about 7,000 output tokens/s with either path. A user waiting for the first token would still see a difference. With the cache, the 95th-percentile wait fell from 131 ms to 103 ms. At 500 requests/s, caching shortened that wait by about half and raised completed output throughput by 33%.
+
+| Offered requests/s | p95 queue ms | p95 first-token ms | p95 inter-token ms | Output tokens/s | Peak cached K/V MiB |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 25 | 69 / 67 | 71 / 68 | 1.43 / 1.36 | 798 / 798 | 5.23 |
+| 100 | 96 / 100 | 98 / 101 | 1.45 / 1.42 | 3,037 / 3,057 | 12.20 |
+| 250 | 129 / 102 | 131 / 103 | 2.35 / 1.38 | 6,979 / 6,994 | 20.91 |
+| 500 | 296 / 143 | 298 / 145 | 2.79 / 1.36 | 8,653 / 11,531 | 27.88 |
+| 1,000 | 431 / 256 | 432 / 257 | 2.81 / 1.40 | 8,969 / 12,170 | 27.88 |
+
+Pairs show uncached / cached. Each entry averages two replays, except memory, which takes the larger peak logical cache size. Each replay had 192 requests with mixed 8-, 64-, and 192-token prompts, each generating 32 tokens. All 20 replays produced identical greedy IDs per request. Throughput includes time to drain the queue after the last arrival.
+
+The worker admitted batches of up to 16 waiting requests with equal prompt length and finished each batch before admitting another. This policy explains why first-token waits can be much longer than the gaps between streamed tokens. At 1,000 requests/s the offered work was 32,000 output tokens/s, well above either observed completion rate. These finite bursts show how a queue develops under this policy. Estimating sustainable service capacity would require longer steady traffic and a target first-token and inter-token latency.
+
+[Runnable arrival benchmark and methodology](https://github.com/kantarcise/learning-llms/tree/main/experiments/cosmopedia#replay-mixed-prompt-lengths-under-load-on-cuda) · [Trace and per-replay results](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-arrivals.json)

@@ -252,3 +252,20 @@ windows="$exp/artifacts/data/validation.pt"
 ```
 
 CUDA timings synchronize the GPU at each phase boundary. The benchmark checks all vocabulary logits and greedy IDs before timing each prompt length. The individual measurements are in the [32-output report](results/kv-cache/3090-matched.json) and the [192-output report](results/kv-cache/3090-long.json).
+
+### Replay mixed prompt lengths under load on CUDA
+
+From the repository root, use the CUDA environment and inputs from the 3090 benchmark above.
+
+```bash
+exp=experiments/cosmopedia
+.venv/bin/python "$exp/benchmark_arrivals.py" \
+  "$exp/artifacts/monitored-training-20261114/best-weights.pt" \
+  "$exp/artifacts/data/validation.pt"
+```
+
+The worker replays 192 requests on an open-loop clock. There are 64 prompts of each length (8, 64, and 192 tokens), each generating exactly 32 tokens. Seeded exponential arrival gaps are scaled to each offered rate. Arrival times are independent of completion, so an overdue request accumulates queue time even while the GPU is busy. When the worker becomes free, it takes the oldest waiting request and up to 15 more waiting requests of the same prompt length. The batch runs to completion before the next admission.
+
+Each token is timestamped after CUDA synchronization. Queue time ends at dispatch, time to first token starts at scheduled arrival, and inter-token gaps cover successive GPU-ready tokens within each request. Output throughput includes idle time and final queue drain. Peak logical cache bytes count the largest active batch's K/V tensor contents. Prompt tensors already reside on the device. The benchmark excludes tokenization, networking, and client delivery.
+
+Both paths see the same prompts and arrival trace. A second sweep reverses rate and path order. The script checks every greedy output ID against the first replay and emits the report only if they all agree.
