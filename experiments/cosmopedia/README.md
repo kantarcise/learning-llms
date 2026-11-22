@@ -227,3 +227,45 @@ uv run --locked --group experiments --group cosmopedia python -m unittest discov
 ```
 
 Tests are offline: changing future tokens or another batch example cannot affect an earlier prediction; padding and EOS targets are handled correctly; gradients are finite and parameter updates occur; context/head constraints are checked. Actual prepared-document hashes were also checked for disjoint splits and exact deduplication.
+
+### Compare cached and uncached generation
+
+From the repository root, use the inference weights from the original 1,000-step run and the prepared validation windows. The benchmark loads the architecture from the adjacent `run.json`. For newer runs use their inference-only `best-weights.pt`. No training or network access is needed once those files are present.
+
+```bash
+uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/benchmark_cache.py \
+  experiments/cosmopedia/artifacts/run-1000steps-20261015-225515/best.pt \
+  experiments/cosmopedia/artifacts/data/validation.pt
+```
+
+The JSON output includes correctness checks and six timings per path and prompt length. [Recorded M5 measurements](results/kv-cache/m5-mps.json) · [Walkthrough and interpretation](../../docs/preparation/cosmopedia.md#kv-caching-on-the-m5-air)
+
+To reproduce the RTX 3090 runs from the repository root with the local CUDA environment, use the best weights from the monitored 100-step run and the prepared validation windows.
+
+```bash
+exp=experiments/cosmopedia
+weights="$exp/artifacts/monitored-training-20261114/best-weights.pt"
+windows="$exp/artifacts/data/validation.pt"
+.venv/bin/python "$exp/benchmark_cache.py" "$weights" "$windows" --device cuda
+.venv/bin/python "$exp/benchmark_cache.py" "$weights" "$windows" --device cuda \
+  --prompt-lengths 8 64 --new-tokens 192 --repeats 20
+```
+
+CUDA timings synchronize the GPU at each phase boundary. The benchmark checks all vocabulary logits and greedy IDs before timing each prompt length. The individual measurements are in the [32-output report](results/kv-cache/3090-matched.json) and the [192-output report](results/kv-cache/3090-long.json).
+
+### Replay mixed prompt lengths under load on CUDA
+
+From the repository root, use the CUDA environment and inputs from the 3090 benchmark above.
+
+```bash
+exp=experiments/cosmopedia
+.venv/bin/python "$exp/benchmark_arrivals.py" \
+  "$exp/artifacts/monitored-training-20261114/best-weights.pt" \
+  "$exp/artifacts/data/validation.pt"
+```
+
+The worker replays 192 requests on an open-loop clock. There are 64 prompts of each length (8, 64, and 192 tokens), each generating exactly 32 tokens. Seeded exponential arrival gaps are scaled to each offered rate. Arrival times are independent of completion, so an overdue request accumulates queue time even while the GPU is busy. When the worker becomes free, it takes the oldest waiting request and up to 15 more waiting requests of the same prompt length. The batch runs to completion before the next admission.
+
+Each token is timestamped after CUDA synchronization. Queue time ends at dispatch, time to first token starts at scheduled arrival, and inter-token gaps cover successive GPU-ready tokens within each request. Output throughput includes idle time and final queue drain. Peak logical cache bytes count the largest active batch's K/V tensor contents. Prompt tensors already reside on the device. The benchmark excludes tokenization, networking, and client delivery.
+
+Both paths see the same prompts and arrival trace. A second sweep reverses rate and path order. The script checks every greedy output ID against the first replay and emits the report only if they all agree.

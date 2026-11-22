@@ -73,3 +73,81 @@ Sezai has now run **1,000 updates** himself. Validation loss reached **6.3611**,
 **Current handoff:** before a multi-hour Linux/3090 experiment, implement resumable latest/best checkpoints and benchmark that machine. Existing weights do not preserve AdamW or sampling state. This additional experiment can proceed alongside Chapter 1; it is not a new prerequisite for the book.
 
 Track the bounded Linux run in [issue #14](https://github.com/kantarcise/learning-llms/issues/14).
+
+## KV caching on the M5 Air
+
+Suppose eight prompt tokens have just produced token nine. In each of our four transformer blocks, each head has already calculated a key and a value for every prompt position. Causal attention lets us keep them: appending token nine cannot change what an earlier position saw. **Prefill** is the first call that processes the prompt and selects token nine. **Decode** starts when we feed token nine back in to select token ten.
+
+| During that first decode step | Full-prefix generation | KV-cached generation |
+| --- | --- | --- |
+| Input to the model | Positions 1–9 | Position 9 |
+| Keys and values calculated per head | Nine of each | One of each |
+| Positions visible to the newest query | All nine | All nine |
+
+Each block’s key and value tensors grow from `[1, 4, 8, 64]` to `[1, 4, 9, 64]` (one request, four heads, processed positions, 64 numbers per head). The new query still reads keys and values across the prefix. Keeping them saves the repeated projections **and the work of passing the older positions through the blocks again**.
+
+### What the Mac actually saved
+
+We used the existing 1,000-step checkpoint on the M5 MacBook Air GPU (PyTorch MPS, float32), with a single request and fixed budgets of 32 greedy output tokens. The prompts are prefixes of the same validation window. Both paths project only the last position into vocabulary scores. The timing includes greedy selection and dynamic cache appends. We warmed both paths, synchronized the GPU around each timed phase, and alternated run order across six repetitions. Each decode measurement averages the 31 steps after prefill.
+
+| Prompt tokens | Prefill ms, uncached / cached (median) | Uncached decode ms/token, median (range) | Cached decode ms/token, median (range) | Decode speedup | Final cache |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 1.26 / 1.19 | 1.034 (1.023–1.106) | 0.949 (0.946–0.957) | 1.09× | 312 KiB |
+| 64 | 1.43 / 1.32 | 1.167 (1.161–1.238) | 0.965 (0.937–0.986) | 1.21× | 760 KiB |
+| 192 | 1.71 / 1.74 | 1.607 (1.603–1.612) | 0.988 (0.985–0.994) | 1.63× | 1,784 KiB |
+
+The first prediction still requires reading the prompt. The saving appears during repeated decoding and grew with prompt length in this run. Across all 96 predictions, both paths picked identical IDs. We also checked every vocabulary logit against the original full-output forward pass. The largest absolute difference was below 0.000009 (absolute and relative tolerances each 0.0001).
+
+For this model, keeping one position costs **8 KiB**: two tensors × four blocks × four heads × 64 numbers × four bytes. At the end of the longest trial the cache holds 192 + 31 = 223 positions. The 32nd output was picked but never fed back in. These sizes count the logical K/V tensor contents. Peak device memory also includes weights, temporary tensors, allocator overhead, and copies made when appending. The results cover one model and one request at a time within its 256-position limit.
+
+[Runnable benchmark](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/benchmark_cache.py) · [Individual timings, prompt IDs, and checkpoint fingerprint](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/m5-mps.json)
+
+### What changed on the RTX 3090?
+
+KV caching took slightly longer per decoded token in all five workloads on the RTX 3090. The table reports median decode time for a single request in float32 with PyTorch 2.14.1+cu126. Prefill produces the first output, leaving 31 timed decode steps for the short continuations and 191 for the long ones.
+
+| Prompt tokens | Output tokens | Repeats | Uncached ms/token | Cached ms/token | Uncached / cached |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 32 | 6 | 0.928 | 0.963 | 0.964× |
+| 64 | 32 | 6 | 0.937 | 0.962 | 0.975× |
+| 192 | 32 | 6 | 0.954 | 0.968 | 0.985× |
+| 8 | 192 | 20 | 1.020 | 1.036 | 0.984× |
+| 64 | 192 | 20 | 0.971 | 0.989 | 0.982× |
+
+The 32-output workload used the same prompt IDs and model configuration as the Mac run. The checkpoint fingerprints differ. The 3090 used the best weights from the local 100-step monitored run, while the Mac used the 1,000-step checkpoint. Each ratio compares two paths using identical weights on the 3090. Both paths matched the reference greedy ID at all 480 predictions across the five workloads. The largest absolute logit difference was 0.0000062.
+
+[32-output timings](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-matched.json) · [192-output timings](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-long.json)
+
+### What happens as requests arrive faster?
+
+At 250 offered requests per second, the RTX 3090 produced about 7,000 output tokens/s with either path. A user waiting for the first token would still see a difference. With the cache, the 95th-percentile wait fell from 131 ms to 103 ms. At 500 requests/s, caching shortened that wait by about half and raised completed output throughput by 33%.
+
+| Offered requests/s | p95 queue ms | p95 first-token ms | p95 inter-token ms | Output tokens/s | Peak cached K/V MiB |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 25 | 69 / 67 | 71 / 68 | 1.43 / 1.36 | 798 / 798 | 5.23 |
+| 100 | 96 / 100 | 98 / 101 | 1.45 / 1.42 | 3,037 / 3,057 | 12.20 |
+| 250 | 129 / 102 | 131 / 103 | 2.35 / 1.38 | 6,979 / 6,994 | 20.91 |
+| 500 | 296 / 143 | 298 / 145 | 2.79 / 1.36 | 8,653 / 11,531 | 27.88 |
+| 1,000 | 431 / 256 | 432 / 257 | 2.81 / 1.40 | 8,969 / 12,170 | 27.88 |
+
+Pairs show uncached / cached. Each entry averages two replays, except memory, which takes the larger peak logical cache size. Each replay had 192 requests with mixed 8-, 64-, and 192-token prompts, each generating 32 tokens. All 20 replays produced identical greedy IDs per request. Throughput includes time to drain the queue after the last arrival.
+
+The single-request benchmark waits for the GPU at phase boundaries. The arrival replay waits after every generated token to timestamp when it is ready. Both the timing policy and the batch sizes change between experiments.
+
+The worker admitted batches of up to 16 waiting requests with equal prompt length and finished each batch before admitting another. This policy explains why first-token waits can be much longer than the gaps between streamed tokens. At 1,000 requests/s the offered work was 32,000 output tokens/s, well above either observed completion rate. These finite bursts show how a queue develops under this policy. Estimating sustainable service capacity would require longer steady traffic and a target first-token and inter-token latency.
+
+[Runnable arrival benchmark and methodology](https://github.com/kantarcise/learning-llms/tree/main/experiments/cosmopedia#replay-mixed-prompt-lengths-under-load-on-cuda) · [Trace and per-replay results](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-arrivals.json)
+
+### Whose memory does the cache use?
+
+The RTX 3090 stores the CUDA cache tensors in its dedicated VRAM. On the M5 Air, the MPS tensors draw from the same physical memory pool as the CPU. The model weights are shared across requests on either machine. Each active sequence has its own keys and values. [Apple’s unified memory model](https://developer.apple.com/documentation/metal/choosing-a-resource-storage-mode-for-apple-gpus)
+
+Suppose 16 clients each send a 192-token prompt and receive 32 tokens. Just before selecting the final token, each cache holds 223 positions. Across the batch, that is **16 × 223 × 8 KiB = 27.875 MiB**, the largest logical cache we observed. The other requests waiting in the queue have no K/V tensors yet. Our worker releases the batch’s cache when generation finishes. Appending with `torch.cat` temporarily needs room for both old and new tensors, so a server also needs headroom above the logical total.
+
+A practical admission rule would budget the sum of prompt tokens and allowed continuation tokens across active requests. An idle conversation presents a different choice. Keeping its token IDs lets a server release the cache and reconstruct it exactly on the next turn by running prefill again. Retaining its cache saves that prefill if the client returns, at the cost of memory that could serve another request.
+
+### How does this relate to Claude’s prompt caching and chat compaction?
+
+Our benchmark reuses a prefix **within one answer**. Anthropic’s prompt caching extends that idea **across API calls**. For example, if a 20,000-token conversation prefix gets a full cache hit and the user adds 50 tokens, the earlier 20,000 are billed at the cache-read rate and the 50 new tokens still need processing. All 20,050 tokens occupy context. Anthropic documents charges for writing and reading cached tokens, with a retention period for each entry. The published API prices do not establish a physical memory cost per token for Claude. [Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) · [Cache pricing](https://platform.claude.com/docs/en/about-claude/pricing#prompt-caching)
+
+Compaction changes what the model reads. Replacing 20,000 tokens of older turns with a 2,000-token summary frees 18,000 context positions for future turns. Generating the summary has an upfront cost, its tokens need prefill, and a detail left out may matter later. An unchanged prefix before the summary can still qualify for a cache hit. A server can evict idle K/V tensors to reclaim device memory. It can independently compact a conversation when the remaining context space or expected savings justify a shorter history. [Anthropic’s compaction overview](https://platform.claude.com/docs/en/build-with-claude/compaction)

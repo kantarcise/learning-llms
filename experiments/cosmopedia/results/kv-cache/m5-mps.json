@@ -1,0 +1,489 @@
+{
+  "device": "mps",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "torch": "2.14.1",
+  "dtype": "torch.float32",
+  "checkpoint_sha256": "bedff8c6ade8fa10c428e83b91327a976fddf973d1fee5a6f7d520b23f53e420",
+  "config": {
+    "vocabulary_size": 49152,
+    "context_length": 256,
+    "width": 256,
+    "heads": 4,
+    "layers": 4,
+    "hidden_width": 1024
+  },
+  "generated_tokens": 32,
+  "lengths": [
+    {
+      "prompt_ids": [
+        7479,
+        42,
+        378,
+        3236,
+        282,
+        46325,
+        48177,
+        9471
+      ],
+      "max_abs_error": 8.58306884765625e-06,
+      "cached": [
+        {
+          "prefill_ms": 1.186333131045103,
+          "decode_ms_per_token": 0.9485604842343638,
+          "logical_cache_bytes": 319488
+        },
+        {
+          "prefill_ms": 1.7101659905165434,
+          "decode_ms_per_token": 0.9573508023975357,
+          "logical_cache_bytes": 319488
+        },
+        {
+          "prefill_ms": 1.1736250016838312,
+          "decode_ms_per_token": 0.9552486421119782,
+          "logical_cache_bytes": 319488
+        },
+        {
+          "prefill_ms": 1.1199580039829016,
+          "decode_ms_per_token": 0.946631737714333,
+          "logical_cache_bytes": 319488
+        },
+        {
+          "prefill_ms": 1.2214169837534428,
+          "decode_ms_per_token": 0.9497822592816045,
+          "logical_cache_bytes": 319488
+        },
+        {
+          "prefill_ms": 1.201709033921361,
+          "decode_ms_per_token": 0.9457069644404035,
+          "logical_cache_bytes": 319488
+        }
+      ],
+      "uncached": [
+        {
+          "prefill_ms": 1.2225420214235783,
+          "decode_ms_per_token": 1.0281720333882878,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.266708131879568,
+          "decode_ms_per_token": 1.04538306233383,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.3786249328404665,
+          "decode_ms_per_token": 1.1059072604703326,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.2719999067485332,
+          "decode_ms_per_token": 1.0354381595407762,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.2606659438461065,
+          "decode_ms_per_token": 1.0322258101716157,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.1339590419083834,
+          "decode_ms_per_token": 1.0227338681297917,
+          "logical_cache_bytes": 0
+        }
+      ]
+    },
+    {
+      "prompt_ids": [
+        7479,
+        42,
+        378,
+        3236,
+        282,
+        46325,
+        48177,
+        9471,
+        14365,
+        6374,
+        1762,
+        198,
+        198,
+        40983,
+        25050,
+        852,
+        17573,
+        253,
+        2116,
+        1898,
+        281,
+        12810,
+        2517,
+        731,
+        502,
+        359,
+        15154,
+        28,
+        11541,
+        28,
+        284,
+        416,
+        10502,
+        288,
+        253,
+        3599,
+        1845,
+        282,
+        8466,
+        8163,
+        284,
+        9416,
+        30,
+        533,
+        1542,
+        28,
+        2733,
+        9419,
+        19913,
+        33549,
+        3073,
+        6168,
+        28,
+        1440,
+        29,
+        39556,
+        28,
+        284,
+        354,
+        6637,
+        327,
+        9871,
+        284,
+        8580
+      ],
+      "max_abs_error": 8.58306884765625e-06,
+      "cached": [
+        {
+          "prefill_ms": 1.2405000161379576,
+          "decode_ms_per_token": 0.9530510588158523,
+          "logical_cache_bytes": 778240
+        },
+        {
+          "prefill_ms": 1.3411249965429306,
+          "decode_ms_per_token": 0.9864650351265746,
+          "logical_cache_bytes": 778240
+        },
+        {
+          "prefill_ms": 1.3076660688966513,
+          "decode_ms_per_token": 0.9704489305975937,
+          "logical_cache_bytes": 778240
+        },
+        {
+          "prefill_ms": 1.3230000622570515,
+          "decode_ms_per_token": 0.960365583699557,
+          "logical_cache_bytes": 778240
+        },
+        {
+          "prefill_ms": 1.3141250237822533,
+          "decode_ms_per_token": 0.9713319671009818,
+          "logical_cache_bytes": 778240
+        },
+        {
+          "prefill_ms": 1.964709023013711,
+          "decode_ms_per_token": 0.9371787384753266,
+          "logical_cache_bytes": 778240
+        }
+      ],
+      "uncached": [
+        {
+          "prefill_ms": 1.4132079668343067,
+          "decode_ms_per_token": 1.1684139664735524,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.4959159307181835,
+          "decode_ms_per_token": 1.2375860354833064,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.4509591273963451,
+          "decode_ms_per_token": 1.1660994496196508,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.406041905283928,
+          "decode_ms_per_token": 1.1607271303693134,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.7902080435305834,
+          "decode_ms_per_token": 1.1650053859357872,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.2430839706212282,
+          "decode_ms_per_token": 1.1704730981540294,
+          "logical_cache_bytes": 0
+        }
+      ]
+    },
+    {
+      "prompt_ids": [
+        7479,
+        42,
+        378,
+        3236,
+        282,
+        46325,
+        48177,
+        9471,
+        14365,
+        6374,
+        1762,
+        198,
+        198,
+        40983,
+        25050,
+        852,
+        17573,
+        253,
+        2116,
+        1898,
+        281,
+        12810,
+        2517,
+        731,
+        502,
+        359,
+        15154,
+        28,
+        11541,
+        28,
+        284,
+        416,
+        10502,
+        288,
+        253,
+        3599,
+        1845,
+        282,
+        8466,
+        8163,
+        284,
+        9416,
+        30,
+        533,
+        1542,
+        28,
+        2733,
+        9419,
+        19913,
+        33549,
+        3073,
+        6168,
+        28,
+        1440,
+        29,
+        39556,
+        28,
+        284,
+        354,
+        6637,
+        327,
+        9871,
+        284,
+        8580,
+        6499,
+        30,
+        669,
+        3532,
+        12981,
+        618,
+        260,
+        984,
+        282,
+        14333,
+        12035,
+        19913,
+        33549,
+        28,
+        351,
+        253,
+        1767,
+        1593,
+        335,
+        38123,
+        10421,
+        8017,
+        30,
+        1428,
+        3415,
+        1461,
+        1783,
+        29,
+        2542,
+        5749,
+        28,
+        5635,
+        6455,
+        616,
+        28,
+        284,
+        14694,
+        7060,
+        2544,
+        28,
+        346,
+        3060,
+        24353,
+        469,
+        19913,
+        25940,
+        3133,
+        284,
+        3694,
+        15769,
+        10812,
+        281,
+        6960,
+        2256,
+        12889,
+        30,
+        198,
+        198,
+        57,
+        30,
+        4229,
+        8199,
+        29,
+        11192,
+        21612,
+        20392,
+        198,
+        198,
+        49,
+        1273,
+        31590,
+        3990,
+        19913,
+        10538,
+        314,
+        480,
+        3435,
+        2470,
+        288,
+        1538,
+        7202,
+        3677,
+        6704,
+        30,
+        1423,
+        28,
+        3824,
+        1783,
+        29,
+        2542,
+        2785,
+        2626,
+        15826,
+        5109,
+        282,
+        904,
+        29,
+        7535,
+        5654,
+        5712,
+        327,
+        19131,
+        284,
+        15627,
+        33549,
+        30,
+        6646,
+        623,
+        8837,
+        359,
+        42,
+        198,
+        198,
+        26,
+        1626,
+        12809,
+        42,
+        16612,
+        1382,
+        429,
+        27702,
+        28,
+        35471,
+        2433,
+        253,
+        8884,
+        16495,
+        327
+      ],
+      "max_abs_error": 7.62939453125e-06,
+      "cached": [
+        {
+          "prefill_ms": 1.672874903306365,
+          "decode_ms_per_token": 0.9896935474488043,
+          "logical_cache_bytes": 1826816
+        },
+        {
+          "prefill_ms": 1.7275421414524317,
+          "decode_ms_per_token": 0.9877110320714212,
+          "logical_cache_bytes": 1826816
+        },
+        {
+          "prefill_ms": 1.779541838914156,
+          "decode_ms_per_token": 0.9887029356773822,
+          "logical_cache_bytes": 1826816
+        },
+        {
+          "prefill_ms": 1.7645410262048244,
+          "decode_ms_per_token": 0.9938481323901684,
+          "logical_cache_bytes": 1826816
+        },
+        {
+          "prefill_ms": 1.657209126278758,
+          "decode_ms_per_token": 0.9857016134886972,
+          "logical_cache_bytes": 1826816
+        },
+        {
+          "prefill_ms": 1.7532918136566877,
+          "decode_ms_per_token": 0.9847997477458369,
+          "logical_cache_bytes": 1826816
+        }
+      ],
+      "uncached": [
+        {
+          "prefill_ms": 1.7882080283015966,
+          "decode_ms_per_token": 1.610297063786176,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.7136249225586653,
+          "decode_ms_per_token": 1.603489261000387,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.6580000519752502,
+          "decode_ms_per_token": 1.6122244884290042,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.7138749826699495,
+          "decode_ms_per_token": 1.60569490324105,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.7134160734713078,
+          "decode_ms_per_token": 1.6080013536397488,
+          "logical_cache_bytes": 0
+        },
+        {
+          "prefill_ms": 1.670291181653738,
+          "decode_ms_per_token": 1.60476480490498,
+          "logical_cache_bytes": 0
+        }
+      ]
+    }
+  ]
+}

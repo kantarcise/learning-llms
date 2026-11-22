@@ -26,6 +26,23 @@ class ExperimentTests(unittest.TestCase):
         torch.testing.assert_close(original[0, :4], actual[0, :4])
         self.assertEqual(actual.shape, (2, 8, 32))
 
+    def test_cached_one_token_prefill_through_last_position(self) -> None:
+        ids = torch.randint(0, 32, (2, 8))
+        cache = None
+        for end in range(1, 9):
+            scores, cache = self.model.cached_logits(ids[:, end - 1 : end], cache)
+            reference = self.model(ids[:, :end])[:, -1]
+            torch.testing.assert_close(scores, reference)
+            torch.testing.assert_close(scores.argmax(-1), reference.argmax(-1))
+            for key, value in cache:
+                self.assertEqual(key.shape, (2, 4, end, 4))
+                self.assertEqual(value.shape, key.shape)
+        with self.assertRaises(ValueError):
+            self.model.cached_logits(ids[:, :1], cache)
+        # A new request starts at absolute position zero even after a full cache.
+        fresh, _ = self.model.cached_logits(ids[:, :3])
+        torch.testing.assert_close(fresh, self.model(ids[:, :3])[:, -1])
+
     def test_gradients_and_optimizer_change_parameters(self) -> None:
         ids = torch.randint(0, 32, (2, 8))
         targets = torch.randint(0, 32, (2, 8))
