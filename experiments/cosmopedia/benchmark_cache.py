@@ -14,6 +14,8 @@ from model import Config, LanguageModel
 def synchronize(device: torch.device) -> None:
     if device.type == "mps":
         torch.mps.synchronize()
+    elif device.type == "cuda":
+        torch.cuda.synchronize(device)
 
 
 @torch.inference_mode()
@@ -78,8 +80,13 @@ def main() -> None:
         "weights", type=Path, help="Inference state_dict beside run.json"
     )
     parser.add_argument("windows", type=Path, help="Prepared validation.pt")
-    parser.add_argument("--device", choices=("mps", "cpu"), default="mps")
+    parser.add_argument("--device", choices=("mps", "cuda", "cpu"), default="mps")
+    parser.add_argument("--prompt-lengths", nargs="+", type=int, default=[8, 64, 192])
+    parser.add_argument("--new-tokens", type=int, default=32)
+    parser.add_argument("--repeats", type=int, default=6)
     args = parser.parse_args()
+    if args.repeats < 1 or args.new_tokens < 2:
+        parser.error("Use at least one repeat and two new tokens for decode timing.")
     device = torch.device(args.device)
     config = Config(
         **json.loads(args.weights.with_name("run.json").read_text())["config"]
@@ -90,6 +97,14 @@ def main() -> None:
     )
     model.to(device).eval()
     row = torch.load(args.windows, weights_only=True, map_location="cpu")["inputs"][0]
+    for length in args.prompt_lengths:
+        if (
+            not 1 <= length <= row.numel()
+            or length + args.new_tokens - 1 > config.context_length
+        ):
+            parser.error(
+                "Each prompt and its decoded inputs must fit the context window."
+            )
     report = {
         "device": str(device),
         "platform": platform.platform(),
@@ -97,12 +112,14 @@ def main() -> None:
         "dtype": str(model.token_embedding.weight.dtype),
         "checkpoint_sha256": hashlib.sha256(args.weights.read_bytes()).hexdigest(),
         "config": model.configuration(),
-        "generated_tokens": 32,
+        "generated_tokens": args.new_tokens,
         "lengths": [],
     }
-    for length in (8, 64, 192):
+    if device.type == "cuda":
+        report.update(gpu=torch.cuda.get_device_name(device), cuda=torch.version.cuda)
+    for length in args.prompt_lengths:
         prompt = row[:length].long().unsqueeze(0).to(device)
-        error = verify(model, prompt, 32)
+        error = verify(model, prompt, args.new_tokens)
         results = {
             "prompt_ids": prompt[0].tolist(),
             "max_abs_error": error,
@@ -110,11 +127,11 @@ def main() -> None:
             "uncached": [],
         }
         for cached in (False, True):
-            measure(model, prompt, 32, cached)
-        for repeat in range(6):
+            measure(model, prompt, args.new_tokens, cached)
+        for repeat in range(args.repeats):
             for cached in (bool(repeat % 2), not bool(repeat % 2)):
                 results["cached" if cached else "uncached"].append(
-                    measure(model, prompt, 32, cached)
+                    measure(model, prompt, args.new_tokens, cached)
                 )
         report["lengths"].append(results)
     print(json.dumps(report, indent=2))
