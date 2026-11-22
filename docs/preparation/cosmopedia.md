@@ -101,3 +101,19 @@ The first prediction still requires reading the prompt. The saving appears durin
 For this model, keeping one position costs **8 KiB**: two tensors × four blocks × four heads × 64 numbers × four bytes. At the end of the longest trial the cache holds 192 + 31 = 223 positions. The 32nd output was picked but never fed back in. These sizes count the logical K/V tensor contents. Peak device memory also includes weights, temporary tensors, allocator overhead, and copies made when appending. The results cover one model and one request at a time within its 256-position limit.
 
 [Runnable benchmark](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/benchmark_cache.py) · [Individual timings, prompt IDs, and checkpoint fingerprint](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/m5-mps.json)
+
+### What changed on the RTX 3090?
+
+KV caching took slightly longer per decoded token in all five workloads on the RTX 3090. The table reports median decode time for a single request in float32 with PyTorch 2.14.1+cu126. Prefill produces the first output, leaving 31 timed decode steps for the short continuations and 191 for the long ones.
+
+| Prompt tokens | Output tokens | Repeats | Uncached ms/token | Cached ms/token | Uncached / cached |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 32 | 6 | 0.928 | 0.963 | 0.964× |
+| 64 | 32 | 6 | 0.937 | 0.962 | 0.975× |
+| 192 | 32 | 6 | 0.954 | 0.968 | 0.985× |
+| 8 | 192 | 20 | 1.020 | 1.036 | 0.984× |
+| 64 | 192 | 20 | 0.971 | 0.989 | 0.982× |
+
+The 32-output workload used the same prompt IDs and model configuration as the Mac run. The checkpoint fingerprints differ. The 3090 used the best weights from the local 100-step monitored run, while the Mac used the 1,000-step checkpoint. Each ratio compares two paths using identical weights on the 3090. Both paths matched the reference greedy ID at all 480 predictions across the five workloads. The largest absolute logit difference was 0.0000062.
+
+[32-output timings](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-matched.json) · [192-output timings](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/3090-long.json)

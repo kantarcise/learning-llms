@@ -240,4 +240,15 @@ uv run --locked --group experiments --group cosmopedia python experiments/cosmop
 
 The JSON output includes correctness checks and six timings per path and prompt length. [Recorded M5 measurements](results/kv-cache/m5-mps.json) · [Walkthrough and interpretation](../../docs/preparation/cosmopedia.md#kv-caching-on-the-m5-air)
 
-For the RTX 3090, use the same inference weights and validation window as the M5 run. The JSON contains the checkpoint SHA-256 and prompt IDs for comparison. Run the default workload with `--device cuda` first. Then add `--prompt-lengths 8 64 --new-tokens 192 --repeats 20` for the longer workload. A 64-token prompt followed by 192 output tokens fits this model's 256-position context. CUDA timings synchronize the GPU before and after each measured phase. The benchmark checks all vocabulary logits and greedy IDs before timing each prompt length.
+To reproduce the RTX 3090 runs from the repository root with the local CUDA environment, use the best weights from the monitored 100-step run and the prepared validation windows.
+
+```bash
+exp=experiments/cosmopedia
+weights="$exp/artifacts/monitored-training-20261114/best-weights.pt"
+windows="$exp/artifacts/data/validation.pt"
+.venv/bin/python "$exp/benchmark_cache.py" "$weights" "$windows" --device cuda
+.venv/bin/python "$exp/benchmark_cache.py" "$weights" "$windows" --device cuda \
+  --prompt-lengths 8 64 --new-tokens 192 --repeats 20
+```
+
+CUDA timings synchronize the GPU at each phase boundary. The benchmark checks all vocabulary logits and greedy IDs before timing each prompt length. The individual measurements are in the [32-output report](results/kv-cache/3090-matched.json) and the [192-output report](results/kv-cache/3090-long.json).
