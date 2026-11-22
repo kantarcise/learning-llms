@@ -73,3 +73,31 @@ Sezai has now run **1,000 updates** himself. Validation loss reached **6.3611**,
 **Current handoff:** before a multi-hour Linux/3090 experiment, implement resumable latest/best checkpoints and benchmark that machine. Existing weights do not preserve AdamW or sampling state. This additional experiment can proceed alongside Chapter 1; it is not a new prerequisite for the book.
 
 Track the bounded Linux run in [issue #14](https://github.com/kantarcise/learning-llms/issues/14).
+
+## KV caching on the M5 Air
+
+Suppose eight prompt tokens have just produced token nine. In each of our four transformer blocks, each head has already calculated a key and a value for every prompt position. Causal attention lets us keep them: appending token nine cannot change what an earlier position saw. **Prefill** is the first call that processes the prompt and selects token nine. **Decode** starts when we feed token nine back in to select token ten.
+
+| During that first decode step | Full-prefix generation | KV-cached generation |
+| --- | --- | --- |
+| Input to the model | Positions 1–9 | Position 9 |
+| Keys and values calculated per head | Nine of each | One of each |
+| Positions visible to the newest query | All nine | All nine |
+
+Each block’s key and value tensors grow from `[1, 4, 8, 64]` to `[1, 4, 9, 64]` (one request, four heads, processed positions, 64 numbers per head). The new query still reads keys and values across the prefix. Keeping them saves the repeated projections **and the work of passing the older positions through the blocks again**.
+
+### What the Mac actually saved
+
+We used the existing 1,000-step checkpoint on the M5 MacBook Air GPU (PyTorch MPS, float32), with a single request and fixed budgets of 32 greedy output tokens. The prompts are prefixes of the same validation window. Both paths project only the last position into vocabulary scores. The timing includes greedy selection and dynamic cache appends. We warmed both paths, synchronized the GPU around each timed phase, and alternated run order across six repetitions. Each decode measurement averages the 31 steps after prefill.
+
+| Prompt tokens | Prefill ms, uncached / cached (median) | Uncached decode ms/token, median (range) | Cached decode ms/token, median (range) | Decode speedup | Final cache |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 1.26 / 1.19 | 1.034 (1.023–1.106) | 0.949 (0.946–0.957) | 1.09× | 312 KiB |
+| 64 | 1.43 / 1.32 | 1.167 (1.161–1.238) | 0.965 (0.937–0.986) | 1.21× | 760 KiB |
+| 192 | 1.71 / 1.74 | 1.607 (1.603–1.612) | 0.988 (0.985–0.994) | 1.63× | 1,784 KiB |
+
+The first prediction still requires reading the prompt. The saving appears during repeated decoding and grew with prompt length in this run. Across all 96 predictions, both paths picked identical IDs. We also checked every vocabulary logit against the original full-output forward pass. The largest absolute difference was below 0.000009 (absolute and relative tolerances each 0.0001).
+
+For this model, keeping one position costs **8 KiB**: two tensors × four blocks × four heads × 64 numbers × four bytes. At the end of the longest trial the cache holds 192 + 31 = 223 positions. The 32nd output was picked but never fed back in. These sizes count the logical K/V tensor contents. Peak device memory also includes weights, temporary tensors, allocator overhead, and copies made when appending. The results cover one model and one request at a time within its 256-position limit.
+
+[Runnable benchmark](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/benchmark_cache.py) · [Individual timings, prompt IDs, and checkpoint fingerprint](https://github.com/kantarcise/learning-llms/blob/main/experiments/cosmopedia/results/kv-cache/m5-mps.json)

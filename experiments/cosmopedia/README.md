@@ -227,3 +227,15 @@ uv run --locked --group experiments --group cosmopedia python -m unittest discov
 ```
 
 Tests are offline: changing future tokens or another batch example cannot affect an earlier prediction; padding and EOS targets are handled correctly; gradients are finite and parameter updates occur; context/head constraints are checked. Actual prepared-document hashes were also checked for disjoint splits and exact deduplication.
+
+### Compare cached and uncached generation
+
+From the repository root, use the inference weights from the original 1,000-step run and the prepared validation windows. The benchmark loads the architecture from the adjacent `run.json`. For newer runs use their inference-only `best-weights.pt`. No training or network access is needed once those files are present.
+
+```bash
+uv run --locked --group experiments --group cosmopedia python experiments/cosmopedia/benchmark_cache.py \
+  experiments/cosmopedia/artifacts/run-1000steps-20261015-225515/best.pt \
+  experiments/cosmopedia/artifacts/data/validation.pt
+```
+
+The JSON output includes correctness checks and six timings per path and prompt length. [Recorded M5 measurements](results/kv-cache/m5-mps.json) · [Walkthrough and interpretation](../../docs/preparation/cosmopedia.md#kv-caching-on-the-m5-air)
