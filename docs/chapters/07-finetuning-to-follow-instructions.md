@@ -99,7 +99,23 @@ Ocassion
 The correct spelling is 'Occasion.'
 ```
 
-Try `data[999]` in the same listing. The antonym question stands on its own, so the response heading follows the instruction directly.
+The antonym question in `data[999]` stands on its own. The formatter skips the empty input field, so the response heading follows the instruction directly.
+
+```python
+model_input = format_input(data[999])
+desired_response = f"\n\n### Response:\n{data[999]['output']}"
+print(model_input + desired_response)
+```
+
+```text
+Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+What is an antonym of 'complicated'?
+
+### Response:
+An antonym of 'complicated' is 'simple'.
+```
 
 ### Exercise 7.1 · Changing the prompt style
 
@@ -126,6 +142,25 @@ prompts = {
 Compare the last two rows. Both open the assistant turn the same way. Qwen3.8’s published template adds an empty thinking block when direct-answer mode is requested. For our GPT checkpoint those characters are simply more input text. In the Gemma rows, even the spelling of the turn boundary changes between generations. [Gemma format reference](https://ai.google.dev/gemma/docs/core/prompt-structure) · [Gemma 4 template](https://huggingface.co/google/gemma-4-E2B-it/blob/main/chat_template.jinja) · [Qwen2.5 template](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/tokenizer_config.json) · [Qwen3.8 template](https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/chat_template.jinja) · [Mistral v0.1 format](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 
 A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following. The formatting examples can run now. The response-quality comparison comes after the fine-tuning run in §7.6.
+
+### Splitting the 1,100 examples
+
+Listing 7.3 assigns the first 85% to training, the next 10% to **testing**, and the remaining 5% to **validation**. The model learns from the 935 training pairs. We use the 55 validation pairs to monitor learning and reserve the 110 test pairs for evaluating responses after training. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+# The slice boundaries count whole instruction–response pairs.
+train_end = int(0.85 * len(data))
+test_end = train_end + int(0.10 * len(data))
+
+# Keep the file order used in Listing 7.3. Each slice starts where the last ended.
+train_data = data[:train_end]
+test_data = data[train_end:test_end]
+val_data = data[test_end:]  # Everything left over goes to validation.
+
+print(len(train_data), len(test_data), len(val_data))  # 935 110 55
+```
+
+Each training record now has a place in the split, but the formatted requests and answers can still have different token lengths. Section 7.3 tackles how to combine them into a batch.
 
 ## 7.3 Organizing data into training batches
 
