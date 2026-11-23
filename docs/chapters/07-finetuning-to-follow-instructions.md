@@ -67,6 +67,54 @@ A **prompt template** tells us how to arrange those fields into the sequence the
 !!! tip "What changes with another model?"
     Keep the same request and answer. **Gemma 2 IT** opens the answer turn with `<start_of_turn>model` and closes it with `<end_of_turn>`. **Qwen2.5-7B-Instruct** opens it with `<|im_start|>assistant` and closes it with `<|im_end|>`. In both examples the answer text, **24**, follows the opening marker on a new line. These are excerpts. For an existing instruction-tuned model, use its tokenizer’s chat template to insert the full sequence of markers and line breaks it learned during training. [Gemma prompt formats](https://ai.google.dev/gemma/docs/core/prompt-structure) · [Qwen tokenizer and usage example](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/tokenizer_config.json)
 
+The chapter uses Alpaca as its baseline. Stanford published its training recipe and templates, so we can see exactly how a record becomes training text. In this version of Listing 7.2, `format_input` builds the request. The caller adds the response heading and, for a training example, the known answer. [Stanford Alpaca](https://github.com/tatsu-lab/stanford_alpaca) · [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+def format_input(entry: dict[str, str]) -> str:
+    sections = [
+        "Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.",
+        f"### Instruction:\n{entry['instruction']}",
+    ]
+    if entry["input"]:
+        sections.append(f"### Input:\n{entry['input']}")
+    return "\n\n".join(sections)
+
+
+entry = data[50]
+prompt = format_input(entry) + "\n\n### Response:\n"
+print(prompt + entry["output"])
+```
+
+```text
+Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Identify the correct spelling of the following word.
+
+### Input:
+Ocassion
+
+### Response:
+The correct spelling is 'Occasion.'
+```
+
+Try `data[999]` in the same listing. The antonym question stands on its own, so the response heading follows the instruction directly.
+
+### Exercise 7.1 · Changing the prompt style
+
+Suppose the trained model spells *Occasion* correctly after seeing `### Response:`. Will it still do so after seeing `<|assistant|>`? Start with the **same Alpaca-tuned checkpoint** and the same held-out spelling questions. Ask each question twice, once in each format, with greedy decoding and the same output budget. Count correct spellings and record cases where the model continues the prompt or prints a role marker. This measures how sensitive that checkpoint is to the format used at inference.
+
+For a third version, borrow the single-turn format from Mistral-7B-Instruct v0.1. Its closing `[/INST]` marks where the answer begins. Here are the two alternative prompts to try alongside `prompt` above. The GPT tokenizer will encode these markers as text. [Mistral’s template](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
+
+```python
+request = "\n".join(part for part in (entry["instruction"], entry["input"]) if part)
+phi3_prompt = f"<|user|>\n{request}<|end|>\n<|assistant|>\n"
+mistral_prompt = f"[INST] {request} [/INST]"
+```
+
+A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following. The formatting examples can run now. The response-quality comparison comes after the fine-tuning run in §7.6.
+
 ## 7.3 Organizing data into training batches
 
 Notes to come as we read this section.
