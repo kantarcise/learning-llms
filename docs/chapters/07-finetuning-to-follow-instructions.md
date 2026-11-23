@@ -35,7 +35,37 @@ A pretrained GPT learns to predict the **next token**. If the prompt begins “T
 
 ## 7.2 Preparing a dataset for supervised instruction fine-tuning
 
-Notes to come as we read this section.
+Raschka prepared 1,100 examples for the book. Download the JSON file and inspect two records before thinking about tokens. Python reads its outer array as a list and each record as a dictionary. [Book dataset](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/instruction-data.json)
+
+```python
+import json
+from urllib.request import urlopen
+
+url = (
+    "https://raw.githubusercontent.com/rasbt/LLMs-from-scratch/main/"
+    "ch07/01_main-chapter-code/instruction-data.json"
+)
+with urlopen(url, timeout=30) as response:
+    data = json.load(response)
+
+print(len(data))  # 1100
+print(data[50])   # Spelling task with a separate word to correct
+print(data[999])  # Antonym question with an empty input field
+```
+
+In the spelling record, the **instruction** asks for a correction, the **input** supplies `Ocassion`, and the **output** gives the corrected spelling, `Occasion`, in a sentence. In the antonym record, the instruction already contains the word *complicated*. An empty `input` makes sense here. The example still has a request and a target answer.
+
+A **prompt template** tells us how to arrange those fields into the sequence the tokenizer will encode. During fine-tuning we include the worked answer. When asking the trained model a new question, we supply the request up to the response marker and let the model generate what follows.
+
+<figure markdown="1">
+
+![One record asks the model to double 12. Alpaca places 12 in an input section. Phi-3 puts 12 in the user turn. Both put 24 in the answer.](../assets/chapter-07/prompt-styles.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 7.4. Follow the number 12 through both formats, then find where the answer 24 begins. The Alpaca excerpt omits its introductory sentence for space. [Stanford Alpaca templates](https://github.com/tatsu-lab/stanford_alpaca#data-release) · [Microsoft Phi-3 prompt format](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct#input-formats)</figcaption>
+</figure>
+
+!!! tip "What changes with another model?"
+    Keep the same request and answer. **Gemma 2 IT** opens the answer turn with `<start_of_turn>model` and closes it with `<end_of_turn>`. **Qwen2.5-7B-Instruct** opens it with `<|im_start|>assistant` and closes it with `<|im_end|>`. In both examples the answer text, **24**, follows the opening marker on a new line. These are excerpts. For an existing instruction-tuned model, use its tokenizer’s chat template to insert the full sequence of markers and line breaks it learned during training. [Gemma prompt formats](https://ai.google.dev/gemma/docs/core/prompt-structure) · [Qwen tokenizer and usage example](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/tokenizer_config.json)
 
 ## 7.3 Organizing data into training batches
 

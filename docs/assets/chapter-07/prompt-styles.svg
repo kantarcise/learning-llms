@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 330" role="img" aria-labelledby="title desc">
+  <title id="title">One training example in two prompt styles</title>
+  <desc id="desc">The instruction Double the number, input 12 and answer 24 become named sections in Alpaca or two conversational turns in Phi-3.</desc>
+  <rect width="660" height="330" rx="12" fill="#faf8f2"/>
+  <g font-family="system-ui,sans-serif" fill="#233731">
+    <text x="30" y="36" font-size="22" font-weight="700">One dataset record</text>
+    <text x="30" y="66" font-size="17">Instruction · Double the number.　　 Input · 12　　 Output · 24</text>
+    <path d="M330 82 V93 H166 V106 M330 93 H494 V106" stroke="#53796b" fill="none" stroke-width="2"/>
+    <rect x="15" y="106" width="308" height="208" rx="10" fill="#e9f1eb"/>
+    <rect x="337" y="106" width="308" height="208" rx="10" fill="#e9eff4"/>
+    <g font-size="19" font-weight="700">
+      <text x="33" y="138">Alpaca · named sections</text>
+      <text x="354" y="138">Phi-3 · conversation turns</text>
+    </g>
+    <g font-family="monospace" font-size="16">
+      <text x="33" y="168">### Instruction:</text>
+      <text x="33" y="189">Double the number.</text>
+      <text x="33" y="218">### Input:</text>
+      <text x="33" y="239">12</text>
+      <text x="33" y="268">### Response:</text>
+      <text x="33" y="289">24</text>
+      <text x="354" y="168">&lt;|user|&gt;</text>
+      <text x="354" y="189">Double the number.</text>
+      <text x="354" y="210">12&lt;|end|&gt;</text>
+      <text x="354" y="268">&lt;|assistant|&gt;</text>
+      <text x="354" y="289">24&lt;|end|&gt;</text>
+    </g>
+  </g>
+</svg>
