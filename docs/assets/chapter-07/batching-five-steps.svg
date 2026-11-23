@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 402" role="img" aria-labelledby="title">
+<title id="title">From one example to one row in a batch</title>
+<rect width="720" height="402" rx="12" fill="#faf8f3"/>
+<g font-family="system-ui, sans-serif" fill="#253330">
+<text x="22" y="35" font-size="23" font-weight="700">From one example to one row in a batch</text>
+<rect x="15" y="50" width="690" height="62" rx="7" fill="#e3eee8"/>
+<text x="30" y="76" font-size="17" font-weight="700">2.1   Format</text>
+<text x="242" y="76" font-size="17">Instruction + optional input + worked answer</text>
+<text x="242" y="98" font-size="15">One text sequence for this example.</text>
+<rect x="15" y="118" width="690" height="62" rx="7" fill="#eaf0f3"/>
+<text x="30" y="144" font-size="17" font-weight="700">2.2   Encode</text>
+<text x="242" y="144" font-size="17">[11, 22, 33]</text>
+<text x="242" y="166" font-size="15">Toy IDs. Suppose the longest example has five IDs.</text>
+<rect x="15" y="186" width="690" height="62" rx="7" fill="#e3eee8"/>
+<text x="30" y="212" font-size="17" font-weight="700">2.3   End and pad</text>
+<text x="242" y="212" font-size="17">[11, 22, 33, END, PAD, PAD]</text>
+<text x="242" y="234" font-size="15">END and PAD both use 50256 in this chapter.</text>
+<rect x="15" y="254" width="690" height="62" rx="7" fill="#eaf0f3"/>
+<text x="30" y="280" font-size="17" font-weight="700">2.4   Shift by one</text>
+<text x="242" y="280" font-size="17">Input      [11, 22, 33, END, PAD]</text>
+<text x="242" y="302" font-size="15">Target    [22, 33, END, PAD, PAD]</text>
+<rect x="15" y="322" width="690" height="62" rx="7" fill="#e3eee8"/>
+<text x="30" y="348" font-size="17" font-weight="700">2.5   Ignore extra padding</text>
+<text x="242" y="348" font-size="17">Target    [22, 33, END, −100, −100]</text>
+<text x="242" y="370" font-size="15">Keep the first END target so the model learns to stop.</text>
+</g></svg>

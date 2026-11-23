@@ -164,7 +164,62 @@ Each training record now has a place in the split, but the formatted requests an
 
 ## 7.3 Organizing data into training batches
 
-Notes to come as we read this section.
+We now have 935 training records and a function to format each one. How do we turn a handful of them into the two tensors that our training loop expects?
+
+<figure markdown="1">
+
+![The chapter roadmap marks downloading and formatting complete and highlights grouping examples into batches.](../assets/chapter-07/batching-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.5. We are at step 2. Here we define how to assemble a batch. In step 3 the data loader will call that code as it iterates over the dataset.</figcaption>
+</figure>
+
+**Collate** means “assemble the selected samples into one batch.” Think of one iteration of the Chapter 6 loader. The dataset handed it eight pairs, each containing a 120-token SMS tensor and one spam label. PyTorch’s default collate function stacked the eight tensors into a rectangular `[8, 120]` input and gathered the labels into `[8]`. That worked because the dataset had already padded each SMS to the same length.
+
+Here, two instruction examples might arrive as lists of 57 and 54 token IDs. The loader chooses the examples. Our collate function will decide how to pad them to a common length and build a next-token target for each position. We can then pass it to the loader as `collate_fn`. [PyTorch’s batching documentation](https://docs.pytorch.org/docs/stable/data.html#loading-batched-and-non-batched-data)
+
+<figure markdown="1">
+
+![Five steps format an instruction and answer, encode them, pad to a shared length, shift targets by one, and mask surplus padding in the targets.](../assets/chapter-07/batching-five-steps.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.6. Follow the short row. The target paired with 33 is END. The two later padding targets become −100, the value the loss function ignores. Listing 7.4 handles the first two steps.</figcaption>
+</figure>
+
+**One dataset item is one complete example.** The initializer calls our §7.2 formatter, appends the response heading and the known answer, and encodes that whole string once. Compare the spelling task and the antonym question below. Their section headings differ because only the spelling task supplies a separate input.
+
+<figure markdown="1">
+
+![The spelling and antonym records become formatted training texts and then lists of 57 and 54 GPT-2 token IDs.](../assets/chapter-07/instruction-dataset-rows.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.7. Each example keeps its own length. The ellipses stand for token IDs omitted from the drawing. Padding waits until we know which examples share a batch.</figcaption>
+</figure>
+
+```python title="InstructionDataset · Listing 7.4"
+import tiktoken
+from torch.utils.data import Dataset
+
+
+class InstructionDataset(Dataset):
+    def __init__(self, records: list[dict[str, str]], tokenizer: tiktoken.Encoding) -> None:
+        self.encoded_texts: list[list[int]] = []
+        for entry in records:
+            # The answer belongs in the text we use for training.
+            text = format_input(entry) + f"\n\n### Response:\n{entry['output']}"
+            self.encoded_texts.append(tokenizer.encode(text))
+
+    def __len__(self) -> int:
+        return len(self.encoded_texts)
+
+    def __getitem__(self, index: int) -> list[int]:
+        return self.encoded_texts[index]
+```
+
+`__init__` is the Python **initializer**. After initialization, `dataset[i]` retrieves the stored IDs without tokenizing again. Try the two records from the figure together to see exactly what the collate function would receive. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+dataset = InstructionDataset([data[50], data[999]], tiktoken.get_encoding("gpt2"))
+samples = [dataset[0], dataset[1]]
+print([len(ids) for ids in samples])  # [57, 54]
+```
 
 ## 7.4 Creating data loaders for an instruction dataset
 

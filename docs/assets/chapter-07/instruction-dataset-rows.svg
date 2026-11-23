@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" role="img" aria-labelledby="title">
+<title id="title">Two records through the same dataset initializer</title>
+<rect width="720" height="470" rx="12" fill="#faf8f3"/>
+<g font-family="system-ui, sans-serif" fill="#253330">
+<text x="22" y="35" font-size="23" font-weight="700">Two records through the same dataset initializer</text>
+<rect x="15" y="50" width="690" height="62" rx="7" fill="#e3eee8"/>
+<text x="30" y="76" font-size="17" font-weight="700">Record 50</text>
+<text x="242" y="76" font-size="17">Identify the correct spelling of the following word.</text>
+<text x="242" y="98" font-size="15">Input: Ocassion</text>
+<rect x="15" y="118" width="690" height="62" rx="7" fill="#eaf0f3"/>
+<text x="30" y="144" font-size="17" font-weight="700">2.1   Format</text>
+<text x="242" y="144" font-size="17">Instruction → Input → Response</text>
+<text x="242" y="166" font-size="15">The correct spelling is &#x27;Occasion.&#x27;</text>
+<rect x="15" y="186" width="690" height="62" rx="7" fill="#e3eee8"/>
+<text x="30" y="212" font-size="17" font-weight="700">2.2   Encode</text>
+<text x="242" y="212" font-size="17">[21106, 318, …, 705, 29223, 4247, 2637]</text>
+<text x="242" y="234" font-size="15">57 GPT-2 token IDs, including the prompt and answer.</text>
+<rect x="15" y="254" width="690" height="62" rx="7" fill="#eaf0f3"/>
+<text x="30" y="280" font-size="17" font-weight="700">Record 999</text>
+<text x="242" y="280" font-size="17">What is an antonym of &#x27;complicated&#x27;?</text>
+<text x="242" y="302" font-size="15">Input: (empty)</text>
+<rect x="15" y="322" width="690" height="62" rx="7" fill="#e3eee8"/>
+<text x="30" y="348" font-size="17" font-weight="700">2.1   Format</text>
+<text x="242" y="348" font-size="17">Instruction → Response</text>
+<text x="242" y="370" font-size="15">An antonym of &#x27;complicated&#x27; is &#x27;simple&#x27;.</text>
+<rect x="15" y="390" width="690" height="62" rx="7" fill="#eaf0f3"/>
+<text x="30" y="416" font-size="17" font-weight="700">2.2   Encode</text>
+<text x="242" y="416" font-size="17">[21106, 318, …, 318, 705, 36439, 4458]</text>
+<text x="242" y="438" font-size="15">54 GPT-2 token IDs, including the prompt and answer.</text>
+</g></svg>
