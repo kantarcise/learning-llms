@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="690" height="273" viewBox="0 0 690 273" role="img" aria-labelledby="title">
+  <title id="title">Three instructions paired with example responses</title>
+  <rect width="690" height="273" rx="12" fill="#faf8f3"/>
+  <g font-family="system-ui, sans-serif" font-size="19" fill="#253330">
+    <g font-weight="bold"><text x="34" y="35">Instruction</text><text x="395" y="35">Desired response</text></g>
+    <rect x="18" y="51" width="654" height="64" rx="8" fill="#ecf2ed"/>
+    <text x="34" y="76">Convert two hours to minutes.</text>
+    <text x="343" y="77" fill="#36715e">→</text>
+    <text x="395" y="76">120 minutes.</text>
+    <rect x="18" y="125" width="654" height="64" rx="8" fill="#ffffff"/>
+    <text x="34" y="150">Give a synonym for “quiet.”</text>
+    <text x="343" y="151" fill="#36715e">→</text>
+    <text x="395" y="150">Silent.</text>
+    <rect x="18" y="199" width="654" height="64" rx="8" fill="#ecf2ed"/>
+    <text x="34" y="224">Rewrite in active voice.</text>
+    <text x="343" y="225" fill="#36715e">→</text>
+    <text x="395" y="224">Mina sent the alert.</text>
+    <text x="34" y="248" font-size="17">“The alert was sent by Mina.”</text>
+  </g>
+</svg>

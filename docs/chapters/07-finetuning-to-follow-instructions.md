@@ -15,7 +15,23 @@ We’ll prepare the instruction examples, group them into training batches, and 
 
 ## 7.1 Introduction to instruction fine-tuning
 
-Notes to come as we read this section.
+A pretrained GPT learns to predict the **next token**. If the prompt begins “The alert was sent by Mina,” a plausible continuation might describe what happened after the alert. Now put a request in front of that same sentence: “Rewrite in active voice.” A useful answer has to preserve the event and change its wording: **“Mina sent the alert.”** A fluent continuation can still miss the requested edit.
+
+**Supervised instruction fine-tuning** gives the pretrained model worked examples of that distinction. During training, each instruction comes with a desired response. The model still predicts one token at a time; the examples teach it what kind of text should follow a request. When we later give it a new instruction, it has to generate the response itself.
+
+<figure markdown="1">
+
+![Three instruction–response pairs illustrate a unit conversion, a synonym, and an edit into active voice.](../assets/chapter-07/instruction-pairs.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 7.2. Read each row from left to right. The response demonstrates what counts as following that particular instruction. For the synonym task, several different answers could be valid.</figcaption>
+</figure>
+
+<figure markdown="1">
+
+![Three stages with nine ordered steps. The first step, downloading and formatting instruction examples, is highlighted.](../assets/chapter-07/instruction-tuning-stages.svg)
+
+<figcaption markdown="span">Companion to Raschka’s Figure 7.3. Follow each stage from left to right, then move down a row. Inspecting loss shows how training is progressing. Reading and scoring generated answers tells us how well the model follows the requests.</figcaption>
+</figure>
 
 ## 7.2 Preparing a dataset for supervised instruction fine-tuning
 
