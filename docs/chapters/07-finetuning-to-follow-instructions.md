@@ -221,6 +221,63 @@ samples = [dataset[0], dataset[1]]
 print([len(ids) for ids in samples])  # [57, 54]
 ```
 
+### Pad to the longest example in this batch
+
+The dataset already gives us integers, so we can append the end-of-text ID directly. GPT-2 has **50,257 vocabulary entries**, numbered from zero. Its end-of-text token has ID **50256**.
+
+```python
+tokenizer = tiktoken.get_encoding("gpt2")
+print(tokenizer.encode("<|endoftext|>", allowed_special={"<|endoftext|>"}))
+# [50256]
+```
+
+<figure markdown="1">
+
+![Batch A has three rows of width five and needs five padding positions. Batch B has three rows of width four and needs only two.](../assets/chapter-07/per-batch-padding.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.8. Read across each row. The tinted cells are the added copies of 50256. Batch B ends after four columns because its own longest example has four tokens.</figcaption>
+</figure>
+
+The loader will pass the selected lists to this function as `batch`. We can also call it directly. The slightly surprising part of the book’s first draft is that it temporarily makes each row **one position wider** than the desired inputs. That extra column will let the next draft build shifted targets from the same row. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+from collections.abc import Sequence
+
+import torch
+
+
+def custom_collate_draft_1(
+    batch: Sequence[list[int]],
+    pad_token_id: int = 50256,
+    device: str | torch.device = "cpu",
+) -> torch.Tensor:
+    """Return int64 inputs shaped [examples, longest token count in this batch]."""
+    working_width = max(len(ids) for ids in batch) + 1
+    rows = []
+    for ids in batch:
+        # Build a fresh list so the dataset keeps its original token IDs.
+        ended = ids + [pad_token_id]
+        padded = ended + [pad_token_id] * (working_width - len(ended))
+
+        # Leave out the final column when constructing the model inputs.
+        rows.append(torch.tensor(padded[:-1], dtype=torch.long))
+
+    return torch.stack(rows).to(device)
+```
+
+```python
+batch = ([0, 1, 2, 3, 4], [5, 6], [7, 8, 9])
+print(custom_collate_draft_1(batch))
+```
+
+```text
+tensor([[    0,     1,     2,     3,     4],
+        [    5,     6, 50256, 50256, 50256],
+        [    7,     8,     9, 50256, 50256]])
+```
+
+The longest input already fits. The two-token input needs three padding positions and the three-token input needs two. Writing those five integers is cheap. The compute cost comes later when the model processes all 15 positions in this dense tensor.
+
 ## 7.4 Creating data loaders for an instruction dataset
 
 Notes to come as we read this section.
