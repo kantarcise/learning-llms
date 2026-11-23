@@ -17,7 +17,7 @@ Keep the main reading focused on Raschka. Use selected Machine Learning Systems 
 
 ## Month 3 lab — call the RTX 3090 from the Mac
 
-The [month-two experiment](docs/preparation/cosmopedia.md#what-happens-as-requests-arrive-faster) measured when tokens were ready on the GPU. This lab follows the same request all the way back to the person waiting for the answer. Use the existing Linux RTX 3090 as the remote compute host and the Mac as the client.
+The [month-two experiment](docs/preparation/cosmopedia.md#what-happens-as-requests-arrive-faster) measured when tokens were ready on the GPU. This lab follows the same request all the way back to the person waiting for the answer. Use the existing Linux RTX 3090 as the remote compute host and the Mac as the client. Track the workstation inventory, measurements, and eventual keep-or-upgrade decision in [issue #65](https://github.com/kantarcise/learning-llms/issues/65).
 
 1. **Serve a model on Linux.** Run a persistent inference engine such as vLLM or llama.cpp with a small instruction-tuned model that fits the 3090. Record the engine version, model revision, launch command, and how to reach its HTTP endpoint over the LAN or an SSH tunnel.
 2. **Send one real request from the Mac.** Give the endpoint a short instruction with an easy-to-check answer. Read the streamed response as it arrives. Trace the path from the HTTP request through the server queue, prompt processing, and token generation to the text displayed on the Mac.
