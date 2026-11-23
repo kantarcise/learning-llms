@@ -103,15 +103,27 @@ Try `data[999]` in the same listing. The antonym question stands on its own, so 
 
 ### Exercise 7.1 · Changing the prompt style
 
-Suppose the trained model spells *Occasion* correctly after seeing `### Response:`. Will it still do so after seeing `<|assistant|>`? Start with the **same Alpaca-tuned checkpoint** and the same held-out spelling questions. Ask each question twice, once in each format, with greedy decoding and the same output budget. Count correct spellings and record cases where the model continues the prompt or prints a role marker. This measures how sensitive that checkpoint is to the format used at inference.
+Suppose the trained model spells *Occasion* correctly after seeing `### Response:`. Will it still do so after seeing `<|assistant|>`? Start with the **same Alpaca-tuned checkpoint** and the same held-out spelling questions. Start with Alpaca and Phi-3, then repeat each question in the additional formats below, with greedy decoding and the same output budget. Count correct spellings and record cases where the model continues the prompt or prints a role marker. This measures how sensitive that checkpoint is to the format used at inference.
 
-For a third version, borrow the single-turn format from Mistral-7B-Instruct v0.1. Its closing `[/INST]` marks where the answer begins. Here are the two alternative prompts to try alongside `prompt` above. The GPT tokenizer will encode these markers as text. [Mistral’s template](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
+Gemma and Qwen give us two more families of examples. A chat template determines how a conversation becomes a sequence of tokens. The supervised task is still to generate the worked answer. Keeping our GPT weights and tokenizer fixed lets us ask a narrower question: can the model find the start of its answer when we change the surrounding text?
+
+Here are seven prompts for one request. We borrow the **single-turn text markers** and omit model-specific beginning-of-sequence tokens and default system messages. This keeps the comparison focused on the request and its answer boundary. GPT’s tokenizer may split a marker into several tokens even when the original model treats it as one.
 
 ```python
 request = "\n".join(part for part in (entry["instruction"], entry["input"]) if part)
-phi3_prompt = f"<|user|>\n{request}<|end|>\n<|assistant|>\n"
-mistral_prompt = f"[INST] {request} [/INST]"
+qwen_turn = f"<|im_start|>user\n{request}<|im_end|>\n<|im_start|>assistant\n"
+prompts = {
+    "Alpaca": format_input(entry) + "\n\n### Response:\n",
+    "Phi-3": f"<|user|>\n{request}<|end|>\n<|assistant|>\n",
+    "Mistral v0.1": f"[INST] {request} [/INST]",
+    "Gemma 2 IT": f"<start_of_turn>user\n{request}<end_of_turn>\n<start_of_turn>model\n",
+    "Gemma 4 E2B-it": f"<|turn>user\n{request}<turn|>\n<|turn>model\n",
+    "Qwen2.5-7B-Instruct": qwen_turn,
+    "Qwen3.8-27B": qwen_turn + "<think>\n\n</think>\n\n",
+}
 ```
+
+Compare the last two rows. Both open the assistant turn the same way. Qwen3.8’s published template adds an empty thinking block when direct-answer mode is requested. For our GPT checkpoint those characters are simply more input text. In the Gemma rows, even the spelling of the turn boundary changes between generations. [Gemma format reference](https://ai.google.dev/gemma/docs/core/prompt-structure) · [Gemma 4 template](https://huggingface.co/google/gemma-4-E2B-it/blob/main/chat_template.jinja) · [Qwen2.5 template](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/tokenizer_config.json) · [Qwen3.8 template](https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/chat_template.jinja) · [Mistral v0.1 format](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 
 A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following. The formatting examples can run now. The response-quality comparison comes after the fine-tuning run in §7.6.
 
