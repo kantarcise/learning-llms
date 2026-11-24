@@ -278,6 +278,87 @@ tensor([[    0,     1,     2,     3,     4],
 
 The longest input already fits. The two-token input needs three padding positions and the three-token input needs two. Writing those five integers is cheap. The compute cost comes later when the model processes all 15 positions in this dense tensor.
 
+### Pair each prediction with the next token
+
+The response is already in the encoded example. Step 2.4 in Figure 7.9 gives the loss function a way to check each prediction: the target at column *i* is the token one place farther along in the padded sequence. For the short example `[5, 6]`, seeing token 5 should lead to a prediction of 6. After seeing both 5 and 6, the model should predict the end of the example.
+
+<figure markdown="1">
+
+![For the five-token and two-token examples, each target is the next entry in the padded sequence. The short example pairs input 5 with target 6.](../assets/chapter-07/next-token-alignment.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.10. Follow the arrow to see where the first target comes from. Then read vertically: each input column produces the prediction checked against the target directly below it.</figcaption>
+</figure>
+
+```python
+def custom_collate_draft_2(
+    batch: Sequence[list[int]],
+    pad_token_id: int = 50256,
+    device: str | torch.device = "cpu",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return int64 input and target tensors, both shaped [examples, tokens]."""
+    width = max(len(ids) for ids in batch) + 1
+    rows = []
+    for ids in batch:
+        # The first added ID marks the end. Further copies fill the row.
+        rows.append(ids + [pad_token_id] * (width - len(ids)))
+
+    padded = torch.tensor(rows, dtype=torch.long, device=device)
+    # Use all rows. Slice the columns two ways to align predictions and labels.
+    return padded[:, :-1], padded[:, 1:]
+```
+
+```python
+inputs, targets = custom_collate_draft_2(batch)
+print(inputs)
+print(targets)
+```
+
+```text
+tensor([[    0,     1,     2,     3,     4],
+        [    5,     6, 50256, 50256, 50256],
+        [    7,     8,     9, 50256, 50256]])
+tensor([[    1,     2,     3,     4, 50256],
+        [    6, 50256, 50256, 50256, 50256],
+        [    8,     9, 50256, 50256, 50256]])
+```
+
+### Keep one stop signal per example
+
+Consider the middle target row. Predicting the first `50256` answers a real question: *what comes after the last token of this example?* The next three copies exist only because a longer example shares the batch. Scoring those copies would reward the model three extra times for repeating the stop signal. Pairing the very same example with a longer neighbor would change how often we reward it.
+
+<figure markdown="1">
+
+![Final targets for all three examples, with one end-of-text target kept per row and only the subsequent padding replaced by minus 100.](../assets/chapter-07/ignored-padding-targets.svg)
+
+<figcaption>Companion to Figures 7.11 and 7.12, step 2.5. Compare these rows with the target tensor above. Of the 15 predictions, ten count toward the mean loss, including three end-of-text predictions.</figcaption>
+</figure>
+
+!!! note "What does −100 do?"
+    PyTorch cross-entropy uses `ignore_index=-100` by default. A target of −100 means “skip this prediction when calculating the loss.” On the middle row, the model still produces five sets of scores. Only the predictions for 6 and END contribute to the loss. The other three positions add nothing to the sum or the count used for the average. The model inputs contain valid token IDs throughout. In Chapter 6 the loss received just one spam label per message, so there were no padding targets to exclude.
+
+This version of Listing 7.5 builds on draft 2. The original lengths tell us exactly where filler begins. For an example containing two tokens, target index 1 holds END and the filler starts at index 2. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+def custom_collate_fn(
+    batch: Sequence[list[int]],
+    pad_token_id: int = 50256,
+    ignore_index: int = -100,
+    allowed_max_length: int | None = None,
+    device: str | torch.device = "cpu",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return aligned int64 [examples, tokens] inputs and masked targets."""
+    inputs, shifted = custom_collate_draft_2(batch, pad_token_id, device)
+    # The two slices share storage. Give targets their own copy before editing.
+    targets = shifted.clone()
+    for row, ids in enumerate(batch):
+        targets[row, len(ids):] = ignore_index
+
+    # Limit both tensors to the same context window, e.g. 1024 for GPT-2.
+    return inputs[:, :allowed_max_length], targets[:, :allowed_max_length]
+```
+
+With the default length limit of `None`, both tensors retain the batch width. If truncation cuts through a long example, its true end may fall outside the window. We keep the observed next-token targets up to the cutoff.
+
 ## 7.4 Creating data loaders for an instruction dataset
 
 Notes to come as we read this section.
