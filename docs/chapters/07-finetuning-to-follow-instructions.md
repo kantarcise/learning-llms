@@ -359,6 +359,38 @@ def custom_collate_fn(
 
 With the default length limit of `None`, both tensors retain the batch width. If truncation cuts through a long example, its true end may fall outside the window. We keep the observed next-token targets up to the cutoff.
 
+Try the finished function on the same batch and read the row for `[5, 6]`:
+
+```python
+inputs, targets = custom_collate_fn(batch)
+print(inputs[1].tolist())   # [5, 6, 50256, 50256, 50256]
+print(targets[1].tolist())  # [6, 50256, -100, -100, -100]
+```
+
+### Which predictions enter the average?
+
+Shrink the vocabulary to two tokens so we can see every score. Each row below is one prediction. Column 0 holds the score for token 0 and column 1 holds the score for token 1. All three rows favor token 1. The first target is 0, so the first prediction incurs a much larger loss.
+
+```python
+from torch.nn.functional import cross_entropy
+
+logits = torch.tensor([[-1.0, 1.0], [-0.5, 1.5], [-0.5, 1.5]])
+labels = torch.tensor([0, 1, 1])
+print(cross_entropy(logits, labels, reduction="none"))  # One loss per row
+
+print(cross_entropy(logits[:2], labels[:2]))           # 1.1269
+print(cross_entropy(logits, labels))                   # 0.7936
+print(cross_entropy(logits, torch.tensor([0, 1, -100])))  # 1.1269
+```
+
+| Positions graded | Losses entering the average (rounded) | Mean loss |
+| --- | --- | ---: |
+| First two | (2.1269 + 0.1269) / 2 | 1.1269 |
+| All three | (2.1269 + 0.1269 + 0.1269) / 3 | 0.7936 |
+| Third target set to −100 | (2.1269 + 0.1269) / 2 | 1.1269 |
+
+Why would a target of 2 raise an error? It asks for the score in column 2, but this example has only columns 0 and 1. PyTorch explicitly reserves the configured `ignore_index` (default `-100`) to skip a position before looking up a score. That is why an ordinary out-of-range ID raises an error and −100 works. In the real GPT batch, 50256 has a score column and can teach the model when to stop. Only the surplus padding gets the skip marker.
+
 ## 7.4 Creating data loaders for an instruction dataset
 
 Notes to come as we read this section.
