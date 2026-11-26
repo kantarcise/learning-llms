@@ -391,6 +391,16 @@ print(cross_entropy(logits, torch.tensor([0, 1, -100])))  # 1.1269
 
 Why would a target of 2 raise an error? It asks for the score in column 2, but this example has only columns 0 and 1. PyTorch explicitly reserves the configured `ignore_index` (default `-100`) to skip a position before looking up a score. That is why an ordinary out-of-range ID raises an error and −100 works. In the real GPT batch, 50256 has a score column and can teach the model when to stop. Only the surplus padding gets the skip marker.
 
+### Exercise 7.2 · Should we grade the instruction too?
+
+In “Double 12 → 24,” the model always sees the full request. The book’s baseline also scores how well it predicts the prompt tokens. For the exercise, assign `-100` to the shifted targets belonging to the instruction and optional input. Keep the first answer token and the end-of-text target scored, and keep surplus padding ignored in both runs.
+
+NVIDIA’s published Nemotron 3 Nano supervised fine-tuning recipe gives user and system tokens zero loss weight and scores assistant responses. Meta also describes masking prompt loss for Llama 3 in §4.1.3 of its technical report. These disclosures describe specific training stages. A model’s chat template alone tells us how turns are written, leaving open which targets counted toward training loss. [NVIDIA’s SFT recipe](https://github.com/NVIDIA-NeMo/Nemotron/blob/main/docs/nemotron/nano3/sft.md) · [Meta’s Llama 3 report](https://arxiv.org/abs/2407.21783)
+
+The 2024 study *Instruction Tuning With Loss Over Instructions* found that scoring instructions helped in its experiments, particularly with few training examples or long prompts paired with short answers. That makes the chapter’s 935 training examples an interesting place to test the choice. [NeurIPS paper](https://proceedings.neurips.cc/paper_files/paper/2024/hash/7ffb43adf37b3eeaba559098bc084cc6-Abstract-Conference.html)
+
+**Return after §7.8.** Save the chapter’s baseline and its responses. Start a second run from the same pretrained GPT weights, keeping the split, template, batch order, optimizer, seed and epochs fixed. Change only the target mask. Score both models on the same held-out instructions with the same decoding settings and rubric. For a numerical comparison, compute held-out loss over answer tokens for both models. Their training losses average over different token sets.
+
 ## 7.4 Creating data loaders for an instruction dataset
 
 Notes to come as we read this section.
