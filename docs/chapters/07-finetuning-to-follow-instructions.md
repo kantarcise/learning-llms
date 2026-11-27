@@ -524,7 +524,51 @@ The model supplied the response heading, copied the active sentence, and began a
 
 ## 7.6 Fine-tuning the LLM on instruction data
 
-Notes to come as we read this section.
+The first validation prompt gave us a visible starting point: pretrained GPT-2 Medium repeated the chef sentence in the active voice. Now we can ask two questions as the weights change. Does the model assign higher probability to the target tokens? And when we give it the same instruction, does it actually rewrite the sentence?
+
+<figure markdown="1">
+
+![The instruction-tuning roadmap marks loading the pretrained weights complete and highlights training on instruction–response examples.](../assets/chapter-07/fine-tune-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.16. In step 5 the loader supplies the batches, the loss grades next-token predictions, and the optimizer updates the pretrained model.</figcaption>
+</figure>
+
+First, measure the losses **before the first update**. The loaders already return aligned inputs and targets, and Chapter 5’s cross-entropy helper already ignores the −100 padding targets. We can reuse it directly.
+
+```python
+from previous_chapters import calc_loss_loader, train_model_simple
+
+model.eval()
+torch.manual_seed(123)
+with torch.no_grad():
+    train_loss = calc_loss_loader(train_loader, model, device, num_batches=5)
+    val_loss = calc_loss_loader(val_loader, model, device, num_batches=5)
+print(f"Training {train_loss:.4f} | Validation {val_loss:.4f}")
+```
+
+On the Mac GPU, GPT-2 Medium started at **3.8259 training loss** and **3.7619 validation loss**. These are five-batch estimates on each split. The optimizer will use only training batches for updates. Falling validation loss is encouraging because it means the model also predicts held-out text better.
+
+```python title="Listing 7.8 companion · Fine-tuning GPT-2 Medium"
+from time import perf_counter
+
+torch.manual_seed(123)
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.1)
+start = perf_counter()
+train_losses, val_losses, tokens_seen = train_model_simple(
+    model, train_loader, val_loader, optimizer, device,
+    num_epochs=2,           # 116 training batches per epoch: 232 updates.
+    eval_freq=5,            # Report after update 1 (step 0), then every 5 steps.
+    eval_iter=5,            # Average 5 batches per split for each report.
+    start_context=format_input(val_data[0]),  # Same chef prompt after each epoch.
+    tokenizer=tokenizer,
+)
+print(f"Two epochs took {(perf_counter() - start) / 60:.2f} minutes")
+```
+
+In the book’s run, validation loss went from **0.665 at step 115** to **0.670 at step 120**, then reached **0.657 at step 230**. A small upward move is compatible with an improving overall trend. Read the samples alongside the losses: after epoch one the model rewrote the meal as being *prepared* by the chef. After epoch two it used *cooked* and kept the sentence passive. This shows progress on the example we inspected. Section 7.8 evaluates responses across more tasks. [Author’s Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+!!! tip "Running the two epochs"
+    Raschka reports about 15.8 minutes on an M3 MacBook Air CPU, 1.8 minutes on an NVIDIA L4, and 0.86 minutes on an A100 for Medium. These are reference timings for his setup. Our planned full run uses the RTX 3090 with the same Medium checkpoint as the Mac baseline. If memory is the constraint, the book also offers GPT-2 Small (124M); switching models calls for measuring a fresh baseline.
 
 ## 7.7 Extracting and saving responses
 
