@@ -459,7 +459,36 @@ The book’s first pair of shapes is `(8, 61)` for both inputs and targets. Its 
 
 ## 7.5 Loading a pretrained LLM
 
-Notes to come as we read this section.
+The loaders are ready. Before changing any weights, we need a starting point for instruction fine-tuning. Chapter 6 used GPT-2 Small (124M) for its two-label spam task. Here the author chooses **GPT-2 Medium (355M)** for generating responses to varied requests. Medium has more capacity: each token has 1,024 features and passes through 24 transformer blocks. Whether that improves a particular answer is something we can evaluate after training.
+
+<figure markdown="1">
+
+![All three data-preparation steps are complete. Loading the pretrained GPT weights is highlighted as the first step in Stage 2.](../assets/chapter-07/load-model-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.15. Follow the highlighted step: load the starting weights now, fine-tune them in §7.6, then inspect the loss.</figcaption>
+</figure>
+
+Listing 7.7 reuses the [Chapter 5 weight-loading procedure](05-pretraining-on-unlabeled-data.md). Run this version alongside the helper modules in the author’s Chapter 7 notebook directory. The original downloader reads OpenAI’s TensorFlow checkpoint. [Chapter 7 code and helpers](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch07/01_main-chapter-code)
+
+```python title="Loading GPT-2 Medium · Listing 7.7 companion"
+from previous_chapters import GPTModel, load_weights_into_gpt
+from gpt_download import download_and_load_gpt2
+
+# Match the architecture that produced the Medium checkpoint.
+config = {
+    "emb_dim": 1024, "n_layers": 24, "n_heads": 16,
+    "vocab_size": 50257, "context_length": 1024,
+    "qkv_bias": True, "drop_rate": 0.0,
+}
+_, params = download_and_load_gpt2(model_size="355M", models_dir="gpt2")
+model = GPTModel(config)
+load_weights_into_gpt(model, params)
+model.to(device).eval()  # Ready for a baseline prediction with dropout disabled.
+```
+
+The book quotes about **1.42 GB** for the original Medium weight data. The author’s converted PyTorch checkpoint, `gpt2-medium-355M.pth`, is **1.73 GB** (decimal). These are alternative downloads. With the PyTorch file, instantiate the same architecture and load its state dictionary as in §5.5. Training will also need memory for gradients, optimizer state, and activations. [Converted checkpoint files](https://huggingface.co/rasbt/gpt2-from-scratch-pytorch/tree/main)
+
+On our Mac, the converted file matched the publisher’s SHA-256 digest and loaded into the companion’s GPT model with every checkpoint key matched. A forward pass on MPS with three input IDs returned finite logits of shape `[1, 3, 50257]`. This checks loading and device placement before training.
 
 ## 7.6 Fine-tuning the LLM on instruction data
 
