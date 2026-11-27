@@ -490,6 +490,38 @@ The book quotes about **1.42 GB** for the original Medium weight data. The autho
 
 On our Mac, the converted file matched the publisher’s SHA-256 digest and loaded into the companion’s GPT model with every checkpoint key matched. A forward pass on MPS with three input IDs returned finite logits of shape `[1, 3, 50257]`. This checks loading and device placement before training.
 
+### What does Medium do before fine-tuning?
+
+Use the first validation record as a before-and-after check. Its instruction asks for a passive rewrite of “The chef cooks the meal every day.” The sentence to edit is inside the instruction itself. The separate `input` field is empty. The dataset supplies “The meal is cooked by the chef every day.” as the reference answer. We keep that answer aside while generating. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+from previous_chapters import generate
+
+entry = val_data[0]
+prompt_ids = torch.tensor([tokenizer.encode(format_input(entry))], device=device)
+output_ids = generate(
+    model, prompt_ids, max_new_tokens=35, context_size=config["context_length"],
+    eos_id=50256,
+)
+# generate returns the prompt followed by the new IDs. Decode only the new part.
+new_ids = output_ids[0, prompt_ids.shape[1]:]
+print(tokenizer.decode(new_ids.tolist()).strip())
+```
+
+Our pretrained Medium checkpoint produced this continuation on the Mac GPU with greedy decoding:
+
+```text
+### Response:
+
+The chef cooks the meal every day.
+
+### Instruction:
+
+Convert the active sentence to passive: 'The chef cooks the
+```
+
+The model supplied the response heading, copied the active sentence, and began another instruction before reaching the 35-token limit. The slice above makes the repetition visible: those words came from the model. It continued the pattern of the document but missed the requested change of voice. This gives us one concrete answer to revisit after §7.6.
+
 ## 7.6 Fine-tuning the LLM on instruction data
 
 Notes to come as we read this section.
