@@ -403,7 +403,59 @@ The 2024 study *Instruction Tuning With Loss Over Instructions* found that scori
 
 ## 7.4 Creating data loaders for an instruction dataset
 
-Notes to come as we read this section.
+The dataset supplies one encoded instruction and answer at a time. Our collate function can already turn eight of those lists into aligned input and target tensors. The loader connects the two: on each iteration, it picks indices, retrieves their examples, and passes that group to the collate function.
+
+<figure markdown="1">
+
+![Stage 1 roadmap with formatting and batching checked off and creating data loaders highlighted.](../assets/chapter-07/data-loader-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.14. Step 3 puts the batching code to work on each split. Once the loaders are ready, we can load the pretrained model in Stage 2.</figcaption>
+</figure>
+
+First choose where the tensors will live. The book defaults to CUDA when available and otherwise CPU. Here we also enable **MPS** (Metal Performance Shaders) to use the Apple GPU on a supported Mac.
+
+```python
+from functools import partial
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+
+# The loader supplies the batch. These two arguments stay fixed for every call.
+collate_batch = partial(custom_collate_fn, device=device, allowed_max_length=1024)
+```
+
+The 1,024-token limit caps the width at GPT-2’s context length. Shorter batches still end at their own longest example. With `num_workers=0`, fetching and collating happen in the main process when the loop asks for the next batch. Placing tensors on the device here makes them ready for the model when the loader returns. Overlapping transfers with GPU computation would require additional scheduling. [PyTorch data-loading documentation](https://docs.pytorch.org/docs/stable/data.html#single-process-data-loading-default)
+
+```python title="Creating the three loaders · Listing 7.6"
+from torch.utils.data import DataLoader
+
+torch.manual_seed(123)
+train_dataset = InstructionDataset(train_data, tokenizer)
+val_dataset = InstructionDataset(val_data, tokenizer)
+test_dataset = InstructionDataset(test_data, tokenizer)
+
+settings = dict(batch_size=8, collate_fn=collate_batch, num_workers=0)
+# Shuffle training rows each epoch and use full batches for updates.
+train_loader = DataLoader(train_dataset, shuffle=True, drop_last=True, **settings)
+# Keep file order and include the final partial batch when evaluating.
+val_loader = DataLoader(val_dataset, shuffle=False, drop_last=False, **settings)
+test_loader = DataLoader(test_dataset, shuffle=False, drop_last=False, **settings)
+```
+
+Inspect two successive batches from **one iterator**:
+
+```python
+batches = iter(train_loader)
+for _ in range(2):
+    inputs, targets = next(batches)
+    print(tuple(inputs.shape), tuple(targets.shape), inputs.device)
+```
+
+The book’s first pair of shapes is `(8, 61)` for both inputs and targets. Its second pair is `(8, 76)`. Each group still contains eight instruction examples. The longest example sets a different width in each group, and every input position still has a corresponding target position. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
 
 ## 7.5 Loading a pretrained LLM
 
