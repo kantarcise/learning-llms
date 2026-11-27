@@ -568,7 +568,17 @@ print(f"Two epochs took {(perf_counter() - start) / 60:.2f} minutes")
 In the book’s run, validation loss went from **0.665 at step 115** to **0.670 at step 120**, then reached **0.657 at step 230**. A small upward move is compatible with an improving overall trend. Read the samples alongside the losses: after epoch one the model rewrote the meal as being *prepared* by the chef. After epoch two it used *cooked* and kept the sentence passive. This shows progress on the example we inspected. Section 7.8 evaluates responses across more tasks. [Author’s Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
 
 !!! tip "Running the two epochs"
-    Raschka reports about 15.8 minutes on an M3 MacBook Air CPU, 1.8 minutes on an NVIDIA L4, and 0.86 minutes on an A100 for Medium. These are reference timings for his setup. Our planned full run uses the RTX 3090 with the same Medium checkpoint as the Mac baseline. If memory is the constraint, the book also offers GPT-2 Small (124M); switching models calls for measuring a fresh baseline.
+    Raschka reports about 15.8 minutes on an M3 MacBook Air CPU, 1.8 minutes on an NVIDIA L4, and 0.86 minutes on an A100 for Medium. These are reference timings for his setup. The partial Mac run reached a logged training loss of 0.776 and validation loss of 0.881 after 21 updates. We stopped before the first epoch sample and checkpoint. The full two-epoch run starts fresh on the RTX 3090. If memory is the constraint, the book also offers GPT-2 Small (124M); switching models calls for measuring a fresh baseline.
+
+### Reading the two-epoch loss plot
+
+The [RTX 3090 runner](https://github.com/kantarcise/learning-llms/blob/main/experiments/instruction-tuning/train.py) generates the companion to Figure 7.17 from the full run. Like the Chapter 6 plot, it places each measurement at its actual update and shows completed epochs on a second axis. With variable-length batches, each update can process a different number of token positions. The JSON records those counts separately. The final logged point comes after update 231; the saved model includes update 232.
+
+In the book, both losses fall rapidly early on. Validation improves more slowly in epoch two while training loss continues to fall. That supports stopping at two for this comparison. The chef example tests one observable behavior; §7.7 collects responses so we can judge correctness across more tasks.
+
+### Exercise 7.3 · Fine-tune on the original Alpaca dataset
+
+Stanford’s original dataset has 52,002 instruction examples. That is about 47 times the size of the book’s entire 1,100-example dataset, and sequence length also affects cost. For the RTX 3090 run, start from the same pretrained Medium checkpoint, keep a held-out split, and time a short series of updates including long batches. Use measured throughput and peak GPU memory to budget the full run. If memory is tight, reduce batch size first; a shorter context limit also fits more easily but can cut off part of a response. Compare the saved answers on common held-out prompts to see what the additional examples taught the model. [Stanford Alpaca dataset and training details](https://github.com/tatsu-lab/stanford_alpaca#data-release)
 
 ## 7.7 Extracting and saving responses
 
