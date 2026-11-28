@@ -25,6 +25,7 @@ nav:
       - 'Chapter 7 - Finetuning to Follow Instructions': chapters/07-finetuning-to-follow-instructions.md
   - Appendices:
       - Introduction to PyTorch: appendices/a-pytorch.md
+      - Exercise review: appendices/c-exercise-review.md
 markdown_extensions:
   - md_in_html
   - admonition

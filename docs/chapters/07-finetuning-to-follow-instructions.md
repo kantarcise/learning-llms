@@ -141,7 +141,11 @@ prompts = {
 
 Compare the last two rows. Both open the assistant turn the same way. Qwen3.8’s published template adds an empty thinking block when direct-answer mode is requested. For our GPT checkpoint those characters are simply more input text. In the Gemma rows, even the spelling of the turn boundary changes between generations. [Gemma format reference](https://ai.google.dev/gemma/docs/core/prompt-structure) · [Gemma 4 template](https://huggingface.co/google/gemma-4-E2B-it/blob/main/chat_template.jinja) · [Qwen2.5 template](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/tokenizer_config.json) · [Qwen3.8 template](https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/chat_template.jinja) · [Mistral v0.1 format](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 
-A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following. The formatting examples can run now. The response-quality comparison comes after the fine-tuning run in §7.6.
+A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following.
+
+**RTX 3090 results.** Testing the Alpaca-tuned checkpoint on the three held-out spelling items in the 110-example test set confirms how strongly inference depends on the training template. Under Alpaca (`### Response:\n`), the checkpoint corrected `'recieve'` to `'receive'` and missed the two subtler edits (`The birds sings` and `store boaght`) while staying on format. Under all six mismatched templates (Phi-3, Mistral v0.1, Gemma 2 IT, Gemma 4 E2B-it, Qwen2.5-7B-Instruct, and Qwen3.8-27B), it solved **0 of 3**: Phi-3 and Gemma 4 looped on repeated tokens and synthetic turn markers (`'Benevolent'?`, `<|bookshelf2|>`, `<|turn>bookshelf`), Mistral and Qwen3 fell back to emitting `### Instruction:` / `### Response:` headings, and several templates generated unrelated questions.
+
+Training and evaluating from scratch with matching **Phi-3** markers behaved very differently. Dropping Alpaca’s boilerplate reduced mean training length by **22.9%** (56.43 to 43.49 tokens) and cut two-epoch RTX 3090 training time by **15.1%** (53.8 s to 45.7 s), close to Raschka’s reported ~17% speedup. Held-out answer cross-entropy was **1.168** versus **1.174** for Alpaca, and the local Llama 3 8B judge scored **57.11/100** across 109 strict-integer replies (56.77 including one prose reply rated 20) versus **59.36/100** (110/110) for Alpaca. [Recorded comparison metrics](../assets/chapter-07/rtx3090-experiments.json)
 
 ### Splitting the 1,100 examples
 
@@ -399,36 +403,434 @@ NVIDIA’s published Nemotron 3 Nano supervised fine-tuning recipe gives user an
 
 The 2024 study *Instruction Tuning With Loss Over Instructions* found that scoring instructions helped in its experiments, particularly with few training examples or long prompts paired with short answers. That makes the chapter’s 935 training examples an interesting place to test the choice. [NeurIPS paper](https://proceedings.neurips.cc/paper_files/paper/2024/hash/7ffb43adf37b3eeaba559098bc084cc6-Abstract-Conference.html)
 
-**Return after §7.8.** Save the chapter’s baseline and its responses. Start a second run from the same pretrained GPT weights, keeping the split, template, batch order, optimizer, seed and epochs fixed. Change only the target mask. Score both models on the same held-out instructions with the same decoding settings and rubric. For a numerical comparison, compute held-out loss over answer tokens for both models. Their training losses average over different token sets.
+**RTX 3090 results.** Masking every prompt token through `\n\n### Response:\n` taught an immediate boundary lesson: when we first prompted the masked checkpoint with `format_input(entry)` alone (without `### Response:\n`), it emitted `<|endoftext|>` right away because it had never been trained to predict the response heading. Supplying the matching `### Response:\n` prefix at inference fixed generation cleanly. Across two epochs on the RTX 3090 (**52.7 s**, 8.28 GB peak VRAM), held-out cross-entropy over the 1,454 answer and stop tokens improved from **1.174** (baseline) to **1.133** (masked). Under local Llama 3 8B judging (`temperature=0`, `seed=123`), the masked model scored **60.05/100** across 109 strict-integer replies (60.23 including one prose reply rated 80) versus **59.36/100** (110/110) for the unmasked baseline — effectively tied within judge variance. [Recorded comparison metrics](../assets/chapter-07/rtx3090-experiments.json)
 
 ## 7.4 Creating data loaders for an instruction dataset
 
-Notes to come as we read this section.
+The dataset supplies one encoded instruction and answer at a time. Our collate function can already turn eight of those lists into aligned input and target tensors. The loader connects the two: on each iteration, it picks indices, retrieves their examples, and passes that group to the collate function.
+
+<figure markdown="1">
+
+![Stage 1 roadmap with formatting and batching checked off and creating data loaders highlighted.](../assets/chapter-07/data-loader-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.14. Step 3 puts the batching code to work on each split. Once the loaders are ready, we can load the pretrained model in Stage 2.</figcaption>
+</figure>
+
+First choose where the tensors will live. The book defaults to CUDA when available and otherwise CPU. Here we also enable **MPS** (Metal Performance Shaders) to use the Apple GPU on a supported Mac.
+
+```python
+from functools import partial
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+
+# The loader supplies the batch. These two arguments stay fixed for every call.
+collate_batch = partial(custom_collate_fn, device=device, allowed_max_length=1024)
+```
+
+The 1,024-token limit caps the width at GPT-2’s context length. Shorter batches still end at their own longest example. With `num_workers=0`, fetching and collating happen in the main process when the loop asks for the next batch. Placing tensors on the device here makes them ready for the model when the loader returns. Overlapping transfers with GPU computation would require additional scheduling. [PyTorch data-loading documentation](https://docs.pytorch.org/docs/stable/data.html#single-process-data-loading-default)
+
+```python title="Creating the three loaders · Listing 7.6"
+from torch.utils.data import DataLoader
+
+torch.manual_seed(123)
+train_dataset = InstructionDataset(train_data, tokenizer)
+val_dataset = InstructionDataset(val_data, tokenizer)
+test_dataset = InstructionDataset(test_data, tokenizer)
+
+settings = dict(batch_size=8, collate_fn=collate_batch, num_workers=0)
+# Shuffle training rows each epoch and use full batches for updates.
+train_loader = DataLoader(train_dataset, shuffle=True, drop_last=True, **settings)
+# Keep file order and include the final partial batch when evaluating.
+val_loader = DataLoader(val_dataset, shuffle=False, drop_last=False, **settings)
+test_loader = DataLoader(test_dataset, shuffle=False, drop_last=False, **settings)
+```
+
+Inspect two successive batches from **one iterator**:
+
+```python
+batches = iter(train_loader)
+for _ in range(2):
+    inputs, targets = next(batches)
+    print(tuple(inputs.shape), tuple(targets.shape), inputs.device)
+```
+
+The book’s first pair of shapes is `(8, 61)` for both inputs and targets. Its second pair is `(8, 76)`. Each group still contains eight instruction examples. The longest example sets a different width in each group, and every input position still has a corresponding target position. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
 
 ## 7.5 Loading a pretrained LLM
 
-Notes to come as we read this section.
+The loaders are ready. Before changing any weights, we need a starting point for instruction fine-tuning. Chapter 6 used GPT-2 Small (124M) for its two-label spam task. Here the author chooses **GPT-2 Medium (355M)** for generating responses to varied requests. Medium has more capacity: each token has 1,024 features and passes through 24 transformer blocks. Whether that improves a particular answer is something we can evaluate after training.
+
+<figure markdown="1">
+
+![All three data-preparation steps are complete. Loading the pretrained GPT weights is highlighted as the first step in Stage 2.](../assets/chapter-07/load-model-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.15. Follow the highlighted step: load the starting weights now, fine-tune them in §7.6, then inspect the loss.</figcaption>
+</figure>
+
+Listing 7.7 reuses the [Chapter 5 weight-loading procedure](05-pretraining-on-unlabeled-data.md). Run this version alongside the helper modules in the author’s Chapter 7 notebook directory. The original downloader reads OpenAI’s TensorFlow checkpoint. [Chapter 7 code and helpers](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch07/01_main-chapter-code)
+
+```python title="Loading GPT-2 Medium · Listing 7.7 companion"
+from previous_chapters import GPTModel, load_weights_into_gpt
+from gpt_download import download_and_load_gpt2
+
+# Match the architecture that produced the Medium checkpoint.
+config = {
+    "emb_dim": 1024, "n_layers": 24, "n_heads": 16,
+    "vocab_size": 50257, "context_length": 1024,
+    "qkv_bias": True, "drop_rate": 0.0,
+}
+_, params = download_and_load_gpt2(model_size="355M", models_dir="gpt2")
+model = GPTModel(config)
+load_weights_into_gpt(model, params)
+model.to(device).eval()  # Ready for a baseline prediction with dropout disabled.
+```
+
+The book quotes about **1.42 GB** for the original Medium weight data. The author’s converted PyTorch checkpoint, `gpt2-medium-355M.pth`, is **1.73 GB** (decimal). These are alternative downloads. With the PyTorch file, instantiate the same architecture and load its state dictionary as in §5.5. Training will also need memory for gradients, optimizer state, and activations. [Converted checkpoint files](https://huggingface.co/rasbt/gpt2-from-scratch-pytorch/tree/main)
+
+On our Mac, the converted file matched the publisher’s SHA-256 digest and loaded into the companion’s GPT model with every checkpoint key matched. A forward pass on MPS with three input IDs returned finite logits of shape `[1, 3, 50257]`. This checks loading and device placement before training.
+
+### What does Medium do before fine-tuning?
+
+Use the first validation record as a before-and-after check. Its instruction asks for a passive rewrite of “The chef cooks the meal every day.” The sentence to edit is inside the instruction itself. The separate `input` field is empty. The dataset supplies “The meal is cooked by the chef every day.” as the reference answer. We keep that answer aside while generating. [Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python
+from previous_chapters import generate
+
+entry = val_data[0]
+prompt_ids = torch.tensor([tokenizer.encode(format_input(entry))], device=device)
+output_ids = generate(
+    model, prompt_ids, max_new_tokens=35, context_size=config["context_length"],
+    eos_id=50256,
+)
+# generate returns the prompt followed by the new IDs. Decode only the new part.
+new_ids = output_ids[0, prompt_ids.shape[1]:]
+print(tokenizer.decode(new_ids.tolist()).strip())
+```
+
+Our pretrained Medium checkpoint produced this continuation on the Mac GPU with greedy decoding:
+
+```text
+### Response:
+
+The chef cooks the meal every day.
+
+### Instruction:
+
+Convert the active sentence to passive: 'The chef cooks the
+```
+
+The model supplied the response heading, copied the active sentence, and began another instruction before reaching the 35-token limit. The slice above makes the repetition visible: those words came from the model. It continued the pattern of the document but missed the requested change of voice. This gives us one concrete answer to revisit after §7.6.
 
 ## 7.6 Fine-tuning the LLM on instruction data
 
-Notes to come as we read this section.
+The first validation prompt gave us a visible starting point: pretrained GPT-2 Medium repeated the chef sentence in the active voice. Now we can ask two questions as the weights change. Does the model assign higher probability to the target tokens? And when we give it the same instruction, does it actually rewrite the sentence?
+
+<figure markdown="1">
+
+![The instruction-tuning roadmap marks loading the pretrained weights complete and highlights training on instruction–response examples.](../assets/chapter-07/fine-tune-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.16. In step 5 the loader supplies the batches, the loss grades next-token predictions, and the optimizer updates the pretrained model.</figcaption>
+</figure>
+
+First, measure the losses **before the first update**. The loaders already return aligned inputs and targets, and Chapter 5’s cross-entropy helper already ignores the −100 padding targets. We can reuse it directly.
+
+```python
+from previous_chapters import calc_loss_loader, train_model_simple
+
+model.eval()
+torch.manual_seed(123)
+with torch.no_grad():
+    train_loss = calc_loss_loader(train_loader, model, device, num_batches=5)
+    val_loss = calc_loss_loader(val_loader, model, device, num_batches=5)
+print(f"Training {train_loss:.4f} | Validation {val_loss:.4f}")
+```
+
+On the Mac GPU, GPT-2 Medium started at **3.8259 training loss** and **3.7619 validation loss**. These are five-batch estimates on each split. The optimizer will use only training batches for updates. Falling validation loss is encouraging because it means the model also predicts held-out text better.
+
+```python title="Listing 7.8 companion · Fine-tuning GPT-2 Medium"
+from time import perf_counter
+
+torch.manual_seed(123)
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.1)
+start = perf_counter()
+train_losses, val_losses, tokens_seen = train_model_simple(
+    model, train_loader, val_loader, optimizer, device,
+    num_epochs=2,           # 116 training batches per epoch: 232 updates.
+    eval_freq=5,            # Report after update 1 (step 0), then every 5 steps.
+    eval_iter=5,            # Average 5 batches per split for each report.
+    start_context=format_input(val_data[0]),  # Same chef prompt after each epoch.
+    tokenizer=tokenizer,
+)
+print(f"Two epochs took {(perf_counter() - start) / 60:.2f} minutes")
+```
+
+In the book’s run, validation loss went from **0.665 at step 115** to **0.670 at step 120**, then reached **0.657 at step 230**. A small upward move is compatible with an improving overall trend. Read the samples alongside the losses: after epoch one the model rewrote the meal as being *prepared* by the chef. After epoch two it used *cooked* and kept the sentence passive. This shows progress on the example we inspected. Section 7.8 evaluates responses across more tasks. [Author’s Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+!!! tip "Running the two epochs"
+    Raschka reports about 15.8 minutes on an M3 MacBook Air CPU, 1.8 minutes on an NVIDIA L4, and 0.86 minutes on an A100 for Medium. These are reference timings for his setup. The partial Mac run reached a logged training loss of 0.776 and validation loss of 0.881 after 21 updates. We stopped before the first epoch sample and checkpoint. The RTX 3090 run started from the original pretrained weights. If memory is the constraint, the book also offers GPT-2 Small (124M); switching models calls for measuring a fresh baseline.
+
+### Reading the two-epoch loss plot
+
+The [RTX 3090 runner](https://github.com/kantarcise/learning-llms/blob/main/experiments/instruction-tuning/train.py) generates the companion to Figure 7.17 from the full run. Like the Chapter 6 plot, it places each measurement at its actual update and shows completed epochs on a second axis. With variable-length batches, each update can process a different number of token positions. The JSON records those counts separately. The final logged point comes after update 231; the saved model includes update 232.
+
+![Training and validation loss drop sharply in the first updates. In the second epoch training loss continues to fall while validation loss fluctuates near 0.65.](../assets/chapter-07/rtx3090-loss.svg)
+
+On the Linux RTX 3090, GPT-2 Medium completed 232 updates on the chapter dataset in **53.8 seconds**. Before training, the five-batch loss estimates were 3.826 for training and 3.762 for validation. At update 231 they were **0.293** and **0.655**. The lowest recorded validation loss was **0.627 at update 206**. After the final update, the model answered the chef prompt with “The meal is cooked every day by the chef.” [Recorded metrics and before-and-after responses](../assets/chapter-07/rtx3090-metrics.json)
+
+In the book, both losses fall rapidly early on. Validation improves more slowly in epoch two while training loss continues to fall. That supports stopping at two for this comparison. The chef example tests one observable behavior; §7.7 collects responses so we can judge correctness across more tasks.
+
+### Exercise 7.3 · Fine-tune on the original Alpaca dataset
+
+Stanford’s original dataset has **52,002** instruction examples — about 47 times the book’s 1,100-example dataset — and its sequences are also longer. Applying the same 85/10/5 split gives **44,201** training, **5,200** test, and **2,601** validation records. On the training split, tokenized length jumps from a mean of 56.4 tokens (chapter dataset) to **107.5 tokens** (median 92, p95 210, p99 319, max 1,510, with only 2 examples above 1,024).
+
+Before committing to a full run, we timed 50 random training updates plus the five longest batches (width capped at 1,024) on the RTX 3090 in FP32 with GPT-2 Medium and AdamW:
+
+| Batch size | Updates / epoch | Random-batch throughput | Peak VRAM (random) | Longest batches (width ≤ 1,024) | Projected 1 epoch / 2 epochs |
+| ---: | ---: | ---: | ---: | --- | --- |
+| 8 | 5,525 | 3.38 updates/s (5,046 tok/s) | 16.71 GB | **OOM** (> 23.6 GiB) | ~27.2 min / ~54.4 min |
+| 4 | 11,050 | 6.41 updates/s (3,889 tok/s) | 10.93 GB | **OOM** (> 23.6 GiB) | ~28.7 min / ~57.4 min |
+| 2 | 22,100 | 9.07 updates/s (2,336 tok/s) | 8.38 GB | **OK (16.12 GB peak)** | ~40.6 min / ~81.2 min |
+
+Testing the longest batches early prevented a mid-run crash: in naive FP32 without FlashAttention or mixed precision, both `batch_size=8` and `batch_size=4` ran out of memory when a batch approached 1,024 tokens. Dropping to `batch_size=2` fits safely at 16.12 GB peak and projects ~41 minutes per epoch. Since 99% of training examples are 319 tokens or shorter, capping `allowed_max_length` (for example at 512) or enabling BF16/SDPA would let larger batches fit without losing nearly any responses. [Stanford Alpaca dataset and training details](https://github.com/tatsu-lab/stanford_alpaca#data-release) · [Pilot measurements](../assets/chapter-07/rtx3090-experiments.json)
 
 ## 7.7 Extracting and saving responses
 
-Notes to come as we read this section.
+The two-epoch run lowered validation loss. Now give the fine-tuned model an instruction it did not train on and read what it writes. Keep the reference answer aside until the model has finished generating.
+
+<figure markdown="1">
+
+![The first six steps are complete. Steps 7 and 8 extract held-out responses and compare sample answers. Step 9 scores responses later.](../assets/chapter-07/extract-responses-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.18. Reading a few answers helps us decide what a later evaluation should reward.</figcaption>
+</figure>
+
+### Read three held-out answers
+
+The generation function returns the prompt and its continuation together. If the prompt contained 40 tokens, the first new token is at index 40. Slice there before decoding, then remove the response heading if the model wrote one.
+
+```python
+@torch.inference_mode()
+def generate_response(entry: dict[str, str]) -> str:
+    """Generate one continuation from the instruction and optional input."""
+    prompt_ids = torch.tensor([tokenizer.encode(format_input(entry))], device=device)
+    output_ids = generate(
+        model, prompt_ids, max_new_tokens=256,
+        context_size=config["context_length"], eos_id=50256,
+    )
+    new_ids = output_ids[0, prompt_ids.shape[1]:]
+    response = tokenizer.decode(new_ids.tolist()).strip()
+    return response.removeprefix("### Response:").strip()
+
+
+model.eval()
+for entry in test_data[:3]:
+    print(format_input(entry))
+    print("Reference:", entry["output"])
+    print("Model:", generate_response(entry))
+```
+
+Here are the three comparisons from **the book’s run**, summarized in our own words.
+
+| Task | Reference | Model answer | How would we grade it? |
+| --- | --- | --- | --- |
+| Write a simile for a fast car | Compares its speed to lightning | Compares its speed to a bullet | Both satisfy the instruction. An exact-text check would reject a valid answer. |
+| Name the cloud associated with thunderstorms | Cumulonimbus | Cumulus | The terms are related, but the answer misses the specific cloud type. |
+| Name the author of *Pride and Prejudice* | Jane Austen | Names Jane Austen in a sentence | Correct. The extra words preserve the answer. |
+
+### Three ways to evaluate an instruction-following model
+
+| Method | What gets measured? | What might it miss? |
+| --- | --- | --- |
+| Answer-key benchmarks | On a multiple-choice test such as MMLU, how often does the model select the keyed answer? | Knowing a fact says little about explaining it in a conversation. |
+| Human evaluation | In a blind comparison such as Chatbot Arena, which response to the same prompt does a person prefer? | A reader may prefer a fluent answer that contains a factual mistake. |
+| Automated conversational evaluation | In AlpacaEval, an evaluator model compares a candidate response with a reference model’s response. This makes it practical to repeat comparisons across many prompts. | The evaluator can favor a writing style or share the candidate’s mistake. |
+
+For our instruction-tuned model, human review and automated judging let us credit both valid similes and still flag the cloud error. [MMLU paper](https://arxiv.org/abs/2009.03300) · [Chatbot Arena paper](https://arxiv.org/abs/2403.04132) · [AlpacaEval](https://tatsu-lab.github.io/alpaca_eval/)
+
+!!! note "Conversational performance"
+    Did the answer address the user’s intent, use the context correctly, and fit the requested style? We can inspect those qualities in one reply. To test consistency across turns, we also need a follow-up. For example, after the car simile, ask the model to make it gentler while keeping it a simile.
+
+### Save the answers once, then judge them
+
+This approach is called **LLM-as-a-judge**. One model answers the question. A second model later reads the question, reference answer, and candidate reply and assigns a score. People still decide what a good answer means and can spot-check the judge. For example, would it accept the bullet simile and catch the cloud error? Scoring the replies leaves the fine-tuned model’s weights unchanged.
+
+Listing 7.9 repeats the three-answer preview across the **110 held-out instructions** from our 1,100-entry dataset. Keeping each reply beside its reference lets us try a different judge later on exactly the same answers. Raschka reports roughly one minute on an A100 and six minutes on an M3 MacBook Air for response generation. [Author’s Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python title="Listing 7.9 companion · Collect the test responses"
+import json
+from pathlib import Path
+
+model.eval()
+for entry in test_data:
+    # Keep the original “output” as the reference. Add the model's reply beside it.
+    entry["model_response"] = generate_response(entry)
+
+responses_path = Path("instruction-data-with-response.json")
+responses_path.write_text(json.dumps(test_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+# Read back the saved file and inspect one instruction, reference, and reply together.
+saved_entries = json.loads(responses_path.read_text(encoding="utf-8"))
+assert len(saved_entries) == len(test_data)
+assert all("model_response" in entry for entry in saved_entries)
+print(json.dumps(saved_entries[0], indent=2, ensure_ascii=False))
+```
+
+The JSON lets us revisit what the model said. On the RTX 3090, generating all **110 held-out replies** from the saved `model.pth` checkpoint took **30.8 seconds** with greedy decoding (`max_new_tokens=256`). Its first three replies matched the book’s examples verbatim: *“The car is as fast as a bullet.”*, *“The type of cloud associated with thunderstorms is a cumulus cloud.”*, and *“The author of 'Pride and Prejudice' is Jane Austen.”* To ask the model a *new* question tomorrow, keep the fine-tuned weights too. Our RTX 3090 training script already writes this state dictionary as `model.pth` in the run directory.
+
+```python
+torch.save(model.state_dict(), "model.pth")
+```
+
+In a fresh session, reuse the GPT-2 Medium configuration from §7.5, the GPT-2 tokenizer, and the same prompt formatter. Restore the weights before generating a reply.
+
+```python
+model = GPTModel(config)
+weights = torch.load("model.pth", map_location="cpu", weights_only=True)
+model.load_state_dict(weights)
+model.to(device).eval()
+```
 
 ## 7.8 Evaluating the fine-tuned LLM
 
-Notes to come as we read this section.
+In Figure 7.19 we reach step 9. We have read a few answers ourselves. Now a second model reads each held-out instruction, reference answer, and GPT-2 reply, and returns a score. The saved responses from §7.7 let us do this in a fresh Python session.
+
+### Serve the judge locally
+
+This is model serving on one machine. **Ollama is the server, Llama 3 is the judge, and our Python script is the client.** The server keeps listening between requests. Figure 7.20 shows two ways to start it: a desktop app can run it in the background, or a terminal can run it headlessly. For the Linux RTX 3090, use the terminal. [Ollama CLI](https://docs.ollama.com/cli) · [Linux installation](https://docs.ollama.com/linux)
+
+```bash
+# Start this only if the installed Ollama service is not already running.
+ollama serve
+```
+
+In a second terminal, check that the service answers, then send one real prompt. The first model run downloads the weights if needed. An interactive session started with just `ollama run llama3:8b` accepts `/bye` to leave the chat.
+
+```bash
+curl --fail http://localhost:11434/api/tags
+ollama run llama3:8b "What do llamas eat?"
+```
+
+The chapter uses the **8B instruction-tuned** variant, a 4.7 GB download. The larger Llama 3 variant is **70B**, a 40 GB download. Changing judges also changes the measuring instrument. Keep the same judge and prompt when comparing two GPT-2 runs. A hosted judge is another option, and Raschka provides a separate GPT-4 example. [Llama 3 model sizes](https://ollama.com/library/llama3) · [Optional OpenAI evaluation notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/03_model-evaluation/llm-instruction-eval-openai.ipynb)
+
+### Ask for explanations first
+
+Listing 7.10 sends one chat message over HTTP. Turning streaming off makes the server return a single JSON reply, which is convenient when the client needs the complete judgment. [Ollama chat API](https://docs.ollama.com/api/chat)
+
+```python title="Listing 7.10 companion · Query the local judge"
+import json
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+
+def query_model(prompt: str, model: str = "llama3:8b") -> str:
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "options": {"temperature": 0, "seed": 123},
+    }
+    request = Request(
+        "http://localhost:11434/api/chat",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(request, timeout=180) as response:
+        return json.load(response)["message"]["content"].strip()
+
+
+def judge_prompt(entry: dict[str, str]) -> str:
+    return (
+        f"Instruction: {entry['instruction']}\nInput: {entry['input']}\n"
+        f"Reference answer: {entry['output']}\nCandidate answer: {entry['model_response']}\n"
+        "Rate how well the candidate fulfills the instruction from 0 to 100. "
+        "Allow correct answers with different wording."
+    )
+
+
+entries = json.loads(Path("instruction-data-with-response.json").read_text(encoding="utf-8"))
+for entry in entries[:3]:
+    print(entry["instruction"], query_model(judge_prompt(entry) + " Explain your score."))
+```
+
+In the **book’s run**, the judge awarded **85** for the bullet simile, **40** for naming cumulus clouds, and **95** for correctly naming Jane Austen. Read those judgments before scaling up. Would you give partial credit for naming a related cloud? Why deduct five points for a correct author? The score reflects the judge’s choices as well as the candidate’s answer.
+
+### Ask for one integer per answer
+
+Listing 7.11 changes the final sentence of the prompt. Check each reply before averaging so a malformed answer cannot silently disappear from the result.
+
+```python title="Listing 7.11 companion · Score the held-out responses"
+from statistics import mean
+
+
+def generate_model_scores(entries: list[dict[str, str]]) -> list[int]:
+    scores: list[int] = []
+    for index, entry in enumerate(entries):
+        reply = query_model(judge_prompt(entry) + " Reply with one integer only.")
+        if not reply.isascii() or not reply.isdecimal() or not 0 <= int(reply) <= 100:
+            raise ValueError(f"Invalid score for entry {index}: {reply!r}")
+        scores.append(int(reply))
+    return scores
+
+
+scores = generate_model_scores(entries)
+print(f"{len(scores)} of {len(entries)} scored. Mean: {mean(scores):.2f}/100")
+```
+
+Raschka reports **110 of 110 scored, mean 50.32/100**, in about a minute on his M3 MacBook Air. A mean of 50.32 could come from mostly partial answers or from a mixture of excellent and poor answers. Inspect individual replies to tell the difference.
+
+**RTX 3090 judge results.** We scored the 110 saved baseline replies locally using **Ollama `0.20.0`** serving **`llama3:8b`** (`Q4_0`, 4.66 GB, digest `365c0bd3c000`) with the adapted Listing 7.10/7.11 prompt above.
+
+- **Fixed-setting repeatability (`temperature=0`, `seed=123`):** Three full passes each scored **110 of 110** replies in ~26.2 s per pass and returned identical means: **59.36, 59.36, and 59.36 / 100** (range **0.00**). The distribution was strongly **bimodal**, not clustered near 60: 1 score of `0`, 40 scores in `1–39`, only 9 in `40–69`, 38 in `70–89`, and 22 in `90–100`.
+- **Sampling variation (`temperature=0.8`, Ollama’s default, seeds `123`, `456`, `789`):** Run means varied across **60.42** (`108/110`), **62.22** (`108/110`), and **59.36** (`110/110`) — a **2.86-point range** (mean of means **60.67**). Four replies under sampling returned prose explanations instead of a bare integer, which our strict validator flagged rather than silently dropping. Individual items swung widely across seeds: *“What is the opposite of 'horizontal'?”* (model replied *“The opposite of 'vertical' is 'horizontal'.”*) received `[50, 100, 20]`.
+- **Judgments worth reviewing:** On the first three entries, asking for an explanation gave **80** for the bullet simile, **40** for the cumulus cloud error, and **100** for Jane Austen — yet asking for a single integer without an explanation raised the cumulus cloud score from **40 to 60**. Worse, on *“Convert 1000 grams to kilograms.”*, the model wrote *“1000 grams is 0.1 kilograms.”* (wrong by a factor of 10), and the deterministic judge consistently awarded **80/100**. Repeat runs measure variance, not correctness: a judge can repeat the same grading mistake every time. [Full judge logs and explanations](../assets/chapter-07/rtx3090-experiments.json)
+
+On page 247, Raschka reports **58.51/100 for Llama 3 8B Base** and **82.6/100 for Llama 3 8B Instruct** as candidates under the book’s evaluation method. Both checkpoints have the same nominal size. The instruct version has received additional training to follow requests. **8B** counts billions of parameters. **8-bit** describes numerical precision.
+
+To investigate a weak score, read a few low-scoring replies first. If the model follows the wrong format, try a clearer prompt. If it struggles with a particular task, add more varied training examples of that kind. Learning rate, batch size, epoch count, and base model size are further experiments. Use validation examples to choose changes and reserve the test set for the final comparison.
+
+### Exercise 7.4 · Compare full fine-tuning with LoRA
+
+Appendix E freezes every pretrained weight matrix and adds two low-rank matrices (`rank=16`, `alpha=16`, applied directly as `alpha * (x @ A @ B)`) to each `nn.Linear` layer in GPT-2 Medium. Starting from the same pretrained checkpoint, split, two-epoch budget, optimizer settings, and seed on the RTX 3090 gives a direct comparison across all four Chapter 7 variants under the same deterministic `llama3:8b` judge:
+
+| Variant | Trainable params | Peak VRAM | Train time (2 epochs) | Test answer CE (1,454 tokens) | Llama 3 8B mean (`temp=0`) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Full fine-tune (Alpaca baseline) | 406,286,336 (100%) | 8.28 GB | 53.8 s | 1.174 | **59.36** (`110/110`) |
+| Phi-3 prompt template (Ex 7.1) | 406,286,336 (100%) | 8.28 GB | 45.7 s | 1.168 | **57.11** (`109/110`; 56.77 w/ 1 prose) |
+| Response-only masked loss (Ex 7.2) | 406,286,336 (100%) | 8.28 GB | 52.7 s | **1.133** | **60.05** (`109/110`; 60.23 w/ 1 prose) |
+| LoRA `r=16, α=16` (Ex 7.4) | **7,898,384 (1.94%)** | **4.58 GB** | **45.3 s** | 1.219 | **57.20** (`109/110`; 56.86 w/ 1 prose) |
+
+LoRA trained **1.94%** of the base parameter count, cut peak GPU memory by **44.7%** (4.58 GB vs 8.28 GB, because optimizer states and gradients exist only for the 7.9M adapter weights), ran **15.7% faster** (45.3 s vs 53.8 s), and saved a **31.7 MB** adapter checkpoint (`adapters.pth`) compared to **1.73 GB** for the full fine-tuned model (`model.pth`). Held-out quality trailed full fine-tuning slightly (answer cross-entropy 1.219 vs 1.174; judge mean 57.20 vs 59.36), with the small gap close to the judge’s own multi-point noise. [Recorded comparison metrics](../assets/chapter-07/rtx3090-experiments.json)
 
 ## 7.9 Conclusions
 
-Notes to come as we read this section.
+<figure markdown="1">
 
-## Questions to bring to the chapter
+![The GPT model built in Chapters 2–4 and pretrained in Chapter 5 branches into an SMS classifier in Chapter 6 and an instruction follower in Chapter 7.](../assets/chapter-07/book-roadmap.svg)
 
-<!-- Add actual questions during reading. -->
+<figcaption>Companion to Raschka’s Figure 7.21. Follow the two arrows out of Chapter 5. The classifier learns to choose a label. The instruction follower keeps the vocabulary output and learns to write an answer.</figcaption>
+</figure>
 
-## End of chapter
+### What preference fine-tuning adds
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Suppose an instruction asks for a friendly appointment reminder. Two replies both get the time right, but one sounds abrupt. In supervised instruction fine-tuning we supply an example reminder to imitate. In preference fine-tuning we can supply both replies and mark which one a reader prefers. Direct Preference Optimization (DPO) uses those pairs to train the model to favor the chosen reply relative to the rejected one. That changes future generations. The judge in §7.8 only scored answers already on disk. [Raschka’s preference-tuning walkthrough](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch07/04_preference-tuning-with-dpo)
+
+### Chapter summary
+
+1. Instruction fine-tuning teaches a pretrained next-token predictor how to respond to a request by showing it worked examples.
+2. Each dataset entry holds an instruction, optional input, and desired response. Format the entries consistently and split them into training, validation, and test sets.
+3. The collate function pads each batch, shifts targets by one token, and marks surplus padding with `-100`. Keeping the first end-of-text target teaches the model when to stop.
+4. Pretrained GPT-2 Medium gives us a starting point. Trying the chef prompt before training shows which behavior we want to change.
+5. The Chapter 5 training loop works here too. After two epochs on the RTX 3090, our model rewrote the chef sentence in the passive voice.
+6. Generate replies to held-out instructions and save each beside its reference. A person can inspect the answers, and several judges can evaluate the same file.
+7. A locally served judge can turn those comparisons into scores. Report how many answers were scored, their mean, and examples that show what the judge rewarded.
+
+### Where to look when a problem comes up
+
+Use Appendix A for a PyTorch question, B for further reading, and C to check an exercise solution. Open D when a training run calls for warm-up, a learning-rate schedule, or gradient clipping. Return to E for the LoRA comparison. The author’s bonus material also includes KV caching and efficient attention implementations for the serving work ahead. For developments since publication, follow a concrete question from a paper to its code and measurements. [Bonus material](https://github.com/rasbt/LLMs-from-scratch#bonus-material) · [Recent machine learning papers](https://arxiv.org/list/cs.LG/recent) · [Raschka’s blog](https://sebastianraschka.com/blog/)
+
+For larger fine-tuning projects, Raschka also points readers to [Axolotl](https://github.com/axolotl-ai-cloud/axolotl) and [LitGPT](https://github.com/Lightning-AI/litgpt).
