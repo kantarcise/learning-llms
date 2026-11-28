@@ -115,10 +115,13 @@ Our **transformer block** contains attention, feedforward, two LayerNorms, and t
 
 ## Floating-point precision: FP32, TF32, FP16, and BF16
 
-Every floating-point number is stored in binary scientific notation: `± (mantissa) × 2^(exponent)`. For example, `6.5` in binary is `110.1₂ = 1.101₂ × 2²` (sign `+`, mantissa `1.101₂ = 1.625`, exponent `2`).
+**Floating-point precision** is how many significant digits—and how much accuracy—a computer can store when representing real (fractional, very large, or very small) numbers in a finite number of bits. It exists because real numbers are infinite while computer memory is finite: by letting the decimal (binary) point "float" like scientific notation, one compact format can represent both microscopic gradients and huge numbers, at the cost of small rounding approximations (such as `0.1 + 0.2 = 0.30000000000000004` in binary float—which is why financial systems use exact decimal/integer math, whereas scientific computing uses 64-bit `FP64` and machine learning trades extra digits for speed and VRAM).
 
+Following the IEEE 754 pattern, a floating-point number is stored in binary scientific notation: `± (mantissa) × 2^(exponent)`. For example, `6.5` in binary is `110.1₂ = 1.101₂ × 2²` (sign `+`, mantissa `1.101₂ = 1.625`, exponent `2`).
+
+- **Sign bit:** positive or negative.
 - **Exponent bits** set the **range** (how giant or tiny a number can be before overflowing to `inf`/`NaN` or underflowing to `0`).
-- **Mantissa bits** set the **decimal sharpness** (how many significant digits are kept).
+- **Mantissa (significand) bits** set the **decimal sharpness** (how many significant digits are kept).
 
 | Format | Stored size | Sign \| Exp \| Mantissa | Max value | Role in LLM training and serving |
 | --- | :---: | :---: | :---: | --- |
