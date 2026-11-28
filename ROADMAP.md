@@ -15,6 +15,8 @@ For month six, shift to one hour reading, one hour project work, and four hours 
 
 Keep the main reading focused on Raschka. Use selected Machine Learning Systems material for hardware acceleration, benchmarking, serving, and inference at scale. Extensive fine-tuning, custom CUDA kernels, and multi-GPU deployment can wait unless a target role calls for them.
 
+As serving and performance work deepens across Months 3–6, revisit modern attention and memory optimizations alongside our measurements: **FlashAttention / PyTorch SDPA** (tiled SRAM attention and BF16/FP16 preconditions), **GQA (Grouped-Query Attention)**, **PagedAttention** (virtual KV-cache blocks in vLLM), **FlashDecoding / FlashAttention-3**, **MLA (Multi-head Latent Attention)**, and **PyTorch `FlexAttention`**.
+
 ## Month 3 lab — call the RTX 3090 from the Mac
 
 The [month-two experiment](docs/preparation/cosmopedia.md#what-happens-as-requests-arrive-faster) measured when tokens were ready on the GPU. This lab follows the same request all the way back to the person waiting for the answer. Use the existing Linux RTX 3090 as the remote compute host and the Mac as the client. Track the workstation inventory, measurements, and eventual keep-or-upgrade decision in [issue #65](https://github.com/kantarcise/learning-llms/issues/65).
