@@ -113,6 +113,45 @@ An `nn.Module` is a PyTorch component that can contain parameters and child modu
 
 Our **transformer block** contains attention, feedforward, two LayerNorms, and two residual additions. Our **model**, `TinyTransformer`, contains the embedding tables, one such block, final LayerNorm, and vocabulary projection. A block is one component of the complete model.
 
+## Floating-point precision: FP32, TF32, FP16, and BF16
+
+**Floating-point precision** is how many significant digits—and how much accuracy—a computer can store when representing real (fractional, very large, or very small) numbers in a finite number of bits. It exists because real numbers are infinite while computer memory is finite: by letting the decimal (binary) point "float" like scientific notation, one compact format can represent both microscopic gradients and huge numbers, at the cost of small rounding approximations (such as `0.1 + 0.2 = 0.30000000000000004` in binary float—which is why financial systems use exact decimal/integer math, whereas scientific computing uses 64-bit `FP64` and machine learning trades extra digits for speed and VRAM).
+
+Following the IEEE 754 pattern, a floating-point number is stored in binary scientific notation: `± (mantissa) × 2^(exponent)`. For example, `6.5` in binary is `110.1₂ = 1.101₂ × 2²` (sign `+`, mantissa `1.101₂ = 1.625`, exponent `2`).
+
+- **Sign bit:** positive or negative.
+- **Exponent bits** set the **range** (how giant or tiny a number can be before overflowing to `inf`/`NaN` or underflowing to `0`).
+- **Mantissa (significand) bits** set the **decimal sharpness** (how many significant digits are kept).
+
+| Format | Stored size | Sign \| Exp \| Mantissa | Max value | Role in LLM training and serving |
+| --- | :---: | :---: | :---: | --- |
+| **FP32** | 4 bytes | `1 \| 8 \| 23` | `3.4 × 10³⁸` | Standard baseline: huge range and fine decimals, heavy on VRAM and bandwidth. |
+| **FP16** | 2 bytes | `1 \| 5 \| 10` | `65,504` | Half the memory, narrow range; training gradients can overflow to `NaN` or underflow to `0` without loss scaling. |
+| **BF16** (*Brain Floating Point 16*) | 2 bytes | `1 \| 8 \| 7` | `3.4 × 10³⁸` | Invented by Google Brain for TPUs: shares FP32's 8-bit exponent and reduces the mantissa to 7 bits. Keeps FP32's full range while halving memory and running on Tensor Cores. |
+| **TF32** (*TensorFloat-32*) | 4 bytes (in RAM) | `1 \| 8 \| 10` *(compute)* | `3.4 × 10³⁸` | NVIDIA Ampere (RTX 3090+) Tensor Core mode: stores FP32 in memory and trims the mantissa to 10 bits on the fly during matrix multiplication. |
+
+**Three concrete bridges for why BF16 is popular in LLMs:**
+
+1. **Same simple numbers, tiny rounding on messy ones (`6.5` vs. `π`):** `6.5 = 1.101₂ × 2²` only needs 3 mantissa bits, so FP32, FP16, and BF16 all store `6.5` identically. For `π = 3.14159265...`, BF16 keeps FP32's sign and 8-bit exponent with a 7-bit mantissa:
+   - **FP32** (`1 | 8 | 23`): `0 | 10000000 | 10010010000111111011011` → `3.1415927`
+   - **BF16** (`1 | 8 | 7`): `0 | 10000000 | 1001001` → `(1 + 1/2 + 1/16 + 1/128) × 2 = 3.140625` (**0.031%** error)
+2. **Range vs. rounding—and rounding vs. truncation (`70,000` and `10⁻⁸`):** Running out of *exponent* range is catastrophic: in **FP16** (max `65,504`), an activation of `70,000` overflows to `inf` (and `inf / inf` becomes `NaN`, poisoning the next matmul) while a tiny `10⁻⁸` gradient underflows to `0.0`. In **BF16**, `70,000` stays finite and `10⁻⁸` stays non-zero. Casting `70,000` in PyTorch also illustrates **rounding vs. truncation**: `torch.tensor(70000.0).to(torch.bfloat16)` rounds to nearest even and gives `70,144`, whereas clearing the bottom 16 bits of the FP32 representation by hand (truncation) gives `69,632`.
+3. **The ruler analogy:** think of the **exponent** as the *span* of a ruler (can it measure both an ant and a skyscraper?) and the **mantissa** as the *tick marks* (millimeters vs. nanometers). Neural networks process both tiny gradients and large activations, so they need the wide span (8-bit exponent) more than 23-bit mantissa detail. For weight storage, halving from 4 bytes to 2 bytes is what lets `Qwen2.5-7B-Instruct` fit in `~14.25 GiB` of BF16 weights on a 24 GiB RTX 3090 instead of `~28.5 GiB` in FP32 (comparing BF16 vs. FP32 answer quality would require a separate evaluation).
+
+## FlashAttention and PyTorch SDPA
+
+Naive self-attention computes `Q @ Kᵀ`, writes the full `[B, n_heads, T, T]` score matrix to GPU VRAM (HBM), reads it back for `softmax`, writes it again, reads it for `@ V`, and keeps copies in VRAM until backpropagation. Because `[B, n_heads, T, T]` grows quadratically with sequence length (`O(T²)`), long prompts quickly exhaust VRAM.
+
+**FlashAttention** computes the **exact same mathematical attention output** without ever materializing that `T × T` matrix in VRAM. Just as a CPU has fast L1/L2 caches in front of main RAM, a GPU has tiny, much faster on-chip **SRAM** in front of VRAM. FlashAttention loads small **tiles** (slices of tokens, e.g. 64–128 at a time) of `Q`, `K`, and `V` into SRAM, computes the exact softmax incrementally tile by tile, and writes only the final `[B, n_heads, T, d_head]` output back to VRAM (recomputing tiles in SRAM during backprop instead of storing the `T × T` matrix). Memory drops from `O(T²)` to `O(T)` and avoids repeated VRAM round-trips (the exact runtime speedup on our RTX 3090 is a benchmark to measure directly).
+
+**PyTorch SDPA** (`torch.nn.functional.scaled_dot_product_attention`) is the built-in abstraction that dispatches to fused attention kernels—such as FlashAttention-2 on Ampere+ GPUs (including the RTX 3090)—depending on device, dtype (FlashAttention-2 requires **FP16 or BF16**; FP32 tensors use non-FlashAttention backends), and input configuration. Our GPT decoder uses `is_causal=True`, while fused attention also supports noncausal workloads.
+
+## LoRA (Low-Rank Adaptation)
+
+**LoRA** adapts a pretrained model without updating its full weight matrices. Every pretrained linear weight `W` is frozen (`requires_grad=False`), and a small trainable side branch of two skinny matrices `A` (`d_in × r`) and `B` (`r × d_out`) is added in parallel: `y = Wx + α((x @ A) @ B)`. Initializing `B` to all zeros ensures `A @ B = 0` at step 0, so training starts from the exact pretrained behavior without random noise.
+
+Even though all frozen base weights stay in GPU memory, LoRA cuts training VRAM sharply because FP32 AdamW stores **16 bytes per trainable parameter** across four buckets: weights (`4 B`), gradients (`4 B`), first moment `m` (`4 B`), and second moment `v` (`4 B`). Freezing the base weights eliminates the last three buckets (`12 B/param`) for ~98% of the model.
+
 ## Interval notation
 
 `[0,V)` means **0 is included, V is excluded**. For integer IDs and V=25, valid values are 0 through 24. `positions <= t` means positions up to and including t.
@@ -123,3 +162,7 @@ Our **transformer block** contains attention, feedforward, two LayerNorms, and t
 - [PyTorch Embedding](https://docs.pytorch.org/docs/stable/generated/torch.nn.Embedding.html)
 - [PyTorch CrossEntropyLoss](https://docs.pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html)
 - [PyTorch Module](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html)
+- [PyTorch scaled_dot_product_attention (SDPA)](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html)
+- [NVIDIA TensorRT accuracy considerations (FP32, TF32, FP16, BF16)](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/accuracy-considerations.html)
+- [FlashAttention paper (Dao et al., 2022)](https://arxiv.org/abs/2205.14135)
+- [LoRA paper (Hu et al., 2021)](https://arxiv.org/abs/2106.09685)
