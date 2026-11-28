@@ -27,17 +27,35 @@ def percentile(values: list[float], pct: float) -> float:
     return ordered[lo] + frac * (ordered[hi] - ordered[lo])
 
 
-def make_prompt(request_id: int, approx_words: int) -> str:
-    """Build a unique prompt of controlled length so prefix caching does not mask prefill."""
-    header = (
-        f"Request #{request_id}. Read the short engineering log below and reply in "
-        "plain sentences explaining the main bottleneck and one concrete fix.\n\n"
-    )
+def make_prompt(request_id: int, approx_words: int, shared_prefix: bool = False) -> str:
+    """Build a prompt of controlled length, optionally sharing a long prefix across requests."""
     if approx_words <= 25:
         return (
             f"Request #{request_id}: In one sentence, what is the capital of France "
             "and why is the Seine river associated with it?"
         )
+    if shared_prefix:
+        # Shared document first so vLLM Automatic Prefix Caching reuses its KV blocks;
+        # unique question at the tail so every request still computes a fresh answer.
+        header = (
+            "Shared engineering log for prefix-caching test. Read the log below and "
+            "answer the specific question at the end concisely.\n\n"
+        )
+        sentences = [
+            f"Batch 0-{i}: worker {i % 7} processed {(i * 13) % 97 + 10} records "
+            f"with queue wait {(i * 17) % 85 + 5} ms and cache hit ratio {60 + (i % 35)}%."
+            for i in range(max(1, approx_words // 18))
+        ]
+        tail = (
+            f"\n\nQuestion #{request_id}: Focusing on worker {request_id % 7}, "
+            "summarize the main bottleneck and one concrete fix in two sentences."
+        )
+        return header + " ".join(sentences) + tail
+
+    header = (
+        f"Request #{request_id}. Read the short engineering log below and reply in "
+        "plain sentences explaining the main bottleneck and one concrete fix.\n\n"
+    )
     sentences = [
         f"Batch {request_id}-{i}: worker {i % 7} processed {(i * 13) % 97 + 10} records "
         f"with queue wait {(i * 17) % 85 + 5} ms and cache hit ratio {60 + (i % 35)}%."
@@ -63,6 +81,8 @@ def parse_prometheus_metrics(text: str) -> dict[str, float]:
         "vllm:request_decode_time_seconds_count",
         "vllm:prompt_tokens_total",
         "vllm:generation_tokens_total",
+        "vllm:prefix_cache_hits_total",
+        "vllm:prefix_cache_queries_total",
         "vllm:num_preemptions_total",
         "vllm:kv_cache_usage_perc",
         "vllm:num_requests_running",
@@ -213,6 +233,7 @@ def run_benchmark(
     approx_words: int,
     max_tokens: int,
     target_p95_ttft_ms: float,
+    shared_prefix: bool = False,
 ) -> dict[str, object]:
     """Run a concurrent workload and summarize latency, throughput, and server deltas."""
     before_metrics = fetch_metrics(base_url)
@@ -224,7 +245,7 @@ def run_benchmark(
                 stream_chat_request,
                 base_url,
                 model,
-                make_prompt(i, approx_words),
+                make_prompt(i, approx_words, shared_prefix=shared_prefix),
                 max_tokens,
             )
             for i in range(total_requests)
@@ -254,11 +275,20 @@ def run_benchmark(
             return (d_sum / d_cnt) * 1000.0
         return None
 
+    cache_hits = delta("vllm:prefix_cache_hits_total")
+    cache_queries = delta("vllm:prefix_cache_queries_total")
+    cache_hit_pct = (
+        round((cache_hits / cache_queries) * 100.0, 1)
+        if cache_hits is not None and cache_queries and cache_queries > 0
+        else None
+    )
+
     p95_ttft = percentile(ttfts, 95) if ttfts else None
     return {
         "concurrency": concurrency,
         "total_requests": total_requests,
         "approx_words": approx_words,
+        "shared_prefix": shared_prefix,
         "max_tokens": max_tokens,
         "completed": len(ok_runs),
         "errors": len(errors),
@@ -274,6 +304,7 @@ def run_benchmark(
         }
         if ttfts and p95_ttft is not None
         else None,
+        "per_request_ttft_ms": [round(t, 1) for t in ttfts] if shared_prefix else None,
         "total_ms": {
             "p50": round(percentile(totals, 50), 1),
             "p95": round(percentile(totals, 95), 1),
@@ -297,6 +328,7 @@ def run_benchmark(
             if (v := server_mean_ms("vllm:request_decode_time_seconds")) is not None
             else None,
             "preemptions": delta("vllm:num_preemptions_total"),
+            "prefix_cache_hit_pct": cache_hit_pct,
         },
         "error_samples": errors[:3],
     }
@@ -315,6 +347,7 @@ def main() -> None:
     parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument("--requests", type=int, default=8)
     parser.add_argument("--approx-words", type=int, default=20)
+    parser.add_argument("--shared-prefix", action="store_true")
     parser.add_argument("--target-p95-ttft-ms", type=float, default=500.0)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
@@ -340,6 +373,7 @@ def main() -> None:
         args.approx_words,
         args.max_tokens,
         args.target_p95_ttft_ms,
+        shared_prefix=args.shared_prefix,
     )
     print(json.dumps(report, indent=2))
     if args.output is not None:
