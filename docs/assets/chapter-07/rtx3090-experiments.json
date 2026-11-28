@@ -1,0 +1,324 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3090",
+  "torch_version": "2.14.1+cu126",
+  "baseline_train_seconds": 53.777332613,
+  "baseline_peak_allocated_bytes": 8277731840,
+  "model_checkpoint_bytes": 1725930431,
+  "lora_adapters_bytes": 31682723,
+  "comparisons": {
+    "baseline": {
+      "style": "alpaca",
+      "total_parameters": 406286336,
+      "trainable_parameters": 406286336,
+      "mean_train_tokens": 56.43,
+      "train_seconds": 53.78,
+      "peak_allocated_bytes": 8277731840,
+      "generation_seconds": 30.83,
+      "answer_target_count": 1454,
+      "answer_cross_entropy": 1.1737,
+      "chef_response": "The meal is cooked every day by the chef.",
+      "judge_scored_count": 110,
+      "judge_total_count": 110,
+      "judge_mean": 59.36,
+      "judge_invalid": [],
+      "spelling": [
+        {
+          "instruction": "Identify the correct spelling: 'recieve' or 'receive'.",
+          "input": "",
+          "reference": "The correct spelling is 'receive'.",
+          "responses": {
+            "alpaca": "The correct spelling is 'receive'.",
+            "phi": "What is the correct spelling of 'benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'? 'Benevolent'?",
+            "mistral": "### Instruction:\nWhat is the plural form of 'book'?\n\n### Response:\nThe plural form of 'book' is 'bibli'.",
+            "gemma2": "Identify the correct spelling: 'model' or 'model'.<end_of_turn>",
+            "gemma4": "Identify the correct spelling: 'model' or 'model'.<turn|>\n<|turn>book\nIdentify the correct spelling: 'book' or 'book'.<turn|>\n<|turn>music\nIdentify the correct spelling: 'music' or 'music'.<turn|>\n<|turn>bookshelf\nIdentify the correct spelling: 'bookshelf' or 'bookshelf'.<turn|>\n<|turn>bookshelf\nIdentify the correct spelling: 'bookshelf' or 'bookshelf'.<turn|>\n<|turn>bookshelf\nIdentify the correct spelling: 'bookshelf' or 'bookshelf'.<turn|>\n<|turn>bookshelf\nIdentify the correct spelling: 'bookshelf' or 'bookshelf'.<turn|>\n<|turn>bookshelf\nIdentify the correct spelling: 'bookshelf' or 'bookshelf'.<turn|>\n<|turn>bookshelf\nIdentify the correct spelling: 'bookshelf' or 'bookshelf'.<turn|>\n<|turn>bookshelf\nIdentify",
+            "qwen2": "Identify the correct spelling: 'assist' or 'assist'.<|im_end|>\n<|im_start|>client\nIdentify the correct spelling: 'client' or 'client'.<|im_end|>\n<|im_start|>server\nIdentify the correct spelling: 'server' or 'server'.<|im_end|>",
+            "qwen3": "### Input:\nI am a teacher.\n\n### Response:\nI am a teacher."
+          }
+        },
+        {
+          "instruction": "Edit the given text to ensure all plural nouns are spelled correctly.",
+          "input": "The birds sings beautiful songs.",
+          "reference": "The birds sing beautiful songs.",
+          "responses": {
+            "alpaca": "The birds sings beautiful songs.",
+            "phi": "The assistant helps you.<|start|>\n<|book|>\n<|bookshelf|>\n<|bookshelf2|>\n<|bookshelf3|>\n<|bookshelf4|>\n<|bookshelf5|>\n<|bookshelf6|>\n<|bookshelf7|>\n<|bookshelf8|>\n<|bookshelf9|>\n<|bookshelf10|>\n<|bookshelf11|>\n<|bookshelf12|>\n<|bookshelf13|>\n<|bookshelf14|>\n<|bookshelf15|>\n<|bookshelf16|>\n<|bookshelf17|>\n<|bookshelf18|>\n<|bookshelf19|>\n<|bookshelf20|>\n<|bookshelf21|>\n<|bookshelf22|>\n<|bookshelf23|>\n<|bookshelf24|>\n<|bookshelf25|>\n<|bookshelf26|>\n<|bookshelf27|",
+            "mistral": "The birds sang beautiful songs. [/INST]",
+            "gemma2": "Edit the given text to ensure all plural nouns are spelled correctly.",
+            "gemma4": "The model shows a model.\nThe song is beautiful.\nThe bird sings a song.",
+            "qwen2": "Edit the given text to ensure all plural nouns are spelled correctly.",
+            "qwen3": "### Input:\nThe birds sings beautiful songs.\n\n### Response:\nThe birds sings beautiful songs."
+          }
+        },
+        {
+          "instruction": "Correct any spelling mistakes in the given sentence.",
+          "input": "I prefer homemade cookies to store boaght.",
+          "reference": "I prefer homemade cookies to store bought.",
+          "responses": {
+            "alpaca": "I prefer homemade cookies to store boaght.",
+            "phi": "What is the capital of the Netherlands?",
+            "mistral": "",
+            "gemma2": "What is your name?\n<end_of_turn>\n<start_of_turn>me\n<end_of_turn>",
+            "gemma4": "What is the melting point of iron in Celsius?",
+            "qwen2": "What is the capital of the Netherlands?",
+            "qwen3": "### Instruction:\nWhat is the capital of the United Kingdom?\n\n### Response:\nThe capital of the United Kingdom is London."
+          }
+        }
+      ]
+    },
+    "phi": {
+      "style": "phi",
+      "total_parameters": 406286336,
+      "trainable_parameters": 406286336,
+      "mean_train_tokens": 43.49,
+      "train_seconds": 45.66,
+      "peak_allocated_bytes": 8275665408,
+      "generation_seconds": 26.78,
+      "answer_target_count": 1454,
+      "answer_cross_entropy": 1.1678,
+      "chef_response": "The meal is cooked every day by the chef.",
+      "judge_scored_count": 109,
+      "judge_total_count": 110,
+      "judge_mean": 57.11,
+      "judge_invalid": [
+        {
+          "index": 31,
+          "raw_reply": "I would rate the candidate answer as 20. The phrase \"It's a piece of cake\" is indeed a cliché, and the instruction asks for it to be rewritten. While the candidate simply repeats the original phrase, I would expect a more creative or unique rephrasing that conveys the same meaning without using the clichéd expression."
+        }
+      ]
+    },
+    "masked": {
+      "style": "alpaca",
+      "total_parameters": 406286336,
+      "trainable_parameters": 406286336,
+      "mean_train_tokens": 56.43,
+      "train_seconds": 52.71,
+      "peak_allocated_bytes": 8275781120,
+      "generation_seconds": 34.93,
+      "answer_target_count": 1454,
+      "answer_cross_entropy": 1.1327,
+      "chef_response": "The meal is cooked every day by the chef.",
+      "judge_scored_count": 109,
+      "judge_total_count": 110,
+      "judge_mean": 60.05,
+      "judge_invalid": [
+        {
+          "index": 31,
+          "raw_reply": "I would rate the candidate answer as 80. The phrase \"A piece of cake\" is a common idiomatic expression that conveys the idea that something is easy, but it's not exactly rewritten. A more creative and original rephrasing could be \"It's a breeze\", which still conveys the same meaning without using the cliché phrase."
+        }
+      ]
+    },
+    "lora": {
+      "style": "alpaca",
+      "total_parameters": 414184720,
+      "trainable_parameters": 7898384,
+      "mean_train_tokens": 56.43,
+      "train_seconds": 45.32,
+      "peak_allocated_bytes": 4580435968,
+      "generation_seconds": 45.66,
+      "answer_target_count": 1454,
+      "answer_cross_entropy": 1.2191,
+      "chef_response": "The meal was cooked by the chef.",
+      "judge_scored_count": 109,
+      "judge_total_count": 110,
+      "judge_mean": 57.2,
+      "judge_invalid": [
+        {
+          "index": 108,
+          "raw_reply": "I would rate the candidate answer a 20, as it does not use a negative adverb and instead changes the meaning of the sentence entirely by removing the word \"remembers\" and making it a statement about her actions rather than her memory. The correct answer uses the negative adverb \"never\" to convey the opposite idea that she always remembers to call."
+        }
+      ]
+    }
+  },
+  "judge": {
+    "meta": {
+      "ollama_version": "0.20.0",
+      "model": {
+        "name": "llama3:8b",
+        "digest": "365c0bd3c000a25d28ddbf732fe1c6add414de7275464c4e4d1c3b5fcb5d8ad1",
+        "size": 4661224676,
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "llama",
+          "families": [
+            "llama"
+          ],
+          "parameter_size": "8.0B",
+          "quantization_level": "Q4_0"
+        }
+      }
+    },
+    "deterministic_repeats": [
+      {
+        "temperature": 0.0,
+        "seed": 123,
+        "scored_count": 110,
+        "total_count": 110,
+        "mean": 59.36,
+        "seconds": 26.4
+      },
+      {
+        "temperature": 0.0,
+        "seed": 123,
+        "scored_count": 110,
+        "total_count": 110,
+        "mean": 59.36,
+        "seconds": 25.8
+      },
+      {
+        "temperature": 0.0,
+        "seed": 123,
+        "scored_count": 110,
+        "total_count": 110,
+        "mean": 59.36,
+        "seconds": 26.3
+      }
+    ],
+    "sampled_repeats": [
+      {
+        "temperature": 0.8,
+        "seed": 123,
+        "scored_count": 108,
+        "total_count": 110,
+        "mean": 60.42,
+        "seconds": 26.3,
+        "invalid_count": 2
+      },
+      {
+        "temperature": 0.8,
+        "seed": 456,
+        "scored_count": 108,
+        "total_count": 110,
+        "mean": 62.22,
+        "seconds": 27.3,
+        "invalid_count": 2
+      },
+      {
+        "temperature": 0.8,
+        "seed": 789,
+        "scored_count": 110,
+        "total_count": 110,
+        "mean": 59.36,
+        "seconds": 26.3,
+        "invalid_count": 0
+      }
+    ],
+    "sampled_range": 2.86,
+    "first_three_explanations": [
+      {
+        "instruction": "Rewrite the sentence using a simile.",
+        "input": "The car is very fast.",
+        "reference": "The car is as fast as lightning.",
+        "model_response": "The car is as fast as a bullet.",
+        "explanation": "I would rate the candidate answer \"The car is as fast as a bullet\" an 80.\n\nThe reason I wouldn't give it a perfect score is that while it's a good simile, it's not exactly equivalent to the reference answer \"The car is as fast as lightning\". Lightning is often used as a metaphor for speed and suddenness, whereas a bullet is more commonly associated with violence or danger. While both are fast-moving objects, they evoke different connotations.\n\nThat being said, \"as fast as a bullet\" is still a strong simile that effectively conveys the idea of the car's speed. It's a common idiomatic expression that many people would understand and relate to. If I were to give it a score out of 100, I'd say it's around 80 because while it's not exactly equivalent to the reference answer, it's still a good simile that effectively conveys the idea of speed.\n\nHere are some alternative answers that might be considered correct:\n\n* The car is as fast as a speeding bullet. (This one incorporates the phrase \"speeding\" to emphasize the car's velocity.)\n* The car is as swift as a bullet.\n* The car moves with the speed of a bullet.\n\nThese alternatives all use the idea of a bullet to convey the car's speed, but in slightly different ways that might be considered correct."
+      },
+      {
+        "instruction": "What type of cloud is typically associated with thunderstorms?",
+        "input": "",
+        "reference": "The type of cloud typically associated with thunderstorms is cumulonimbus.",
+        "model_response": "The type of cloud associated with thunderstorms is a cumulus cloud.",
+        "explanation": "I would rate the candidate answer as 40 out of 100.\n\nThe reason for this rating is that while the candidate mentions \"thunderstorms\", they incorrectly identify the type of cloud associated with them. Cumulus clouds are not typically associated with thunderstorms, whereas cumulonimbus clouds are. The correct answer should have mentioned cumulonimbus or a similar phrase to convey the correct information.\n\nThe candidate's answer is partially related to the instruction, but it does not accurately fulfill the requirement. Therefore, I would rate it as 40 out of 100."
+      },
+      {
+        "instruction": "Name the author of 'Pride and Prejudice'.",
+        "input": "",
+        "reference": "Jane Austen.",
+        "model_response": "The author of 'Pride and Prejudice' is Jane Austen.",
+        "explanation": "I would rate the candidate answer a 100.\n\nThe reason for this high rating is that the candidate answer not only correctly identifies the author of 'Pride and Prejudice' as Jane Austen, but also does so in a clear and concise manner. The answer is direct and to the point, providing exactly what was asked for in the instruction. There is no ambiguity or uncertainty in the response, making it a perfect match for the given task.\n\nIn fact, I would argue that the candidate answer is not only correct but also exceeds the minimum requirements of the instruction. It provides a clear and definitive statement about the authorship of 'Pride and Prejudice', which goes beyond simply naming the author. This level of detail and clarity demonstrates a strong understanding of the instruction and a willingness to provide a thorough response.\n\nOverall, I believe that the candidate answer is an excellent example of how to fulfill the instruction, and it deserves a score of 100."
+      }
+    ]
+  },
+  "alpaca_pilots": {
+    "bs8": {
+      "total_records": 52002,
+      "split_sizes": {
+        "train": 44201,
+        "test": 5200,
+        "val": 2601
+      },
+      "train_length_stats": {
+        "min": 36,
+        "median": 92,
+        "mean": 107.50695685617973,
+        "p95": 210,
+        "p99": 319,
+        "max": 1510,
+        "over_1024": 2
+      },
+      "batches_per_epoch": 5525,
+      "random_pilot": {
+        "updates": 50,
+        "seconds": 14.78,
+        "updates_per_second": 3.38,
+        "tokens_per_second": 5046.3,
+        "mean_width": 186.48,
+        "peak_allocated_bytes": 16712350720
+      },
+      "longest_batches_status": "oom",
+      "longest_batches_peak_allocated_bytes": null,
+      "projected_minutes_one_epoch": 27.2,
+      "projected_minutes_two_epochs": 54.4
+    },
+    "bs4": {
+      "total_records": 52002,
+      "split_sizes": {
+        "train": 44201,
+        "test": 5200,
+        "val": 2601
+      },
+      "train_length_stats": {
+        "min": 36,
+        "median": 92,
+        "mean": 107.50695685617973,
+        "p95": 210,
+        "p99": 319,
+        "max": 1510,
+        "over_1024": 2
+      },
+      "batches_per_epoch": 11050,
+      "random_pilot": {
+        "updates": 50,
+        "seconds": 7.8,
+        "updates_per_second": 6.41,
+        "tokens_per_second": 3888.9,
+        "mean_width": 151.58,
+        "peak_allocated_bytes": 10930978304
+      },
+      "longest_batches_status": "oom",
+      "longest_batches_peak_allocated_bytes": null,
+      "projected_minutes_one_epoch": 28.7,
+      "projected_minutes_two_epochs": 57.4
+    },
+    "bs2": {
+      "total_records": 52002,
+      "split_sizes": {
+        "train": 44201,
+        "test": 5200,
+        "val": 2601
+      },
+      "train_length_stats": {
+        "min": 36,
+        "median": 92,
+        "mean": 107.50695685617973,
+        "p95": 210,
+        "p99": 319,
+        "max": 1510,
+        "over_1024": 2
+      },
+      "batches_per_epoch": 22100,
+      "random_pilot": {
+        "updates": 50,
+        "seconds": 5.51,
+        "updates_per_second": 9.07,
+        "tokens_per_second": 2335.8,
+        "mean_width": 128.76,
+        "peak_allocated_bytes": 8380336640
+      },
+      "longest_batches_status": "ok",
+      "longest_batches_peak_allocated_bytes": 16121454592,
+      "projected_minutes_one_epoch": 40.6,
+      "projected_minutes_two_epochs": 81.2
+    }
+  }
+}

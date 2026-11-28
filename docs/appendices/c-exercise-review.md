@@ -38,16 +38,16 @@ This review compares the companion’s recorded work with the printed solutions 
 
 [Chapter 6 setup and comparison tables](../chapters/06-finetuning-for-text-classification.md)
 
-## Chapter 7 · Reference results for the Linux runs
+## Chapter 7 · RTX 3090 runs versus Appendix C
 
-The baseline two-epoch instruction fine-tune ran on our RTX 3090. These four exercise comparisons are pending in the handoff. The figures below describe the author's runs.
+All four Chapter 7 exercises ran on the Linux RTX 3090 from the same pretrained GPT-2 Medium checkpoint and 85/10/5 split, scored by local `llama3:8b` (Ollama `0.20.0`, `Q4_0`, `temperature=0`, `seed=123`). Under that judge, the two-epoch Alpaca baseline scored **59.36/100** (`110/110`) with held-out answer cross-entropy **1.174** in **53.8 s** (8.28 GB peak VRAM). [Recorded RTX 3090 experiment metrics](../assets/chapter-07/rtx3090-experiments.json)
 
-| Exercise | Appendix C comparison to make |
-| --- | --- |
-| 7.1 · Prompt style | Train and extract replies using matching Phi-3 markers. The author reports similar quality and about 17% faster training with shorter inputs. Trying a template only at inference answers a different question. |
-| 7.2 · Instruction masking | Keep the prompt visible and exclude its targets from loss. The author’s judge score fell by about four points. Check the direction on our held-out replies. |
-| 7.3 · Original Alpaca | The appendix switches to the larger instruction dataset and inspects generated replies. Our plan adds a throughput and memory pilot before the full comparison. |
-| 7.4 · LoRA | The appendix freezes the base weights and uses rank 16 and alpha 16. On an L4 it reports 1.30 minutes versus 1.80 minutes for full tuning, with a judge score around 50. Measure time and quality anew on the 3090. |
+| Exercise | Our RTX 3090 evidence | Appendix C reference |
+| --- | --- | --- |
+| 7.1 · Prompt style | Mismatched templates at inference broke all 3 held-out spelling items (`0/3` across Phi-3, Mistral, Gemma 2/4, and Qwen 2.5/3.8). Training and evaluating with matching Phi-3 markers shortened mean training inputs by 22.9% (56.4 to 43.5 tokens), cut training time by 15.1% (45.7 s vs 53.8 s), reached answer cross-entropy **1.168**, and scored **57.11/100** (`109/110`; 56.77 with 1 prose reply). | Similar quality and about 17% faster training with shorter Phi-3 inputs. |
+| 7.2 · Instruction masking | Masking the entire prompt including `\n\n### Response:\n` required supplying `### Response:\n` at inference (omitting it made the model emit `<|endoftext|>` immediately). With aligned prompts, two epochs took **52.7 s**, improved held-out answer cross-entropy from **1.174** to **1.133**, and scored **60.05/100** (`109/110`; 60.23 with 1 prose reply) — within judge variance of the 59.36 baseline. | The author’s judge score fell by about four points under his setup. |
+| 7.3 · Original Alpaca | Timed pilots on all 52,002 records (44,201 train, mean 107.5 tokens, p99 319, max 1,510). In FP32, `batch_size=8` and `batch_size=4` both OOMed on the 1,024-token longest batches. `batch_size=2` succeeded at **16.12 GB** peak VRAM and projected **~40.6 min/epoch** (~81.2 min for two epochs). Full 52k training was held back pending that budget decision. | Switches to the 52k dataset and inspects generated replies. |
+| 7.4 · LoRA | Freezing the 406.3M base weights and adding rank-16, alpha-16 adapters trained **7,898,384** parameters (1.94% of base), cut peak VRAM by **44.7%** (4.58 GB vs 8.28 GB) and time by **15.7%** (45.3 s vs 53.8 s), saved a **31.7 MB** adapter file (vs 1.73 GB full checkpoint), reached answer cross-entropy **1.219**, and scored **57.20/100** (`109/110`; 56.86 with 1 prose reply). | Freezes base weights with rank 16 and alpha 16; on an L4 reports 1.30 min vs 1.80 min for full tuning with judge score around 50. |
 
 [Chapter 7 exercises and baseline](../chapters/07-finetuning-to-follow-instructions.md)
 

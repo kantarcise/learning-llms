@@ -141,7 +141,11 @@ prompts = {
 
 Compare the last two rows. Both open the assistant turn the same way. Qwen3.8’s published template adds an empty thinking block when direct-answer mode is requested. For our GPT checkpoint those characters are simply more input text. In the Gemma rows, even the spelling of the turn boundary changes between generations. [Gemma format reference](https://ai.google.dev/gemma/docs/core/prompt-structure) · [Gemma 4 template](https://huggingface.co/google/gemma-4-E2B-it/blob/main/chat_template.jinja) · [Qwen2.5 template](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/tokenizer_config.json) · [Qwen3.8 template](https://huggingface.co/Qwen/Qwen3.8-27B/blob/main/chat_template.jinja) · [Mistral v0.1 format](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1)
 
-A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following. The formatting examples can run now. The response-quality comparison comes after the fine-tuning run in §7.6.
+A second experiment asks whether the **training format** matters. Start each run from the same pretrained GPT weights, format the same training examples in one style per run, and evaluate each model in its own style. Keep the split, optimizer settings, seed, and decoding settings fixed. Score the same held-out requests for correctness and instruction following.
+
+**RTX 3090 results.** Testing the Alpaca-tuned checkpoint on the three held-out spelling items in the 110-example test set confirms how strongly inference depends on the training template. Under Alpaca (`### Response:\n`), the checkpoint corrected `'recieve'` to `'receive'` and missed the two subtler edits (`The birds sings` and `store boaght`) while staying on format. Under all six mismatched templates (Phi-3, Mistral v0.1, Gemma 2 IT, Gemma 4 E2B-it, Qwen2.5-7B-Instruct, and Qwen3.8-27B), it solved **0 of 3**: Phi-3 and Gemma 4 looped on repeated tokens and synthetic turn markers (`'Benevolent'?`, `<|bookshelf2|>`, `<|turn>bookshelf`), Mistral and Qwen3 fell back to emitting `### Instruction:` / `### Response:` headings, and several templates generated unrelated questions.
+
+Training and evaluating from scratch with matching **Phi-3** markers behaved very differently. Dropping Alpaca’s boilerplate reduced mean training length by **22.9%** (56.43 to 43.49 tokens) and cut two-epoch RTX 3090 training time by **15.1%** (53.8 s to 45.7 s), close to Raschka’s reported ~17% speedup. Held-out answer cross-entropy was **1.168** versus **1.174** for Alpaca, and the local Llama 3 8B judge scored **57.11/100** across 109 strict-integer replies (56.77 including one prose reply rated 20) versus **59.36/100** (110/110) for Alpaca. [Recorded comparison metrics](../assets/chapter-07/rtx3090-experiments.json)
 
 ### Splitting the 1,100 examples
 
@@ -399,7 +403,7 @@ NVIDIA’s published Nemotron 3 Nano supervised fine-tuning recipe gives user an
 
 The 2024 study *Instruction Tuning With Loss Over Instructions* found that scoring instructions helped in its experiments, particularly with few training examples or long prompts paired with short answers. That makes the chapter’s 935 training examples an interesting place to test the choice. [NeurIPS paper](https://proceedings.neurips.cc/paper_files/paper/2024/hash/7ffb43adf37b3eeaba559098bc084cc6-Abstract-Conference.html)
 
-**Return after §7.8.** Save the chapter’s baseline and its responses. Start a second run from the same pretrained GPT weights, keeping the split, template, batch order, optimizer, seed and epochs fixed. Change only the target mask. Score both models on the same held-out instructions with the same decoding settings and rubric. For a numerical comparison, compute held-out loss over answer tokens for both models. Their training losses average over different token sets.
+**RTX 3090 results.** Masking every prompt token through `\n\n### Response:\n` taught an immediate boundary lesson: when we first prompted the masked checkpoint with `format_input(entry)` alone (without `### Response:\n`), it emitted `<|endoftext|>` right away because it had never been trained to predict the response heading. Supplying the matching `### Response:\n` prefix at inference fixed generation cleanly. Across two epochs on the RTX 3090 (**52.7 s**, 8.28 GB peak VRAM), held-out cross-entropy over the 1,454 answer and stop tokens improved from **1.174** (baseline) to **1.133** (masked). Under local Llama 3 8B judging (`temperature=0`, `seed=123`), the masked model scored **60.05/100** across 109 strict-integer replies (60.23 including one prose reply rated 80) versus **59.36/100** (110/110) for the unmasked baseline — effectively tied within judge variance. [Recorded comparison metrics](../assets/chapter-07/rtx3090-experiments.json)
 
 ## 7.4 Creating data loaders for an instruction dataset
 
@@ -582,7 +586,17 @@ In the book, both losses fall rapidly early on. Validation improves more slowly 
 
 ### Exercise 7.3 · Fine-tune on the original Alpaca dataset
 
-Stanford’s original dataset has 52,002 instruction examples. That is about 47 times the size of the book’s entire 1,100-example dataset, and sequence length also affects cost. For the RTX 3090 run, start from the same pretrained Medium checkpoint, keep a held-out split, and time a short series of updates including long batches. Use measured throughput and peak GPU memory to budget the full run. If memory is tight, reduce batch size first; a shorter context limit also fits more easily but can cut off part of a response. Compare the saved answers on common held-out prompts to see what the additional examples taught the model. [Stanford Alpaca dataset and training details](https://github.com/tatsu-lab/stanford_alpaca#data-release)
+Stanford’s original dataset has **52,002** instruction examples — about 47 times the book’s 1,100-example dataset — and its sequences are also longer. Applying the same 85/10/5 split gives **44,201** training, **5,200** test, and **2,601** validation records. On the training split, tokenized length jumps from a mean of 56.4 tokens (chapter dataset) to **107.5 tokens** (median 92, p95 210, p99 319, max 1,510, with only 2 examples above 1,024).
+
+Before committing to a full run, we timed 50 random training updates plus the five longest batches (width capped at 1,024) on the RTX 3090 in FP32 with GPT-2 Medium and AdamW:
+
+| Batch size | Updates / epoch | Random-batch throughput | Peak VRAM (random) | Longest batches (width ≤ 1,024) | Projected 1 epoch / 2 epochs |
+| ---: | ---: | ---: | ---: | --- | --- |
+| 8 | 5,525 | 3.38 updates/s (5,046 tok/s) | 16.71 GB | **OOM** (> 23.6 GiB) | ~27.2 min / ~54.4 min |
+| 4 | 11,050 | 6.41 updates/s (3,889 tok/s) | 10.93 GB | **OOM** (> 23.6 GiB) | ~28.7 min / ~57.4 min |
+| 2 | 22,100 | 9.07 updates/s (2,336 tok/s) | 8.38 GB | **OK (16.12 GB peak)** | ~40.6 min / ~81.2 min |
+
+Testing the longest batches early prevented a mid-run crash: in naive FP32 without FlashAttention or mixed precision, both `batch_size=8` and `batch_size=4` ran out of memory when a batch approached 1,024 tokens. Dropping to `batch_size=2` fits safely at 16.12 GB peak and projects ~41 minutes per epoch. Since 99% of training examples are 319 tokens or shorter, capping `allowed_max_length` (for example at 512) or enabling BF16/SDPA would let larger batches fit without losing nearly any responses. [Stanford Alpaca dataset and training details](https://github.com/tatsu-lab/stanford_alpaca#data-release) · [Pilot measurements](../assets/chapter-07/rtx3090-experiments.json)
 
 ## 7.7 Extracting and saving responses
 
@@ -666,7 +680,7 @@ assert all("model_response" in entry for entry in saved_entries)
 print(json.dumps(saved_entries[0], indent=2, ensure_ascii=False))
 ```
 
-The JSON lets us revisit what the model said. To ask it a *new* question tomorrow, save the fine-tuned weights too. Our RTX 3090 training script already writes this state dictionary as `model.pth` in the run directory.
+The JSON lets us revisit what the model said. On the RTX 3090, generating all **110 held-out replies** from the saved `model.pth` checkpoint took **30.8 seconds** with greedy decoding (`max_new_tokens=256`). Its first three replies matched the book’s examples verbatim: *“The car is as fast as a bullet.”*, *“The type of cloud associated with thunderstorms is a cumulus cloud.”*, and *“The author of 'Pride and Prejudice' is Jane Austen.”* To ask the model a *new* question tomorrow, keep the fine-tuned weights too. Our RTX 3090 training script already writes this state dictionary as `model.pth` in the run directory.
 
 ```python
 torch.save(model.state_dict(), "model.pth")
@@ -767,9 +781,13 @@ scores = generate_model_scores(entries)
 print(f"{len(scores)} of {len(entries)} scored. Mean: {mean(scores):.2f}/100")
 ```
 
-Raschka reports **110 of 110 scored, mean 50.32/100**, in about a minute on his M3 MacBook Air. A mean of 50.32 could come from mostly partial answers or from a mixture of excellent and poor answers. Inspect individual replies to tell the difference. The book’s result is a reference for the upcoming Linux run. Our prompt is adapted, and even fixed decoding settings can give different scores across environments.
+Raschka reports **110 of 110 scored, mean 50.32/100**, in about a minute on his M3 MacBook Air. A mean of 50.32 could come from mostly partial answers or from a mixture of excellent and poor answers. Inspect individual replies to tell the difference.
 
-To measure variation in the judge, keep the saved GPT-2 replies fixed and score them several times. Record each run’s mean and the range before averaging. Repeating a judgment helps reveal variability. A judge that consistently rewards a fluent factual error can still make the same mistake on every run.
+**RTX 3090 judge results.** We scored the 110 saved baseline replies locally using **Ollama `0.20.0`** serving **`llama3:8b`** (`Q4_0`, 4.66 GB, digest `365c0bd3c000`) with the adapted Listing 7.10/7.11 prompt above.
+
+- **Fixed-setting repeatability (`temperature=0`, `seed=123`):** Three full passes each scored **110 of 110** replies in ~26.2 s per pass and returned identical means: **59.36, 59.36, and 59.36 / 100** (range **0.00**). The distribution was strongly **bimodal**, not clustered near 60: 1 score of `0`, 40 scores in `1–39`, only 9 in `40–69`, 38 in `70–89`, and 22 in `90–100`.
+- **Sampling variation (`temperature=0.8`, Ollama’s default, seeds `123`, `456`, `789`):** Run means varied across **60.42** (`108/110`), **62.22** (`108/110`), and **59.36** (`110/110`) — a **2.86-point range** (mean of means **60.67**). Four replies under sampling returned prose explanations instead of a bare integer, which our strict validator flagged rather than silently dropping. Individual items swung widely across seeds: *“What is the opposite of 'horizontal'?”* (model replied *“The opposite of 'vertical' is 'horizontal'.”*) received `[50, 100, 20]`.
+- **Judgments worth reviewing:** On the first three entries, asking for an explanation gave **80** for the bullet simile, **40** for the cumulus cloud error, and **100** for Jane Austen — yet asking for a single integer without an explanation raised the cumulus cloud score from **40 to 60**. Worse, on *“Convert 1000 grams to kilograms.”*, the model wrote *“1000 grams is 0.1 kilograms.”* (wrong by a factor of 10), and the deterministic judge consistently awarded **80/100**. Repeat runs measure variance, not correctness: a judge can repeat the same grading mistake every time. [Full judge logs and explanations](../assets/chapter-07/rtx3090-experiments.json)
 
 On page 247, Raschka reports **58.51/100 for Llama 3 8B Base** and **82.6/100 for Llama 3 8B Instruct** as candidates under the book’s evaluation method. Both checkpoints have the same nominal size. The instruct version has received additional training to follow requests. **8B** counts billions of parameters. **8-bit** describes numerical precision.
 
@@ -777,7 +795,16 @@ To investigate a weak score, read a few low-scoring replies first. If the model 
 
 ### Exercise 7.4 · Compare full fine-tuning with LoRA
 
-Appendix E shows how to freeze a pretrained weight matrix and train two smaller matrices whose product supplies an update. The next Linux experiment can start from the same pretrained GPT-2 Medium weights as our full fine-tune. Keep the split, two-epoch budget, and evaluation procedure fixed. Compare trainable parameter count, training time, and held-out reply quality. The full fine-tune took 53.8 seconds on the RTX 3090. The LoRA run and its scores are pending.
+Appendix E freezes every pretrained weight matrix and adds two low-rank matrices (`rank=16`, `alpha=16`, applied directly as `alpha * (x @ A @ B)`) to each `nn.Linear` layer in GPT-2 Medium. Starting from the same pretrained checkpoint, split, two-epoch budget, optimizer settings, and seed on the RTX 3090 gives a direct comparison across all four Chapter 7 variants under the same deterministic `llama3:8b` judge:
+
+| Variant | Trainable params | Peak VRAM | Train time (2 epochs) | Test answer CE (1,454 tokens) | Llama 3 8B mean (`temp=0`) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Full fine-tune (Alpaca baseline) | 406,286,336 (100%) | 8.28 GB | 53.8 s | 1.174 | **59.36** (`110/110`) |
+| Phi-3 prompt template (Ex 7.1) | 406,286,336 (100%) | 8.28 GB | 45.7 s | 1.168 | **57.11** (`109/110`; 56.77 w/ 1 prose) |
+| Response-only masked loss (Ex 7.2) | 406,286,336 (100%) | 8.28 GB | 52.7 s | **1.133** | **60.05** (`109/110`; 60.23 w/ 1 prose) |
+| LoRA `r=16, α=16` (Ex 7.4) | **7,898,384 (1.94%)** | **4.58 GB** | **45.3 s** | 1.219 | **57.20** (`109/110`; 56.86 w/ 1 prose) |
+
+LoRA trained **1.94%** of the base parameter count, cut peak GPU memory by **44.7%** (4.58 GB vs 8.28 GB, because optimizer states and gradients exist only for the 7.9M adapter weights), ran **15.7% faster** (45.3 s vs 53.8 s), and saved a **31.7 MB** adapter checkpoint (`adapters.pth`) compared to **1.73 GB** for the full fine-tuned model (`model.pth`). Held-out quality trailed full fine-tuning slightly (answer cross-entropy 1.219 vs 1.174; judge mean 57.20 vs 59.36), with the small gap close to the judge’s own multi-point noise. [Recorded comparison metrics](../assets/chapter-07/rtx3090-experiments.json)
 
 ## 7.9 Conclusions
 
