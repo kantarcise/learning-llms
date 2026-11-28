@@ -586,7 +586,56 @@ Stanford’s original dataset has 52,002 instruction examples. That is about 47 
 
 ## 7.7 Extracting and saving responses
 
-Notes to come as we read this section.
+The two-epoch run lowered validation loss. Now give the fine-tuned model an instruction it did not train on and read what it writes. Keep the reference answer aside until the model has finished generating.
+
+<figure markdown="1">
+
+![The first six steps are complete. Steps 7 and 8 extract held-out responses and compare sample answers. Step 9 scores responses later.](../assets/chapter-07/extract-responses-roadmap.svg)
+
+<figcaption>Companion to Raschka’s Figure 7.18. Reading a few answers helps us decide what a later evaluation should reward.</figcaption>
+</figure>
+
+### Read three held-out answers
+
+The generation function returns the prompt and its continuation together. If the prompt contained 40 tokens, the first new token is at index 40. Slice there before decoding, then remove the response heading if the model wrote one.
+
+```python
+model.eval()
+with torch.inference_mode():
+    for entry in test_data[:3]:
+        prompt = format_input(entry)  # Instruction and optional input only.
+        prompt_ids = torch.tensor([tokenizer.encode(prompt)], device=device)
+        output_ids = generate(
+            model, prompt_ids, max_new_tokens=256,
+            context_size=config["context_length"], eos_id=50256,
+        )
+        new_ids = output_ids[0, prompt_ids.shape[1]:]
+        response = tokenizer.decode(new_ids.tolist()).strip()
+        print(prompt)
+        print("Reference:", entry["output"])
+        print("Model:", response.removeprefix("### Response:").strip())
+```
+
+Here are the three comparisons from **the book’s run**, summarized in our own words.
+
+| Task | Reference | Model answer | How would we grade it? |
+| --- | --- | --- | --- |
+| Write a simile for a fast car | Compares its speed to lightning | Compares its speed to a bullet | Both satisfy the instruction. An exact-text check would reject a valid answer. |
+| Name the cloud associated with thunderstorms | Cumulonimbus | Cumulus | The terms are related, but the answer misses the specific cloud type. |
+| Name the author of *Pride and Prejudice* | Jane Austen | Names Jane Austen in a sentence | Correct. The extra words preserve the answer. |
+
+### Three ways to evaluate an instruction-following model
+
+| Method | What gets measured? | What might it miss? |
+| --- | --- | --- |
+| Answer-key benchmarks | On a multiple-choice test such as MMLU, how often does the model select the keyed answer? | Knowing a fact says little about explaining it in a conversation. |
+| Human evaluation | In a blind comparison such as Chatbot Arena, which response to the same prompt does a person prefer? | A reader may prefer a fluent answer that contains a factual mistake. |
+| Automated conversational evaluation | In AlpacaEval, an evaluator model compares a candidate response with a reference model’s response. This makes it practical to repeat comparisons across many prompts. | The evaluator can favor a writing style or share the candidate’s mistake. |
+
+For our instruction-tuned model, human review and automated judging let us credit both valid similes and still flag the cloud error. [MMLU paper](https://arxiv.org/abs/2009.03300) · [Chatbot Arena paper](https://arxiv.org/abs/2403.04132) · [AlpacaEval](https://tatsu-lab.github.io/alpaca_eval/)
+
+!!! note "Conversational performance"
+    Did the answer address the user’s intent, use the context correctly, and fit the requested style? We can inspect those qualities in one reply. To test consistency across turns, we also need a follow-up. For example, after the car simile, ask the model to make it gentler while keeping it a simile.
 
 ## 7.8 Evaluating the fine-tuned LLM
 

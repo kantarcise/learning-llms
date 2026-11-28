@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="702" height="340" viewBox="0 0 702 340" role="img" aria-labelledby="title">
+  <title id="title">Steps 1 through 6 complete. Extract and compare held-out responses before scoring them.</title>
+  <rect width="702" height="340" rx="12" fill="#faf8f3"/>
+  <g font-family="system-ui, sans-serif" font-size="19" fill="#253330">
+    <text x="20" y="34" font-weight="bold">Stage 1 · Prepare the dataset</text>
+    <rect x="20" y="46" width="202" height="58" rx="8" fill="#e0ede6"/>
+    <g font-size="16" fill="#253330"><text x="32" y="70">✓ Download and</text><text x="57" y="91">format examples</text></g>
+    <text x="227" y="81" font-size="17">→</text>
+    <rect x="250" y="46" width="202" height="58" rx="8" fill="#e0ede6"/>
+    <g font-size="16" fill="#253330"><text x="262" y="70">✓ Group examples</text><text x="287" y="91">into batches</text></g>
+    <text x="457" y="81" font-size="17">→</text>
+    <rect x="480" y="46" width="202" height="58" rx="8" fill="#e0ede6"/>
+    <g font-size="16" fill="#253330"><text x="492" y="70">✓ Create data</text><text x="517" y="91">loaders</text></g>
+    <text x="20" y="144" font-weight="bold">Stage 2 · Fine-tune the model</text>
+    <rect x="20" y="156" width="202" height="58" rx="8" fill="#e0ede6"/>
+    <g font-size="16" fill="#253330"><text x="32" y="180">✓ Load pretrained</text><text x="57" y="201">GPT weights</text></g>
+    <text x="227" y="191" font-size="17">→</text>
+    <rect x="250" y="156" width="202" height="58" rx="8" fill="#e0ede6"/>
+    <g font-size="16" fill="#253330"><text x="262" y="180">✓ Train on instruction–</text><text x="287" y="201">response examples</text></g>
+    <text x="457" y="191" font-size="17">→</text>
+    <rect x="480" y="156" width="202" height="58" rx="8" fill="#e0ede6"/>
+    <g font-size="16" fill="#253330"><text x="492" y="180">✓ Inspect the</text><text x="517" y="201">loss curve</text></g>
+    <text x="20" y="254" font-weight="bold">Stage 3 · Evaluate responses</text>
+    <rect x="20" y="266" width="202" height="58" rx="8" fill="#186555"/>
+    <g font-size="16" fill="white"><text x="32" y="290">7 · Extract generated</text><text x="57" y="311">responses</text></g>
+    <text x="227" y="301" font-size="17">→</text>
+    <rect x="250" y="266" width="202" height="58" rx="8" fill="#186555"/>
+    <g font-size="16" fill="white"><text x="262" y="290">8 · Read and compare</text><text x="287" y="311">sample answers</text></g>
+    <text x="457" y="301" font-size="17">→</text>
+    <rect x="480" y="266" width="202" height="58" rx="8" fill="#e9eeed"/>
+    <g font-size="16" fill="#253330"><text x="492" y="290">9 · Score the</text><text x="517" y="311">responses</text></g>
+  </g>
+</svg>
