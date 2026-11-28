@@ -683,7 +683,91 @@ model.to(device).eval()
 
 ## 7.8 Evaluating the fine-tuned LLM
 
-Notes to come as we read this section.
+In Figure 7.19 we reach step 9. We have read a few answers ourselves. Now a second model reads each held-out instruction, reference answer, and GPT-2 reply, and returns a score. The saved responses from §7.7 let us do this in a fresh Python session.
+
+### Serve the judge locally
+
+This is model serving on one machine. **Ollama is the server, Llama 3 is the judge, and our Python script is the client.** The server keeps listening between requests. Figure 7.20 shows two ways to start it: a desktop app can run it in the background, or a terminal can run it headlessly. For the Linux RTX 3090, use the terminal. [Ollama CLI](https://docs.ollama.com/cli) · [Linux installation](https://docs.ollama.com/linux)
+
+```bash
+# Start this only if the installed Ollama service is not already running.
+ollama serve
+```
+
+In a second terminal, check that the service answers, then send one real prompt. The first model run downloads the weights if needed. An interactive session started with just `ollama run llama3:8b` accepts `/bye` to leave the chat.
+
+```bash
+curl --fail http://localhost:11434/api/tags
+ollama run llama3:8b "What do llamas eat?"
+```
+
+The chapter uses the **8B instruction-tuned** variant, a 4.7 GB download. The larger Llama 3 variant is **70B**, a 40 GB download. Changing judges also changes the measuring instrument. Keep the same judge and prompt when comparing two GPT-2 runs. A hosted judge is another option, and Raschka provides a separate GPT-4 example. [Llama 3 model sizes](https://ollama.com/library/llama3) · [Optional OpenAI evaluation notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/03_model-evaluation/llm-instruction-eval-openai.ipynb)
+
+### Ask for explanations first
+
+Listing 7.10 sends one chat message over HTTP. Turning streaming off makes the server return a single JSON reply, which is convenient when the client needs the complete judgment. [Ollama chat API](https://docs.ollama.com/api/chat)
+
+```python title="Listing 7.10 companion · Query the local judge"
+import json
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+
+def query_model(prompt: str, model: str = "llama3:8b") -> str:
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "options": {"temperature": 0, "seed": 123},
+    }
+    request = Request(
+        "http://localhost:11434/api/chat",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(request, timeout=180) as response:
+        return json.load(response)["message"]["content"].strip()
+
+
+def judge_prompt(entry: dict[str, str]) -> str:
+    return (
+        f"Instruction: {entry['instruction']}\nInput: {entry['input']}\n"
+        f"Reference answer: {entry['output']}\nCandidate answer: {entry['model_response']}\n"
+        "Rate how well the candidate fulfills the instruction from 0 to 100. "
+        "Allow correct answers with different wording."
+    )
+
+
+entries = json.loads(Path("instruction-data-with-response.json").read_text(encoding="utf-8"))
+for entry in entries[:3]:
+    print(entry["instruction"], query_model(judge_prompt(entry) + " Explain your score."))
+```
+
+In the **book’s run**, the judge awarded **85** for the bullet simile, **40** for naming cumulus clouds, and **95** for correctly naming Jane Austen. Read those judgments before scaling up. Would you give partial credit for naming a related cloud? Why deduct five points for a correct author? The score reflects the judge’s choices as well as the candidate’s answer.
+
+### Ask for one integer per answer
+
+Listing 7.11 changes the final sentence of the prompt. Check each reply before averaging so a malformed answer cannot silently disappear from the result.
+
+```python title="Listing 7.11 companion · Score the held-out responses"
+from statistics import mean
+
+
+def generate_model_scores(entries: list[dict[str, str]]) -> list[int]:
+    scores: list[int] = []
+    for index, entry in enumerate(entries):
+        reply = query_model(judge_prompt(entry) + " Reply with one integer only.")
+        if not reply.isascii() or not reply.isdecimal() or not 0 <= int(reply) <= 100:
+            raise ValueError(f"Invalid score for entry {index}: {reply!r}")
+        scores.append(int(reply))
+    return scores
+
+
+scores = generate_model_scores(entries)
+print(f"{len(scores)} of {len(entries)} scored. Mean: {mean(scores):.2f}/100")
+```
+
+Raschka reports **110 of 110 scored, mean 50.32/100**, in about a minute on his M3 MacBook Air. A mean of 50.32 could come from mostly partial answers or from a mixture of excellent and poor answers. Inspect individual replies to tell the difference. The book’s result is a reference for the upcoming Linux run. Our prompt is adapted, and even fixed decoding settings can give different scores across environments.
 
 ## 7.9 Conclusions
 
