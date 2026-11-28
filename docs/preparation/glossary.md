@@ -127,7 +127,13 @@ Every floating-point number is stored in binary scientific notation: `± (mantis
 | **BF16** (*Brain Floating Point 16*) | 2 bytes | `1 \| 8 \| 7` | `3.4 × 10³⁸` | Invented by Google Brain for TPUs: literally FP32 with the bottom 16 mantissa bits dropped. Keeps FP32's full range while halving memory and running on Tensor Cores. |
 | **TF32** (*TensorFloat-32*) | 4 bytes (in RAM) | `1 \| 8 \| 10` *(compute)* | `3.4 × 10³⁸` | NVIDIA Ampere (RTX 3090+) Tensor Core mode: stores FP32 in memory and trims the mantissa to 10 bits on the fly during matrix multiplication. |
 
-**The ruler analogy:** think of the **exponent** as the *span* of a ruler (can it measure both an ant and a skyscraper?) and the **mantissa** as the *tick marks* (millimeters vs. nanometers). Neural networks process both tiny gradients (`10⁻⁶`) and large activations (`10⁵`), so they need the wide span (8-bit exponent), while noisy learned weights summed across thousands of dimensions barely notice 7-bit mantissa rounding (~0.03% on `π`). That is why BF16 matches FP32 quality on LLMs at half the memory (`~14.25 GiB` instead of `~28.5 GiB` for Qwen2.5-7B-Instruct on a 24 GiB RTX 3090).
+**Three concrete bridges for why BF16 works so well in LLMs:**
+
+1. **Same simple numbers, tiny rounding on messy ones (`6.5` vs. `π`):** `6.5 = 1.101₂ × 2²` only needs 3 mantissa bits, so FP32, FP16, and BF16 all store `6.5` identically. For `π = 3.14159265...`, BF16 literally keeps the top 16 bits of FP32 and drops the bottom 16 mantissa bits:
+   - **FP32** (`1 | 8 | 23`): `0 | 10000000 | 10010010000111111011011` → `3.1415927`
+   - **BF16** (`1 | 8 | 7`): `0 | 10000000 | 1001001` → `(1 + 1/2 + 1/16 + 1/128) × 2 = 3.140625` (**0.031%** error)
+2. **Range breaks training; tiny rounding does not (`70,000` and `10⁻⁸`):** Because an LLM multiplies and sums thousands of noisy weights across millions of operations, ±0.03% mantissa rounding averages out while halving memory and unlocking Tensor Core throughput. Running out of *exponent* range is catastrophic: in **FP16** (max `65,504`), an activation of `70,000` overflows to `inf` (and `inf / inf` becomes `NaN`, poisoning the next matmul) while a tiny `10⁻⁸` gradient underflows to `0.0`. In **BF16**, `70,000` stays finite (`70,144`) and `10⁻⁸` stays non-zero.
+3. **The ruler analogy:** think of the **exponent** as the *span* of a ruler (can it measure both an ant and a skyscraper?) and the **mantissa** as the *tick marks* (millimeters vs. nanometers). Neural networks process both tiny gradients and large activations, so they need the wide span (8-bit exponent), not nanometer tick marks (23-bit mantissa). That is why BF16 matches FP32 quality on LLMs at half the memory (`~14.25 GiB` instead of `~28.5 GiB` for Qwen2.5-7B-Instruct on a 24 GiB RTX 3090).
 
 ## FlashAttention and PyTorch SDPA
 
