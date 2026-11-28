@@ -600,20 +600,24 @@ The two-epoch run lowered validation loss. Now give the fine-tuned model an inst
 The generation function returns the prompt and its continuation together. If the prompt contained 40 tokens, the first new token is at index 40. Slice there before decoding, then remove the response heading if the model wrote one.
 
 ```python
+@torch.inference_mode()
+def generate_response(entry: dict[str, str]) -> str:
+    """Generate one continuation from the instruction and optional input."""
+    prompt_ids = torch.tensor([tokenizer.encode(format_input(entry))], device=device)
+    output_ids = generate(
+        model, prompt_ids, max_new_tokens=256,
+        context_size=config["context_length"], eos_id=50256,
+    )
+    new_ids = output_ids[0, prompt_ids.shape[1]:]
+    response = tokenizer.decode(new_ids.tolist()).strip()
+    return response.removeprefix("### Response:").strip()
+
+
 model.eval()
-with torch.inference_mode():
-    for entry in test_data[:3]:
-        prompt = format_input(entry)  # Instruction and optional input only.
-        prompt_ids = torch.tensor([tokenizer.encode(prompt)], device=device)
-        output_ids = generate(
-            model, prompt_ids, max_new_tokens=256,
-            context_size=config["context_length"], eos_id=50256,
-        )
-        new_ids = output_ids[0, prompt_ids.shape[1]:]
-        response = tokenizer.decode(new_ids.tolist()).strip()
-        print(prompt)
-        print("Reference:", entry["output"])
-        print("Model:", response.removeprefix("### Response:").strip())
+for entry in test_data[:3]:
+    print(format_input(entry))
+    print("Reference:", entry["output"])
+    print("Model:", generate_response(entry))
 ```
 
 Here are the three comparisons from **the book’s run**, summarized in our own words.
@@ -636,6 +640,46 @@ For our instruction-tuned model, human review and automated judging let us credi
 
 !!! note "Conversational performance"
     Did the answer address the user’s intent, use the context correctly, and fit the requested style? We can inspect those qualities in one reply. To test consistency across turns, we also need a follow-up. For example, after the car simile, ask the model to make it gentler while keeping it a simile.
+
+### Save the answers once, then judge them
+
+This approach is called **LLM-as-a-judge**. One model answers the question. A second model later reads the question, reference answer, and candidate reply and assigns a score. People still decide what a good answer means and can spot-check the judge. For example, would it accept the bullet simile and catch the cloud error? Scoring the replies leaves the fine-tuned model’s weights unchanged.
+
+Listing 7.9 repeats the three-answer preview across the **110 held-out instructions** from our 1,100-entry dataset. Keeping each reply beside its reference lets us try a different judge later on exactly the same answers. Raschka reports roughly one minute on an A100 and six minutes on an M3 MacBook Air for response generation. [Author’s Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
+
+```python title="Listing 7.9 companion · Collect the test responses"
+import json
+from pathlib import Path
+
+model.eval()
+for entry in test_data:
+    # Keep the original “output” as the reference. Add the model's reply beside it.
+    entry["model_response"] = generate_response(entry)
+
+responses_path = Path("instruction-data-with-response.json")
+responses_path.write_text(json.dumps(test_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+# Read back the saved file and inspect one instruction, reference, and reply together.
+saved_entries = json.loads(responses_path.read_text(encoding="utf-8"))
+assert len(saved_entries) == len(test_data)
+assert all("model_response" in entry for entry in saved_entries)
+print(json.dumps(saved_entries[0], indent=2, ensure_ascii=False))
+```
+
+The JSON lets us revisit what the model said. To ask it a *new* question tomorrow, save the fine-tuned weights too. Our RTX 3090 training script already writes this state dictionary as `model.pth` in the run directory.
+
+```python
+torch.save(model.state_dict(), "model.pth")
+```
+
+In a fresh session, reuse the GPT-2 Medium configuration from §7.5, the GPT-2 tokenizer, and the same prompt formatter. Restore the weights before generating a reply.
+
+```python
+model = GPTModel(config)
+weights = torch.load("model.pth", map_location="cpu", weights_only=True)
+model.load_state_dict(weights)
+model.to(device).eval()
+```
 
 ## 7.8 Evaluating the fine-tuned LLM
 
