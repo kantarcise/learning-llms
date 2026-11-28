@@ -568,11 +568,15 @@ print(f"Two epochs took {(perf_counter() - start) / 60:.2f} minutes")
 In the book’s run, validation loss went from **0.665 at step 115** to **0.670 at step 120**, then reached **0.657 at step 230**. A small upward move is compatible with an improving overall trend. Read the samples alongside the losses: after epoch one the model rewrote the meal as being *prepared* by the chef. After epoch two it used *cooked* and kept the sentence passive. This shows progress on the example we inspected. Section 7.8 evaluates responses across more tasks. [Author’s Chapter 7 notebook](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch07/01_main-chapter-code/ch07.ipynb)
 
 !!! tip "Running the two epochs"
-    Raschka reports about 15.8 minutes on an M3 MacBook Air CPU, 1.8 minutes on an NVIDIA L4, and 0.86 minutes on an A100 for Medium. These are reference timings for his setup. The partial Mac run reached a logged training loss of 0.776 and validation loss of 0.881 after 21 updates. We stopped before the first epoch sample and checkpoint. The full two-epoch run starts fresh on the RTX 3090. If memory is the constraint, the book also offers GPT-2 Small (124M); switching models calls for measuring a fresh baseline.
+    Raschka reports about 15.8 minutes on an M3 MacBook Air CPU, 1.8 minutes on an NVIDIA L4, and 0.86 minutes on an A100 for Medium. These are reference timings for his setup. The partial Mac run reached a logged training loss of 0.776 and validation loss of 0.881 after 21 updates. We stopped before the first epoch sample and checkpoint. The RTX 3090 run started from the original pretrained weights. If memory is the constraint, the book also offers GPT-2 Small (124M); switching models calls for measuring a fresh baseline.
 
 ### Reading the two-epoch loss plot
 
 The [RTX 3090 runner](https://github.com/kantarcise/learning-llms/blob/main/experiments/instruction-tuning/train.py) generates the companion to Figure 7.17 from the full run. Like the Chapter 6 plot, it places each measurement at its actual update and shows completed epochs on a second axis. With variable-length batches, each update can process a different number of token positions. The JSON records those counts separately. The final logged point comes after update 231; the saved model includes update 232.
+
+![Training and validation loss drop sharply in the first updates. In the second epoch training loss continues to fall while validation loss fluctuates near 0.65.](../assets/chapter-07/rtx3090-loss.svg)
+
+On the Linux RTX 3090, GPT-2 Medium completed 232 updates on the chapter dataset in **53.8 seconds**. Before training, the five-batch loss estimates were 3.826 for training and 3.762 for validation. At update 231 they were **0.293** and **0.655**. The lowest recorded validation loss was **0.627 at update 206**. After the final update, the model answered the chef prompt with “The meal is cooked every day by the chef.” [Recorded metrics and before-and-after responses](../assets/chapter-07/rtx3090-metrics.json)
 
 In the book, both losses fall rapidly early on. Validation improves more slowly in epoch two while training loss continues to fall. That supports stopping at two for this comparison. The chef example tests one observable behavior; §7.7 collects responses so we can judge correctness across more tasks.
 
