@@ -769,14 +769,41 @@ print(f"{len(scores)} of {len(entries)} scored. Mean: {mean(scores):.2f}/100")
 
 Raschka reports **110 of 110 scored, mean 50.32/100**, in about a minute on his M3 MacBook Air. A mean of 50.32 could come from mostly partial answers or from a mixture of excellent and poor answers. Inspect individual replies to tell the difference. The book’s result is a reference for the upcoming Linux run. Our prompt is adapted, and even fixed decoding settings can give different scores across environments.
 
+To measure variation in the judge, keep the saved GPT-2 replies fixed and score them several times. Record each run’s mean and the range before averaging. Repeating a judgment helps reveal variability. A judge that consistently rewards a fluent factual error can still make the same mistake on every run.
+
+On page 247, Raschka reports **58.51/100 for Llama 3 8B Base** and **82.6/100 for Llama 3 8B Instruct** as candidates under the book’s evaluation method. Both checkpoints have the same nominal size. The instruct version has received additional training to follow requests. **8B** counts billions of parameters. **8-bit** describes numerical precision.
+
+To investigate a weak score, read a few low-scoring replies first. If the model follows the wrong format, try a clearer prompt. If it struggles with a particular task, add more varied training examples of that kind. Learning rate, batch size, epoch count, and base model size are further experiments. Use validation examples to choose changes and reserve the test set for the final comparison.
+
+### Exercise 7.4 · Compare full fine-tuning with LoRA
+
+Appendix E shows how to freeze a pretrained weight matrix and train two smaller matrices whose product supplies an update. The next Linux experiment can start from the same pretrained GPT-2 Medium weights as our full fine-tune. Keep the split, two-epoch budget, and evaluation procedure fixed. Compare trainable parameter count, training time, and held-out reply quality. The full fine-tune took 53.8 seconds on the RTX 3090. The LoRA run and its scores are pending.
+
 ## 7.9 Conclusions
 
-Notes to come as we read this section.
+<figure markdown="1">
 
-## Questions to bring to the chapter
+![The GPT model built in Chapters 2–4 and pretrained in Chapter 5 branches into an SMS classifier in Chapter 6 and an instruction follower in Chapter 7.](../assets/chapter-07/book-roadmap.svg)
 
-<!-- Add actual questions during reading. -->
+<figcaption>Companion to Raschka’s Figure 7.21. Follow the two arrows out of Chapter 5. The classifier learns to choose a label. The instruction follower keeps the vocabulary output and learns to write an answer.</figcaption>
+</figure>
 
-## End of chapter
+### What preference fine-tuning adds
 
-<!-- Summarize what became clear, link exercises, and record unresolved questions. -->
+Suppose an instruction asks for a friendly appointment reminder. Two replies both get the time right, but one sounds abrupt. In supervised instruction fine-tuning we supply an example reminder to imitate. In preference fine-tuning we can supply both replies and mark which one a reader prefers. Direct Preference Optimization (DPO) uses those pairs to train the model to favor the chosen reply relative to the rejected one. That changes future generations. The judge in §7.8 only scored answers already on disk. [Raschka’s preference-tuning walkthrough](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch07/04_preference-tuning-with-dpo)
+
+### Chapter summary
+
+1. Instruction fine-tuning teaches a pretrained next-token predictor how to respond to a request by showing it worked examples.
+2. Each dataset entry holds an instruction, optional input, and desired response. Format the entries consistently and split them into training, validation, and test sets.
+3. The collate function pads each batch, shifts targets by one token, and marks surplus padding with `-100`. Keeping the first end-of-text target teaches the model when to stop.
+4. Pretrained GPT-2 Medium gives us a starting point. Trying the chef prompt before training shows which behavior we want to change.
+5. The Chapter 5 training loop works here too. After two epochs on the RTX 3090, our model rewrote the chef sentence in the passive voice.
+6. Generate replies to held-out instructions and save each beside its reference. A person can inspect the answers, and several judges can evaluate the same file.
+7. A locally served judge can turn those comparisons into scores. Report how many answers were scored, their mean, and examples that show what the judge rewarded.
+
+### Where to look when a problem comes up
+
+Use Appendix A for a PyTorch question, B for further reading, and C to check an exercise solution. Open D when a training run calls for warm-up, a learning-rate schedule, or gradient clipping. Return to E for the LoRA comparison. The author’s bonus material also includes KV caching and efficient attention implementations for the serving work ahead. For developments since publication, follow a concrete question from a paper to its code and measurements. [Bonus material](https://github.com/rasbt/LLMs-from-scratch#bonus-material) · [Recent machine learning papers](https://arxiv.org/list/cs.LG/recent) · [Raschka’s blog](https://sebastianraschka.com/blog/)
+
+For larger fine-tuning projects, Raschka also points readers to [Axolotl](https://github.com/axolotl-ai-cloud/axolotl) and [LitGPT](https://github.com/Lightning-AI/litgpt).
