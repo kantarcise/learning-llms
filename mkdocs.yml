@@ -14,6 +14,7 @@ nav:
   - Preparation conversation: preparation/first-conversation.md
   - Character-log experiment: preparation/training-comparison.md
   - Cosmopedia experiment: preparation/cosmopedia.md
+  - Remote vLLM serving: preparation/vllm-serving.md
   - Learning glossary: preparation/glossary.md
   - The Book:
       - 'Chapter 1 - Understanding Large Language Models': chapters/01-understanding-large-language-models.md

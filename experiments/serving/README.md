@@ -77,3 +77,12 @@ for w in 20 250 1000 2500; do
     --target-p95-ttft-ms 500
 done
 ```
+
+## 4. Recorded results (`sezaiMac` → RTX 3090)
+
+Full structured measurements live in `results/rtx3090-mac-baseline.json` and the companion write-up in `docs/preparation/vllm-serving.md`:
+
+- **Short prompts (`~54` tokens, `c=1 → 16`):** Passed `p95 TTFT ≤ 500 ms` at every level (`38.5 ms` at `c=1`, `106.5 ms` at `c=16`), scaling output throughput **13.6×** (`46.4 → 630.6 tok/s`, `15.36 req/s`) with `0` errors and `0` preemptions.
+- **Long prompts (`c=1`, `54 → 4,203` tokens):** Passed through `1,686` tokens (`330.6 ms` p95 TTFT); missed at `4,203` tokens (`673.2 ms` p95 TTFT, `588.7 ms` server prefill). Raising `--max-num-batched-tokens 8192` trimmed server prefill by `45.0 ms` (`543.7 ms`, `662.5 ms` client p95 TTFT), confirming the single-3090 BF16 prefill compute roofline.
+- **Automatic Prefix Caching (`--shared-prefix`, `4,227` tokens):** Cold Request 1 took `1,023.5 ms`; cached Requests 2–6 dropped to `44.5–99.6 ms` (**51.0 ms** p50 TTFT, **82.7%** prefix cache hit rate).
+- **Decision ([Issue #65](https://github.com/kantarcise/learning-llms/issues/65)):** Keep the single RTX 3090 for Month 4 and Month 5.
